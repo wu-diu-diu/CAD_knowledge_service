@@ -7,6 +7,7 @@ from typing import List, Optional, Tuple
 
 import faiss
 import numpy as np
+import torch
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
@@ -21,6 +22,9 @@ INDEX_PATH = STORE_DIR / "index.faiss"
 META_PATH = STORE_DIR / "metadata.json"
 
 EMBED_MODEL_NAME = os.getenv("RAG_EMBED_MODEL", "BAAI/bge-small-zh-v1.5")
+EMBED_DEVICE = os.getenv("RAG_EMBED_DEVICE", "cuda")
+EMBED_BATCH_SIZE = int(os.getenv("RAG_EMBED_BATCH_SIZE", "64"))
+EMBED_MULTI_GPU = os.getenv("RAG_EMBED_MULTI_GPU", "0").lower() in ("1", "true", "yes")
 CHUNK_SIZE = int(os.getenv("RAG_CHUNK_SIZE", "800"))
 CHUNK_OVERLAP = int(os.getenv("RAG_CHUNK_OVERLAP", "120"))
 MINERU_BACKEND = os.getenv("RAG_MINERU_BACKEND", "hybrid-auto-engine")
@@ -90,13 +94,33 @@ def chunk_text(text: str) -> List[str]:
 def get_model() -> SentenceTransformer:
     global _model
     if _model is None:
-        _model = SentenceTransformer(EMBED_MODEL_NAME)
+        device = EMBED_DEVICE
+        if device == "cuda" and not torch.cuda.is_available():
+            device = "cpu"
+        _model = SentenceTransformer(EMBED_MODEL_NAME, device=device)
     return _model
 
 
 def embed_texts(texts: List[str]) -> np.ndarray:
     model = get_model()
-    vectors = model.encode(texts, normalize_embeddings=True)
+    if EMBED_MULTI_GPU and torch.cuda.is_available() and torch.cuda.device_count() > 1:
+        target_devices = [f"cuda:{i}" for i in range(torch.cuda.device_count())]
+        pool = model.start_multi_process_pool(target_devices=target_devices)
+        try:
+            vectors = model.encode_multi_process(
+                texts,
+                pool,
+                batch_size=EMBED_BATCH_SIZE,
+                normalize_embeddings=True,
+            )
+        finally:
+            model.stop_multi_process_pool(pool)
+    else:
+        vectors = model.encode(
+            texts,
+            batch_size=EMBED_BATCH_SIZE,
+            normalize_embeddings=True,
+        )
     return np.asarray(vectors, dtype=np.float32)
 
 
@@ -241,7 +265,14 @@ async def startup_event() -> None:
 async def status() -> dict:
     count = len(_metadata)
     dim = _index.d if _index else None
-    return {"chunks": count, "dim": dim, "model": EMBED_MODEL_NAME}
+    return {
+        "chunks": count,
+        "dim": dim,
+        "model": EMBED_MODEL_NAME,
+        "device": str(getattr(get_model(), "device", EMBED_DEVICE)),
+        "gpu_count": torch.cuda.device_count() if torch.cuda.is_available() else 0,
+        "multi_gpu": EMBED_MULTI_GPU,
+    }
 
 
 @app.post("/ingest")
