@@ -8,6 +8,7 @@ from typing import List, Optional, Tuple
 import faiss
 import numpy as np
 import torch
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
@@ -32,7 +33,18 @@ MINERU_LANG = os.getenv("RAG_MINERU_LANG", "ch")
 MINERU_OCR = os.getenv("RAG_MINERU_OCR", "false").lower() in ("1", "true", "yes")
 MINERU_MAX_PAGES = int(os.getenv("RAG_MINERU_MAX_PAGES", "1000"))
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    ensure_dirs()
+    global _metadata, _index
+    _metadata = load_metadata()
+    _index = load_index()
+    if _index is None and _metadata:
+        rebuild_index_from_metadata()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 _model: Optional[SentenceTransformer] = None
 _index: Optional[faiss.Index] = None
@@ -107,11 +119,11 @@ def embed_texts(texts: List[str]) -> np.ndarray:
         target_devices = [f"cuda:{i}" for i in range(torch.cuda.device_count())]
         pool = model.start_multi_process_pool(target_devices=target_devices)
         try:
-            vectors = model.encode_multi_process(
+            vectors = model.encode(
                 texts,
-                pool,
                 batch_size=EMBED_BATCH_SIZE,
                 normalize_embeddings=True,
+                pool=pool,
             )
         finally:
             model.stop_multi_process_pool(pool)
@@ -249,16 +261,6 @@ async def ingest_path(path: Path) -> Tuple[int, int]:
         save_metadata(_metadata)
 
     return processed_files, total_chunks
-
-
-@app.on_event("startup")
-async def startup_event() -> None:
-    ensure_dirs()
-    global _metadata, _index
-    _metadata = load_metadata()
-    _index = load_index()
-    if _index is None and _metadata:
-        rebuild_index_from_metadata()
 
 
 @app.get("/status")

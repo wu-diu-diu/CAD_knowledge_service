@@ -3,9 +3,9 @@ FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3.12 \
-    python3.12-venv \
-    python3.12-dev \
+    python3.10 \
+    python3.10-venv \
+    python3.10-dev \
     python3-pip \
     build-essential \
     git \
@@ -17,14 +17,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxext6 \
     && rm -rf /var/lib/apt/lists/*
 
-RUN python3.12 -m pip install --upgrade pip
+RUN python3.10 -m pip install --upgrade pip
 
-RUN python3.12 -m pip install --index-url https://download.pytorch.org/whl/cu121 \
+RUN python3.10 -m pip install --index-url https://download.pytorch.org/whl/cu121 \
     torch torchvision torchaudio
 
 WORKDIR /app
 COPY requirements.txt /app/requirements.txt
-RUN python3.12 -m pip install -r /app/requirements.txt
+RUN python3.10 -m pip install -r /app/requirements.txt
 
 COPY . /app
 
@@ -34,4 +34,4 @@ ENV RAG_EMBED_DEVICE=cuda
 
 EXPOSE 8008
 
-CMD ["python3.12", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8008"]
+CMD ["python3.10", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8008"]
