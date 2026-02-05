@@ -2,6 +2,7 @@ import hashlib
 import json
 import os
 import re
+from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Tuple
 
@@ -14,6 +15,7 @@ from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
 
 from mineru.cli.gradio_app import to_markdown
+from utils.transfer import process_markdown_file, fix_md_headings, process_images_in_markdown
 
 BASE_DIR = Path(__file__).resolve().parent
 DOCS_DIR = BASE_DIR / "docs"
@@ -77,6 +79,124 @@ def clean_markdown(md: str) -> str:
     text = re.sub(r"[ \t]+", " ", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
+
+
+def _extract_inline_text(items: Optional[List[dict]]) -> str:
+    if not items:
+        return ""
+    parts: List[str] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        item_type = item.get("type")
+        if item_type in ("text", "inline_equation"):
+            parts.append(item.get("content", ""))
+    return "".join(parts).strip()
+
+
+def _render_block(block: dict, asset_root: Path) -> Optional[str]:
+    block_type = block.get("type")
+    content = block.get("content", {})
+
+    if block_type in ("page_header", "page_footer", "page_number"):
+        return None
+
+    if block_type == "title":
+        level = int(content.get("level", 1))
+        level = min(max(level, 1), 6)
+        title = _extract_inline_text(content.get("title_content", []))
+        return f"{'#' * level} {title}".strip()
+
+    if block_type == "paragraph":
+        text = _extract_inline_text(content.get("paragraph_content", []))
+        return text or None
+
+    if block_type == "list":
+        items = content.get("list_items", [])
+        lines: List[str] = []
+        for item in items:
+            item_text = _extract_inline_text(item.get("item_content", []))
+            if item_text:
+                lines.append(f"- {item_text}")
+        return "\n".join(lines) if lines else None
+
+    if block_type == "table":
+        caption_text = _extract_inline_text(content.get("table_caption", []))
+        html = content.get("html")
+        parts: List[str] = []
+        if caption_text:
+            parts.append(caption_text)
+        if html:
+            parts.append(html)
+        return "\n".join(parts) if parts else None
+
+    if block_type == "image":
+        image_source = content.get("image_source", {}).get("path")
+        if not image_source:
+            return None
+        image_path = (asset_root / image_source).resolve()
+        caption_text = _extract_inline_text(content.get("image_caption", []))
+        lines = [f"![]({image_path})"]
+        if caption_text:
+            lines.append(caption_text)
+        return "\n".join(lines)
+
+    if block_type == "equation_interline":
+        math = content.get("math_content")
+        if not math:
+            return None
+        return f"$$\n{math}\n$$"
+
+    return None
+
+
+def _find_latest_content_list(pdf_path: Path, suffix: str) -> Optional[Path]:
+    output_root = BASE_DIR / "output"
+    if not output_root.exists():
+        return None
+    pattern = f"{pdf_path.stem}*{suffix}.json"
+    candidates = list(output_root.rglob(pattern))
+    if not candidates:
+        return None
+    return max(candidates, key=lambda p: p.stat().st_mtime)
+
+
+def build_markdown_with_pages(content_list_path: Path) -> str:
+    with content_list_path.open("r", encoding="utf-8") as f:
+        pages = json.load(f)
+
+    asset_root = content_list_path.parent
+    output_lines: List[str] = []
+    for page_idx, blocks in enumerate(pages):
+        output_lines.append(f"[PAGE:{page_idx + 1}]")
+        for block in blocks:
+            rendered = _render_block(block, asset_root)
+            if rendered:
+                output_lines.append(rendered)
+        output_lines.append("")
+    return "\n\n".join(output_lines).strip() + "\n"
+
+
+def build_markdown_with_pages_from_flat(content_list_path: Path) -> str:
+    with content_list_path.open("r", encoding="utf-8") as f:
+        items = json.load(f)
+
+    pages: dict[int, List[str]] = {}
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        page_idx = item.get("page_idx")
+        text = item.get("text", "")
+        if page_idx is None or not text:
+            continue
+        pages.setdefault(int(page_idx), []).append(text)
+
+    output_lines: List[str] = []
+    for page_idx in sorted(pages.keys()):
+        output_lines.append(f"[PAGE:{page_idx + 1}]")
+        output_lines.append(" ".join(pages[page_idx]).strip())
+        output_lines.append("")
+    return "\n\n".join(output_lines).strip() + "\n"
 
 
 def chunk_text(text: str) -> List[str]:
@@ -191,7 +311,27 @@ async def parse_pdf(path: Path) -> str:
         backend=MINERU_BACKEND,
         url=None,
     )
-    return md_content
+    content_list_v2_path = _find_latest_content_list(path, "_content_list_v2")
+    if content_list_v2_path:
+        md_content = build_markdown_with_pages(content_list_v2_path)
+    else:
+        content_list_path = _find_latest_content_list(path, "_content_list")
+        if content_list_path:
+            md_content = build_markdown_with_pages_from_flat(content_list_path)
+    output_dir = BASE_DIR / "transfer_output"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_path = output_dir / f"{path.stem}_{timestamp}.md"
+
+    output_path.write_text(md_content, encoding="utf-8")
+    fix_md_headings(output_path)
+
+    processed = output_path.read_text(encoding="utf-8", errors="ignore")
+    processed = process_markdown_file(processed)
+    # processed = process_images_in_markdown(processed, output_path)
+    output_path.write_text(processed, encoding="utf-8")
+
+    return processed
 
 
 async def load_text_from_file(path: Path) -> Tuple[str, str]:
@@ -328,6 +468,12 @@ async def search(req: SearchRequest) -> dict:
         if idx < 0 or idx >= len(_metadata):
             continue
         item = _metadata[idx]
+        print(
+            f"[search] score={float(score):.4f} "
+            f"source={item.get('source_path')} "
+            f"chunk={item.get('chunk_index')} "
+            f"text={item.get('text')[:500]}"
+        )
         results.append(
             {
                 "score": float(score),

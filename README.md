@@ -1,8 +1,18 @@
-#### 启动命令
+#### 启动命令（单GPU）
 - ` uv run uvicorn main:app --host 127.0.0.1 --port 8008`
+#### 启动命令（多GPU）
+```python
+export RAG_EMBED_MULTI_GPU=1
+export RAG_EMBED_DEVICE=cuda
+export RAG_EMBED_BATCH_SIZE=128
+uvicorn main:app --host 0.0.0.0 --port 8008
+```
 
 #### powershell 测试
+- 使用ssh连接本机的8008端口和服务器的8008端口:`ssh -L 8008:127.0.0.1:8008 用户名@ip`
 - 使用默认docx下的文件测试解析并向量化pdf文件，powershell命令：` Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8008/ingest`
+
+
 Autocad RAG Server (MinerU + FastAPI + FAISS)
 =============================================
 

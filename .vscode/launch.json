@@ -1,0 +1,30 @@
+{
+    // 使用 IntelliSense 了解相关属性。 
+    // 悬停以查看现有属性的描述。
+    // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+    
+        {
+            "name": "文件解析测试",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/test_parse_pdf.py",
+            "args": ["/home/chen/punchy/CAD_knowledge_service/docs/建筑照明设计标准.pdf"],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "FastAPI: UV启动服务",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "main:app",
+                "--host", "127.0.0.1",
+                "--port", "8008",
+            ],
+            "python": "${command:python.interpreterPath}",
+            "console": "integratedTerminal"
+        },
+    ]
+}
