@@ -2,6 +2,9 @@ import hashlib
 import json
 import os
 import re
+import sys
+import time
+import traceback
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Tuple
@@ -10,7 +13,9 @@ import faiss
 import numpy as np
 import torch
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
 
@@ -23,6 +28,16 @@ STORE_DIR = BASE_DIR / "rag_store"
 UPLOAD_DIR = STORE_DIR / "uploads"
 INDEX_PATH = STORE_DIR / "index.faiss"
 META_PATH = STORE_DIR / "metadata.json"
+CAD_SERVICE_DIR = BASE_DIR / "cad_images_service"
+
+if CAD_SERVICE_DIR.exists():
+    cad_service_path = str(CAD_SERVICE_DIR)
+    if cad_service_path not in sys.path:
+        sys.path.insert(0, cad_service_path)
+
+from preprocess.cad_service import CADParams, CADResponse, cad_service
+from preprocess.coordinate_converter import DEFAULT_CAD_PARAMS
+from preprocess.logger import get_logger as get_cad_logger
 
 EMBED_MODEL_NAME = os.getenv("RAG_EMBED_MODEL", "BAAI/bge-small-zh-v1.5")
 EMBED_DEVICE = os.getenv("RAG_EMBED_DEVICE", "cuda")
@@ -34,6 +49,10 @@ MINERU_BACKEND = os.getenv("RAG_MINERU_BACKEND", "hybrid-auto-engine")
 MINERU_LANG = os.getenv("RAG_MINERU_LANG", "ch")
 MINERU_OCR = os.getenv("RAG_MINERU_OCR", "false").lower() in ("1", "true", "yes")
 MINERU_MAX_PAGES = int(os.getenv("RAG_MINERU_MAX_PAGES", "1000"))
+cad_logger = get_cad_logger("cad_api")
+_model: Optional[SentenceTransformer] = None
+_index: Optional[faiss.Index] = None
+_metadata: List[dict] = []
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -47,15 +66,47 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
-
-_model: Optional[SentenceTransformer] = None
-_index: Optional[faiss.Index] = None
-_metadata: List[dict] = []
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class SearchRequest(BaseModel):
     query: str
     top_k: int = 5
+
+
+@app.middleware("http")
+async def add_process_time_header(request: Request, call_next):
+    start_time = time.time()
+    cad_logger.info(f"request started: {request.method} {request.url}")
+    response = await call_next(request)
+    process_time = time.time() - start_time
+    response.headers["X-Process-Time"] = str(process_time)
+    cad_logger.info(
+        f"request completed: {request.method} {request.url} "
+        f"status={response.status_code} time={process_time:.4f}s"
+    )
+    return response
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    cad_logger.error(f"unhandled exception: {request.method} {request.url} - {exc}")
+    cad_logger.error(traceback.format_exc())
+    error_detail = {
+        "error": "Internal Server Error",
+        "message": str(exc),
+        "path": str(request.url),
+        "method": request.method,
+        "timestamp": time.time(),
+    }
+    if app.debug:
+        error_detail["traceback"] = traceback.format_exc()
+    return JSONResponse(status_code=500, content=error_detail)
 
 
 def ensure_dirs() -> None:
@@ -327,7 +378,7 @@ async def parse_pdf(path: Path) -> str:
     fix_md_headings(output_path)
 
     processed = output_path.read_text(encoding="utf-8", errors="ignore")
-    processed = process_markdown_file(processed)
+    # processed = process_markdown_file(processed)
     # processed = process_images_in_markdown(processed, output_path)
     output_path.write_text(processed, encoding="utf-8")
 
@@ -485,6 +536,100 @@ async def search(req: SearchRequest) -> dict:
         )
 
     return {"results": results}
+
+
+@app.get("/")
+async def root() -> dict:
+    return {
+        "service": "CAD and RAG service",
+        "version": "1.0.0",
+        "status": "running",
+        "endpoints": {
+            "rag_ingest": "/ingest",
+            "rag_search": "/search",
+            "rag_status": "/status",
+            "cad_process": "/upload-and-process",
+            "cad_health": "/health",
+            "cad_default_params": "/default-cad-params",
+        },
+    }
+
+
+@app.get("/health")
+async def health_check() -> dict:
+    return {
+        "status": "healthy",
+        "timestamp": time.time(),
+        "service": "cad-rag-service",
+    }
+
+
+@app.get("/default-cad-params")
+async def get_default_cad_params() -> dict:
+    return {
+        "default_cad_params": DEFAULT_CAD_PARAMS,
+        "description": "default CAD parameter values",
+    }
+
+
+@app.post("/upload-and-process", response_model=CADResponse)
+async def upload_and_process_cad(
+    files: List[UploadFile] = File(..., description="PNG files"),
+    cad_params: Optional[str] = Form(None, description="CAD params as JSON string"),
+):
+    cad_logger.info(f"upload request received: file_count={len(files)}")
+
+    for file in files:
+        filename = file.filename or ""
+        if not filename.lower().endswith(".png"):
+            raise HTTPException(
+                status_code=400,
+                detail=f"unsupported file type: {filename}, only PNG is supported",
+            )
+
+    try:
+        file_contents: List[bytes] = []
+        filenames: List[str] = []
+        for file in files:
+            content = await file.read()
+            filename = file.filename or "upload.png"
+            if not content:
+                raise HTTPException(status_code=400, detail=f"file {filename} is empty")
+            file_contents.append(content)
+            filenames.append(filename)
+            cad_logger.info(f"read file: {filename}, size={len(content)} bytes")
+
+        cad_params_obj = None
+        if cad_params:
+            try:
+                cad_params_obj = CADParams(**json.loads(cad_params))
+                cad_logger.info("using custom CAD parameters")
+            except (json.JSONDecodeError, ValueError) as exc:
+                cad_logger.warning(f"failed to parse CAD parameters, fallback to default: {exc}")
+                cad_params_obj = None
+        else:
+            cad_logger.info("using default CAD parameters")
+
+        result = cad_service.process_uploaded_files(file_contents, filenames, cad_params_obj)
+        cad_logger.info(
+            f"CAD processing finished: success={result.processed_images}/{result.total_images}"
+        )
+
+        if not result.success:
+            if result.total_images == 0:
+                raise HTTPException(status_code=400, detail=result.message)
+            payload = result.model_dump() if hasattr(result, "model_dump") else result.dict()
+            return JSONResponse(status_code=207, content=payload)
+        return result
+    except HTTPException:
+        raise
+    except Exception as exc:
+        cad_logger.error(f"unexpected CAD processing error: {exc}")
+        cad_logger.error(traceback.format_exc())
+        raise HTTPException(
+            status_code=500,
+            detail=f"internal error while processing uploaded files: {exc}",
+        )
 
 
 def main() -> None:
