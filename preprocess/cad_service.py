@@ -8,9 +8,9 @@ import os
 import tempfile
 import shutil
 from pathlib import Path
-from find_all import process_images_batch, process_single_image
-from coordinate_converter import DEFAULT_CAD_PARAMS
-from logger import get_logger
+from .find_all import process_images_batch, process_single_image
+from .coordinate_converter import DEFAULT_CAD_PARAMS
+from .logger import get_logger
 
 # 获取logger实例
 logger = get_logger("cad_service")
@@ -22,19 +22,11 @@ class CADParams(BaseModel):
     Ymin: float = Field(..., description="CAD窗口下边界")  
     Xmax: float = Field(..., description="CAD窗口右边界")
     Ymax: float = Field(..., description="CAD窗口上边界")
-    originx: float = Field(default=0, description="X轴原点偏移量")
-    originy: float = Field(default=0, description="Y轴原点偏移量")
 
     @field_validator('Xmin', 'Ymin', 'Xmax', 'Ymax')
     def validate_bounds(cls, v):
         if not isinstance(v, (int, float)):
             raise ValueError('坐标值必须是数字')
-        return float(v)
-
-    @field_validator('originx', 'originy')
-    def validate_origin(cls, v):
-        if not isinstance(v, (int, float)):
-            raise ValueError('原点偏移量必须是数字')
         return float(v)
 
 
@@ -271,8 +263,6 @@ class CADAnalysisService:
             'Ymin': cad_params.Ymin,
             'Xmax': cad_params.Xmax,
             'Ymax': cad_params.Ymax,
-            'originx': cad_params.originx,
-            'originy': cad_params.originy
         }
     
     def extract_room_coordinates(self, processing_results: Dict[str, Any]) -> Dict[str, List[RoomCADCoordinate]]:

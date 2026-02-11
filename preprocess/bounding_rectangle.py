@@ -423,11 +423,12 @@ def calculate_room_bounding_rectangles(
     return room_rectangles
 
 
-def visualize_bounding_rectangles(room_rectangles, image_path):
+def visualize_bounding_rectangles(room_rectangles, image_path, fill_alpha=0.15):
     """
     可视化房间的最小外接矩形
     :param room_rectangles: 房间矩形字典
     :param image_path: 原始图像路径
+    :param fill_alpha: 矩形填充透明度
     """
     img = cv2.imread(image_path)
     if img is None:
@@ -448,6 +449,9 @@ def visualize_bounding_rectangles(room_rectangles, image_path):
         (128, 128, 0),    # 橄榄色
     ]
     
+    # 使用overlay做半透明填充，保留底图细节
+    overlay = img.copy()
+
     color_idx = 0
     for room_name, room_shapes in room_rectangles.items():
         color = colors[color_idx % len(colors)]
@@ -455,17 +459,31 @@ def visualize_bounding_rectangles(room_rectangles, image_path):
 
         for shape_idx, rectangle_points in enumerate(room_shapes):
             rect_points = np.array(rectangle_points, dtype=np.int32)
+            # 先在overlay上填充，后续与原图按alpha融合
+            cv2.fillPoly(overlay, [rect_points], color)
+
+    # 将半透明填充融合回原图
+    img = cv2.addWeighted(overlay, fill_alpha, img, 1.0 - fill_alpha, 0)
+
+    # 再绘制边框与顶点，保持轮廓清晰
+    color_idx = 0
+    for room_name, room_shapes in room_rectangles.items():
+        color = colors[color_idx % len(colors)]
+        color_idx += 1
+
+        for rectangle_points in room_shapes:
+            rect_points = np.array(rectangle_points, dtype=np.int32)
             cv2.drawContours(img, [rect_points], 0, color, 3)
-            for i, point in enumerate(rect_points):
+            for point in rect_points:
                 x, y = point
-                cv2.circle(img, (x, y), 6, color, -1)
+                cv2.circle(img, (x, y), 6, (0, 0, 255), -1)
                 cv2.putText(
                     img,
-                    f"{shape_idx + 1}-{i + 1}",
+                    f"({x},{y})",
                     (x + 8, y - 8),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.45,
-                    color,
+                    (0, 0, 255),
                     1,
                     cv2.LINE_AA,
                 )

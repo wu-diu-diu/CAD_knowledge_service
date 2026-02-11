@@ -2,13 +2,13 @@
 CAD图纸房间分析主程序 - 重构版本
 整合了OCR文本识别、轮廓检测、门窗识别和转折点处理的完整流程
 """
-from ocr_extractor import extract_text_boxes
-from contour_detector import find_all_inner_contours
-from door_window_detector import find_door_and_window
-from door_point_exclusion import process_all_rooms
-from bounding_rectangle import process_room_bounding_rectangles, save_bounding_rectangles
-from coordinate_converter import process_rooms_to_cad
-from adaptive_shape_analyzer import process_adaptive_room_shapes, create_comparison_visualization
+from .ocr_extractor import extract_text_boxes
+from .contour_detector import find_all_inner_contours
+from .door_window_detector import find_door_and_window
+from .door_point_exclusion import process_all_rooms
+from .bounding_rectangle import process_room_bounding_rectangles, save_bounding_rectangles
+from .coordinate_converter import process_rooms_to_cad
+from .adaptive_shape_analyzer import process_adaptive_room_shapes, create_comparison_visualization
 import os
 import shutil
 from datetime import datetime
@@ -149,7 +149,7 @@ def main():
     主处理流程（兼容性保持）
     """
     # 输入图像路径
-    image_path = '/home/chen/punchy/CAD_knowledge_service/images/test.png'
+    image_path = '/home/chen/punchy/CAD_knowledge_service/images/test_8K.png'
 
     print("=== CAD图纸房间分析开始 ===")
 

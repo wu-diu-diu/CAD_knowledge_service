@@ -1,0 +1,2 @@
+2026-02-12 03:08:37 | ERROR    | preprocess.cad_service:process_uploaded_files:235 | 处理上传文件时发生异常: 'CADParams' object has no attribute 'originx'
+2026-02-12 03:08:37 | ERROR    | preprocess.cad_service:process_uploaded_files:236 | 异常详情: AttributeError

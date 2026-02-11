@@ -602,11 +602,31 @@ async def upload_and_process_cad(
         cad_params_obj = None
         if cad_params:
             try:
-                cad_params_obj = CADParams(**json.loads(cad_params))
+                parsed_params = json.loads(cad_params)
+                if not isinstance(parsed_params, dict):
+                    raise HTTPException(
+                        status_code=400,
+                        detail="invalid cad_params: JSON body must be an object",
+                    )
+                cad_params_obj = CADParams(**parsed_params)
                 cad_logger.info("using custom CAD parameters")
-            except (json.JSONDecodeError, ValueError) as exc:
-                cad_logger.warning(f"failed to parse CAD parameters, fallback to default: {exc}")
-                cad_params_obj = None
+            except json.JSONDecodeError as exc:
+                cad_logger.warning(f"failed to parse CAD parameters JSON: {exc}")
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "invalid cad_params JSON format: "
+                        f"{exc.msg} (line {exc.lineno}, column {exc.colno})"
+                    ),
+                )
+            except HTTPException:
+                raise
+            except Exception as exc:
+                cad_logger.warning(f"failed to validate CAD parameters: {exc}")
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"invalid cad_params values: {exc}",
+                )
         else:
             cad_logger.info("using default CAD parameters")
 
