@@ -103,7 +103,7 @@ def process_single_image(image_path, cad_params=None, save_to_file=True):
             os.environ["CAD_STEP_OUTPUT_DIR"] = previous_output_dir
 
 
-def process_images_batch(image_directory, cad_params=None, save_to_file=False):
+def process_images_batch(image_directory, cad_params=None, save_to_file=True):
     """
     批量处理指定目录下的所有PNG图像
     :param image_directory: 图像目录路径

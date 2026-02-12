@@ -190,7 +190,7 @@ class CADAnalysisService:
             processing_results = process_images_batch(
                 image_directory=temp_dir,
                 cad_params=cad_params_dict,
-                save_to_file=False  # 服务模式下不保存文件
+                save_to_file=True  # 服务模式下保存文件
             )
             
             # 统计处理结果
