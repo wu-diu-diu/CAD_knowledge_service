@@ -15,4 +15,6 @@ dependencies = [
     "paddlepaddle==3.1.1",
     "faiss-cpu>=1.8.0",
     "numpy>=1.26.4",
+    "neo4j>=5.26.0",
+    "openai>=1.40.0",
 ]

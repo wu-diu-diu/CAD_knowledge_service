@@ -371,10 +371,87 @@ def fix_md_tables(md_path):
     with open(md_path, "w", encoding="utf-8") as f:
         f.write(merged)
 
-md_path = Path("/home/chen/punchy/CAD_knowledge_service/output/建筑照明设计标准_260202_124455/hybrid_auto/test.md")
+def process_table(text):
+    """
+    将文本中嵌入的 HTML <table> 转换为 Markdown 的管道式表格。
+    
+    Args:
+        text (str): 包含 html 表格的 markdown 文本
+        
+    Returns:
+        str: 转换后的文本
+    """
+    
+    def html_to_md_table(match):
+        html_content = match.group(0)
+        soup = BeautifulSoup(html_content, 'html.parser')
+        table = soup.find('table')
+        
+        if not table:
+            return html_content
+
+        rows_data = []
+        
+        # 遍历所有行 (包括 thead 和 tbody 中的 tr)
+        for tr in table.find_all('tr'):
+            row_cells = []
+            # 获取该行的所有单元格 (th 或 td)
+            cells = tr.find_all(['th', 'td'])
+            
+            for cell in cells:
+                # 获取文本，去除首尾空白，将内部换行符替换为空格或 <br>
+                # Markdown 表格单元格内通常不支持直接换行，这里用空格代替以保持格式整洁
+                cell_text = cell.get_text(separator=" ", strip=True).replace('\n', ' ')
+                # 处理管道符冲突，转义 | 为 \|
+                cell_text = cell_text.replace('|', '\\|')
+                row_cells.append(cell_text)
+            
+            if row_cells:
+                rows_data.append(row_cells)
+
+        if not rows_data:
+            return html_content
+
+        # 1. 确定表格的最大列数 (处理部分行单元格缺失的情况)
+        max_cols = max(len(row) for row in rows_data)
+
+        # 2. 补齐行数据，使其长度一致
+        for row in rows_data:
+            while len(row) < max_cols:
+                row.append("")
+
+        # 3. 构建 Markdown 表格
+        md_lines = []
+        
+        # --- 表头部分 ---
+        # 默认取第一行作为表头
+        headers = rows_data[0]
+        md_lines.append("| " + " | ".join(headers) + " |")
+        
+        # --- 分割线部分 ---
+        # 默认为居左对齐 (---)
+        md_lines.append("| " + " | ".join(["---"] * max_cols) + " |")
+        
+        # --- 数据主体部分 ---
+        for row in rows_data[1:]:
+            md_lines.append("| " + " | ".join(row) + " |")
+
+        return "\n" + "\n".join(md_lines) + "\n"
+
+    # 使用正则表达式匹配 <table>...</table>，flags=re.DOTALL 让 . 匹配换行符
+    # 这里的正则是非贪婪匹配 (.*?)
+    pattern = re.compile(r'<table[^>]*>.*?</table>', re.DOTALL | re.IGNORECASE)
+    
+    # 执行替换
+    return pattern.sub(html_to_md_table, text)
+
+md_path = Path("/home/chen/punchy/CAD_knowledge_service/test_files/test1_processed.md")
 
 # fix_md_headings(md_path)
 # fix_md_tables(md_path)
 # new_content = process_images_in_markdown(md_path.read_text(encoding="utf-8"), md_path)
 # with open(md_path, "w", encoding="utf-8") as f:
 #     f.write(new_content)
+new_content = process_markdown_file(md_path.read_text(encoding="utf-8"))
+with open(md_path, "w", encoding="utf-8") as f:
+    f.write(new_content)

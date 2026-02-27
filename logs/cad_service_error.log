@@ -1,2 +1,7 @@
 2026-02-12 03:08:37 | ERROR    | preprocess.cad_service:process_uploaded_files:235 | 处理上传文件时发生异常: 'CADParams' object has no attribute 'originx'
 2026-02-12 03:08:37 | ERROR    | preprocess.cad_service:process_uploaded_files:236 | 异常详情: AttributeError
+2026-02-26 11:58:22 | ERROR    | main:lifespan:82 | neo4j init failed: Couldn't connect to 127.0.0.1:7687 (resolved to ('127.0.0.1:7687',)):
+Failed to establish connection to ResolvedIPv4Address(('127.0.0.1', 7687)) (reason [Errno 111] Connection refused)
+2026-02-26 16:19:16 | ERROR    | main:lifespan:82 | neo4j init failed: Couldn't connect to 127.0.0.1:7474 (resolved to ('127.0.0.1:7474',)):
+Cannot to connect to Bolt service on ResolvedIPv4Address(('127.0.0.1', 7474)) (looks like HTTP)
+2026-02-26 16:20:23 | ERROR    | main:lifespan:82 | neo4j init failed: URI scheme 'http' is not supported. Supported URI schemes are ['bolt', 'bolt+ssc', 'bolt+s', 'neo4j', 'neo4j+ssc', 'neo4j+s']. Examples: bolt://host[:port] or neo4j://host[:port][?routing_context]

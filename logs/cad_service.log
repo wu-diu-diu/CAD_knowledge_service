@@ -464,3 +464,288 @@
 2026-02-12 15:29:19 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:151 | 清理临时目录: /tmp/cad_upload_3j_jbyrq
 2026-02-12 15:29:19 | INFO     | main:upload_and_process_cad:693 | CAD processing finished: success=1/1
 2026-02-12 15:29:19 | INFO     | main:add_process_time_header:139 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=29.7555s
+2026-02-25 16:20:07 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-25 16:20:29 | INFO     | main:add_process_time_header:135 | request started: POST http://127.0.0.1:8008/ingest
+2026-02-25 16:20:29 | WARNING  | mineru.utils.pdf_page_id:get_end_page_id:8 | end_page_id is out of range, use images length
+2026-02-25 16:20:29 | INFO     | mineru.utils.engine_utils:get_vlm_engine:32 | Using vllm-async-engine as the inference engine for VLM.
+2026-02-25 16:20:34 | INFO     | mineru.backend.vlm.utils:enable_custom_logits_processors:50 | compute_capability: 8.6 >= 8.0 and vllm version: 0.11.0 >= 0.10.1, enable custom_logits_processors
+2026-02-25 16:21:19 | INFO     | mineru.backend.vlm.vlm_analyze:get_model:244 | get vllm-async-engine predictor cost: 49.33s
+2026-02-25 16:21:27 | DEBUG    | mineru.backend.hybrid.hybrid_analyze:aio_doc_analyze:477 | load images cost: 8.55, speed: 18.129 images/s
+2026-02-25 16:23:17 | DEBUG    | mineru.backend.hybrid.hybrid_analyze:aio_doc_analyze:509 | infer finished, cost: 107.2, speed: 1.446 page/s
+2026-02-25 16:23:18 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:269 | Obj index: 5, Sub index: 4, Edge distance: 9
+2026-02-25 16:23:18 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:269 | Obj index: 5, Sub index: 6, Edge distance: 3
+2026-02-25 16:23:18 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:274 | Obj index: 5, edge_dist_diff > 2, matching to subject with min edge distance, index: 6
+2026-02-25 16:23:18 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:269 | Obj index: 2, Sub index: 1, Edge distance: 11
+2026-02-25 16:23:18 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:269 | Obj index: 2, Sub index: 3, Edge distance: 4
+2026-02-25 16:23:18 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:274 | Obj index: 2, edge_dist_diff > 2, matching to subject with min edge distance, index: 3
+2026-02-25 16:23:18 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:269 | Obj index: 4, Sub index: 3, Edge distance: 11
+2026-02-25 16:23:18 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:269 | Obj index: 4, Sub index: 5, Edge distance: 4
+2026-02-25 16:23:18 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:274 | Obj index: 4, edge_dist_diff > 2, matching to subject with min edge distance, index: 5
+2026-02-25 16:23:18 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:269 | Obj index: 1, Sub index: 0, Edge distance: 6
+2026-02-25 16:23:18 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:269 | Obj index: 1, Sub index: 2, Edge distance: 12
+2026-02-25 16:23:18 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:274 | Obj index: 1, edge_dist_diff > 2, matching to subject with min edge distance, index: 0
+2026-02-25 16:23:19 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:269 | Obj index: 2, Sub index: 1, Edge distance: 7
+2026-02-25 16:23:19 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:269 | Obj index: 2, Sub index: 3, Edge distance: 42.20189569201838
+2026-02-25 16:23:19 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:274 | Obj index: 2, edge_dist_diff > 2, matching to subject with min edge distance, index: 1
+2026-02-25 16:23:19 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:269 | Obj index: 4, Sub index: 3, Edge distance: 10
+2026-02-25 16:23:19 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:269 | Obj index: 4, Sub index: 5, Edge distance: 26.0
+2026-02-25 16:23:19 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:274 | Obj index: 4, edge_dist_diff > 2, matching to subject with min edge distance, index: 3
+2026-02-25 16:23:19 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:269 | Obj index: 6, Sub index: 5, Edge distance: 10
+2026-02-25 16:23:19 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:269 | Obj index: 6, Sub index: 8, Edge distance: 48.83646178829912
+2026-02-25 16:23:19 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:274 | Obj index: 6, edge_dist_diff > 2, matching to subject with min edge distance, index: 5
+2026-02-25 16:23:19 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:269 | Obj index: 7, Sub index: 5, Edge distance: 52.15361924162119
+2026-02-25 16:23:19 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:269 | Obj index: 7, Sub index: 8, Edge distance: 17
+2026-02-25 16:23:19 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:274 | Obj index: 7, edge_dist_diff > 2, matching to subject with min edge distance, index: 8
+2026-02-25 16:23:21 | INFO     | mineru.cli.common:_process_output:168 | local output dir is ./output/建筑照明设计_260225_162029/hybrid_auto
+2026-02-25 16:23:22 | INFO     | mineru.cli.gradio_app:to_markdown:122 | Compression successful
+2026-02-25 16:24:06 | INFO     | main:add_process_time_header:139 | request completed: POST http://127.0.0.1:8008/ingest status=200 time=216.7702s
+2026-02-25 16:26:54 | INFO     | main:add_process_time_header:135 | request started: POST http://127.0.0.1:8008/ingest
+2026-02-25 16:26:54 | INFO     | main:add_process_time_header:139 | request completed: POST http://127.0.0.1:8008/ingest status=200 time=0.0333s
+2026-02-25 16:27:02 | INFO     | main:add_process_time_header:135 | request started: POST http://127.0.0.1:8008/ingest
+2026-02-25 16:27:02 | INFO     | main:add_process_time_header:139 | request completed: POST http://127.0.0.1:8008/ingest status=200 time=0.0328s
+2026-02-25 16:27:19 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-25 16:29:05 | INFO     | main:add_process_time_header:135 | request started: POST http://127.0.0.1:8008/ingest
+2026-02-25 16:29:06 | WARNING  | mineru.utils.pdf_page_id:get_end_page_id:8 | end_page_id is out of range, use images length
+2026-02-25 16:29:06 | INFO     | mineru.utils.engine_utils:get_vlm_engine:32 | Using vllm-async-engine as the inference engine for VLM.
+2026-02-25 16:29:09 | INFO     | mineru.backend.vlm.utils:enable_custom_logits_processors:50 | compute_capability: 8.6 >= 8.0 and vllm version: 0.11.0 >= 0.10.1, enable custom_logits_processors
+2026-02-25 16:29:45 | INFO     | mineru.backend.vlm.vlm_analyze:get_model:244 | get vllm-async-engine predictor cost: 39.24s
+2026-02-25 16:29:53 | DEBUG    | mineru.backend.hybrid.hybrid_analyze:aio_doc_analyze:477 | load images cost: 8.31, speed: 18.652 images/s
+2026-02-25 16:31:44 | DEBUG    | mineru.backend.hybrid.hybrid_analyze:aio_doc_analyze:509 | infer finished, cost: 108.04, speed: 1.435 page/s
+2026-02-25 16:31:44 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:269 | Obj index: 5, Sub index: 4, Edge distance: 9
+2026-02-25 16:31:44 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:269 | Obj index: 5, Sub index: 6, Edge distance: 3
+2026-02-25 16:31:44 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:274 | Obj index: 5, edge_dist_diff > 2, matching to subject with min edge distance, index: 6
+2026-02-25 16:31:45 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:269 | Obj index: 2, Sub index: 1, Edge distance: 11
+2026-02-25 16:31:45 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:269 | Obj index: 2, Sub index: 3, Edge distance: 4
+2026-02-25 16:31:45 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:274 | Obj index: 2, edge_dist_diff > 2, matching to subject with min edge distance, index: 3
+2026-02-25 16:31:45 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:269 | Obj index: 4, Sub index: 3, Edge distance: 11
+2026-02-25 16:31:45 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:269 | Obj index: 4, Sub index: 5, Edge distance: 4
+2026-02-25 16:31:45 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:274 | Obj index: 4, edge_dist_diff > 2, matching to subject with min edge distance, index: 5
+2026-02-25 16:31:45 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:269 | Obj index: 1, Sub index: 0, Edge distance: 6
+2026-02-25 16:31:45 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:269 | Obj index: 1, Sub index: 2, Edge distance: 12
+2026-02-25 16:31:45 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:274 | Obj index: 1, edge_dist_diff > 2, matching to subject with min edge distance, index: 0
+2026-02-25 16:31:46 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:269 | Obj index: 2, Sub index: 1, Edge distance: 6
+2026-02-25 16:31:46 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:269 | Obj index: 2, Sub index: 3, Edge distance: 41.97618372363071
+2026-02-25 16:31:46 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:274 | Obj index: 2, edge_dist_diff > 2, matching to subject with min edge distance, index: 1
+2026-02-25 16:31:46 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:269 | Obj index: 4, Sub index: 3, Edge distance: 9
+2026-02-25 16:31:46 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:269 | Obj index: 4, Sub index: 5, Edge distance: 25.632011235952593
+2026-02-25 16:31:46 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:274 | Obj index: 4, edge_dist_diff > 2, matching to subject with min edge distance, index: 3
+2026-02-25 16:31:46 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:269 | Obj index: 6, Sub index: 5, Edge distance: 10
+2026-02-25 16:31:46 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:269 | Obj index: 6, Sub index: 8, Edge distance: 48.83646178829912
+2026-02-25 16:31:46 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:274 | Obj index: 6, edge_dist_diff > 2, matching to subject with min edge distance, index: 5
+2026-02-25 16:31:46 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:269 | Obj index: 7, Sub index: 5, Edge distance: 51.31276644267
+2026-02-25 16:31:46 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:269 | Obj index: 7, Sub index: 8, Edge distance: 17
+2026-02-25 16:31:46 | DEBUG    | mineru.utils.magic_model_utils:tie_up_category_by_index:274 | Obj index: 7, edge_dist_diff > 2, matching to subject with min edge distance, index: 8
+2026-02-25 16:31:48 | INFO     | mineru.cli.common:_process_output:168 | local output dir is ./output/建筑照明设计_260225_162906/hybrid_auto
+2026-02-25 16:31:48 | INFO     | mineru.cli.gradio_app:to_markdown:122 | Compression successful
+2026-02-25 16:31:57 | INFO     | main:add_process_time_header:139 | request completed: POST http://127.0.0.1:8008/ingest status=200 time=171.6334s
+2026-02-25 16:35:34 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-25 16:35:54 | INFO     | main:add_process_time_header:135 | request started: POST http://127.0.0.1:8008/ingest
+2026-02-25 16:35:54 | WARNING  | mineru.utils.pdf_page_id:get_end_page_id:8 | end_page_id is out of range, use images length
+2026-02-25 16:36:05 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:113 | load images cost: 10.75, speed: 14.419 images/s
+2026-02-25 16:36:05 | INFO     | mineru.backend.pipeline.pipeline_analyze:doc_analyze:129 | Batch 1/1: 155 pages/155 pages
+2026-02-25 16:36:06 | INFO     | mineru.backend.pipeline.pipeline_analyze:batch_image_analyze:189 | GPU Memory: 24 GB, Batch Ratio: 16. 
+2026-02-25 16:36:06 | INFO     | mineru.backend.pipeline.model_init:__init__:209 | DocAnalysis init, this may take some times......
+2026-02-25 16:36:22 | INFO     | mineru.backend.pipeline.model_init:__init__:271 | DocAnalysis init done!
+2026-02-25 16:36:22 | INFO     | mineru.backend.pipeline.pipeline_analyze:custom_model_init:65 | model init cost: 16.06474542617798
+2026-02-25 16:38:46 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:136 | infer finished, cost: 160.81, speed: 0.964 page/s
+2026-02-25 16:39:02 | INFO     | mineru.cli.common:_process_output:168 | local output dir is ./output/建筑照明设计_260225_163554/auto
+2026-02-25 16:39:03 | INFO     | mineru.cli.gradio_app:to_markdown:122 | Compression successful
+2026-02-25 16:39:49 | INFO     | main:add_process_time_header:139 | request completed: POST http://127.0.0.1:8008/ingest status=200 time=235.4434s
+2026-02-25 16:40:52 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-25 16:42:50 | INFO     | main:add_process_time_header:135 | request started: POST http://127.0.0.1:8008/ingest
+2026-02-25 16:42:50 | INFO     | main:add_process_time_header:139 | request completed: POST http://127.0.0.1:8008/ingest status=200 time=0.0314s
+2026-02-25 16:42:54 | INFO     | main:add_process_time_header:135 | request started: POST http://127.0.0.1:8008/ingest
+2026-02-25 16:42:54 | INFO     | main:add_process_time_header:139 | request completed: POST http://127.0.0.1:8008/ingest status=200 time=0.0338s
+2026-02-25 16:43:42 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-25 16:48:57 | INFO     | main:add_process_time_header:135 | request started: POST http://127.0.0.1:8008/ingest
+2026-02-25 16:48:57 | INFO     | main:add_process_time_header:139 | request completed: POST http://127.0.0.1:8008/ingest status=200 time=0.0301s
+2026-02-25 16:49:10 | INFO     | main:add_process_time_header:135 | request started: POST http://127.0.0.1:8008/ingest
+2026-02-25 16:49:10 | INFO     | main:add_process_time_header:139 | request completed: POST http://127.0.0.1:8008/ingest status=200 time=0.0357s
+2026-02-25 16:50:39 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-25 19:59:30 | INFO     | main:add_process_time_header:135 | request started: POST http://127.0.0.1:8008/ingest
+2026-02-25 19:59:30 | WARNING  | mineru.utils.pdf_page_id:get_end_page_id:8 | end_page_id is out of range, use images length
+2026-02-25 19:59:45 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:113 | load images cost: 12.66, speed: 12.243 images/s
+2026-02-25 19:59:45 | INFO     | mineru.backend.pipeline.pipeline_analyze:doc_analyze:129 | Batch 1/1: 155 pages/155 pages
+2026-02-25 19:59:46 | INFO     | mineru.backend.pipeline.pipeline_analyze:batch_image_analyze:189 | GPU Memory: 24 GB, Batch Ratio: 16. 
+2026-02-25 19:59:46 | INFO     | mineru.backend.pipeline.model_init:__init__:209 | DocAnalysis init, this may take some times......
+2026-02-25 19:59:58 | INFO     | mineru.backend.pipeline.model_init:__init__:271 | DocAnalysis init done!
+2026-02-25 19:59:58 | INFO     | mineru.backend.pipeline.pipeline_analyze:custom_model_init:65 | model init cost: 11.901805639266968
+2026-02-25 20:02:07 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:136 | infer finished, cost: 142.11, speed: 1.091 page/s
+2026-02-25 20:02:20 | INFO     | mineru.cli.common:_process_output:168 | local output dir is ./output/建筑照明设计_260225_195930/auto
+2026-02-25 20:02:21 | INFO     | mineru.cli.gradio_app:to_markdown:122 | Compression successful
+2026-02-25 20:10:06 | INFO     | main:add_process_time_header:139 | request completed: POST http://127.0.0.1:8008/ingest status=200 time=636.0224s
+2026-02-25 20:50:34 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-25 20:53:03 | INFO     | main:add_process_time_header:137 | request started: POST http://127.0.0.1:8008/ingest
+2026-02-25 20:53:03 | WARNING  | mineru.utils.pdf_page_id:get_end_page_id:8 | end_page_id is out of range, use images length
+2026-02-25 20:53:14 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:113 | load images cost: 10.53, speed: 14.72 images/s
+2026-02-25 20:53:14 | INFO     | mineru.backend.pipeline.pipeline_analyze:doc_analyze:129 | Batch 1/1: 155 pages/155 pages
+2026-02-25 20:53:14 | INFO     | mineru.backend.pipeline.pipeline_analyze:batch_image_analyze:189 | GPU Memory: 24 GB, Batch Ratio: 16. 
+2026-02-25 20:53:14 | INFO     | mineru.backend.pipeline.model_init:__init__:209 | DocAnalysis init, this may take some times......
+2026-02-25 20:53:24 | INFO     | mineru.backend.pipeline.model_init:__init__:271 | DocAnalysis init done!
+2026-02-25 20:53:24 | INFO     | mineru.backend.pipeline.pipeline_analyze:custom_model_init:65 | model init cost: 10.324627161026001
+2026-02-25 20:55:33 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:136 | infer finished, cost: 139.55, speed: 1.111 page/s
+2026-02-25 20:55:45 | INFO     | mineru.cli.common:_process_output:168 | local output dir is ./output/建筑照明设计_260225_205303/auto
+2026-02-25 20:55:46 | INFO     | mineru.cli.gradio_app:to_markdown:122 | Compression successful
+2026-02-25 20:56:18 | INFO     | main:add_process_time_header:141 | request completed: POST http://127.0.0.1:8008/ingest status=200 time=195.6347s
+2026-02-25 21:02:10 | INFO     | main:add_process_time_header:137 | request started: POST http://127.0.0.1:8008/ingest
+2026-02-25 21:02:10 | WARNING  | mineru.utils.pdf_page_id:get_end_page_id:8 | end_page_id is out of range, use images length
+2026-02-25 21:02:22 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:113 | load images cost: 12.11, speed: 12.799 images/s
+2026-02-25 21:02:22 | INFO     | mineru.backend.pipeline.pipeline_analyze:doc_analyze:129 | Batch 1/1: 155 pages/155 pages
+2026-02-25 21:02:22 | INFO     | mineru.backend.pipeline.pipeline_analyze:batch_image_analyze:189 | GPU Memory: 24 GB, Batch Ratio: 16. 
+2026-02-25 21:04:11 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:136 | infer finished, cost: 108.9, speed: 1.423 page/s
+2026-02-25 21:04:21 | INFO     | mineru.cli.common:_process_output:168 | local output dir is ./output/建筑照明设计_260225_210210/auto
+2026-02-25 21:04:22 | INFO     | mineru.cli.gradio_app:to_markdown:122 | Compression successful
+2026-02-25 21:04:54 | INFO     | main:add_process_time_header:141 | request completed: POST http://127.0.0.1:8008/ingest status=200 time=164.3709s
+2026-02-25 21:06:40 | INFO     | main:add_process_time_header:137 | request started: POST http://127.0.0.1:8008/search
+2026-02-25 21:06:40 | INFO     | main:add_process_time_header:141 | request completed: POST http://127.0.0.1:8008/search status=200 time=0.0035s
+2026-02-25 21:10:53 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-25 21:12:17 | INFO     | main:add_process_time_header:137 | request started: POST http://127.0.0.1:8008/ingest
+2026-02-25 21:12:17 | WARNING  | mineru.utils.pdf_page_id:get_end_page_id:8 | end_page_id is out of range, use images length
+2026-02-25 21:12:32 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:113 | load images cost: 11.99, speed: 12.927 images/s
+2026-02-25 21:12:32 | INFO     | mineru.backend.pipeline.pipeline_analyze:doc_analyze:129 | Batch 1/1: 155 pages/155 pages
+2026-02-25 21:12:33 | INFO     | mineru.backend.pipeline.pipeline_analyze:batch_image_analyze:189 | GPU Memory: 24 GB, Batch Ratio: 16. 
+2026-02-25 21:12:33 | INFO     | mineru.backend.pipeline.model_init:__init__:209 | DocAnalysis init, this may take some times......
+2026-02-25 21:12:46 | INFO     | mineru.backend.pipeline.model_init:__init__:271 | DocAnalysis init done!
+2026-02-25 21:12:46 | INFO     | mineru.backend.pipeline.pipeline_analyze:custom_model_init:65 | model init cost: 13.541463851928711
+2026-02-25 21:14:57 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:136 | infer finished, cost: 144.82, speed: 1.07 page/s
+2026-02-25 21:15:10 | INFO     | mineru.cli.common:_process_output:168 | local output dir is ./output/建筑照明设计_260225_211217/auto
+2026-02-25 21:15:11 | INFO     | mineru.cli.gradio_app:to_markdown:122 | Compression successful
+2026-02-25 21:15:55 | INFO     | main:add_process_time_header:141 | request completed: POST http://127.0.0.1:8008/ingest status=200 time=217.8496s
+2026-02-25 21:15:55 | INFO     | main:add_process_time_header:137 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-25 21:15:55 | INFO     | main:upload_and_process_cad:681 | upload request received: file_count=1
+2026-02-25 21:15:55 | INFO     | main:upload_and_process_cad:701 | read file: output_20260225_210657_344.png, size=146680 bytes
+2026-02-25 21:15:55 | INFO     | main:upload_and_process_cad:713 | using custom CAD parameters
+2026-02-25 21:15:55 | INFO     | preprocess.cad_service:process_uploaded_files:164 | 开始处理上传的文件，共 1 个文件
+2026-02-25 21:15:55 | DEBUG    | preprocess.cad_service:save_uploaded_files:134 | 保存上传文件: /tmp/cad_upload_mst13vf6/output_20260225_210657_344.png
+2026-02-25 21:15:55 | DEBUG    | preprocess.cad_service:process_uploaded_files:186 | 使用CAD参数: {'Xmin': 17861.0548767105, 'Ymin': 21785.821903112, 'Xmax': 45662.2744148889, 'Ymax': 71210.2121932069}
+2026-02-25 21:15:55 | INFO     | preprocess.cad_service:process_uploaded_files:189 | 开始批量处理上传的图像...
+2026-02-25 21:16:35 | INFO     | preprocess.cad_service:process_uploaded_files:202 | 批量处理完成: 1/1 个图像成功
+2026-02-25 21:16:35 | INFO     | preprocess.cad_service:process_uploaded_files:220 | CAD处理成功: 提取了 18 个房间的坐标
+2026-02-25 21:16:35 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:151 | 清理临时目录: /tmp/cad_upload_mst13vf6
+2026-02-25 21:16:35 | INFO     | main:upload_and_process_cad:744 | CAD processing finished: success=1/1
+2026-02-25 21:16:35 | INFO     | main:add_process_time_header:141 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=39.6716s
+2026-02-25 21:22:26 | INFO     | main:add_process_time_header:137 | request started: POST http://127.0.0.1:8008/ingest
+2026-02-25 21:22:26 | WARNING  | mineru.utils.pdf_page_id:get_end_page_id:8 | end_page_id is out of range, use images length
+2026-02-25 21:22:39 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:113 | load images cost: 13.02, speed: 11.905 images/s
+2026-02-25 21:22:39 | INFO     | mineru.backend.pipeline.pipeline_analyze:doc_analyze:129 | Batch 1/1: 155 pages/155 pages
+2026-02-25 21:22:39 | INFO     | mineru.backend.pipeline.pipeline_analyze:batch_image_analyze:189 | GPU Memory: 24 GB, Batch Ratio: 16. 
+2026-02-25 21:24:28 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:136 | infer finished, cost: 109.63, speed: 1.414 page/s
+2026-02-25 21:24:39 | INFO     | mineru.cli.common:_process_output:168 | local output dir is ./output/建筑照明设计_260225_212226/auto
+2026-02-25 21:24:40 | INFO     | mineru.cli.gradio_app:to_markdown:122 | Compression successful
+2026-02-25 21:25:13 | INFO     | main:add_process_time_header:141 | request completed: POST http://127.0.0.1:8008/ingest status=200 time=167.7868s
+2026-02-25 21:25:36 | INFO     | main:add_process_time_header:137 | request started: POST http://127.0.0.1:8008/ingest
+2026-02-25 21:25:36 | WARNING  | mineru.utils.pdf_page_id:get_end_page_id:8 | end_page_id is out of range, use images length
+2026-02-25 21:25:50 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:113 | load images cost: 13.09, speed: 11.841 images/s
+2026-02-25 21:25:50 | INFO     | mineru.backend.pipeline.pipeline_analyze:doc_analyze:129 | Batch 1/1: 155 pages/155 pages
+2026-02-25 21:25:50 | INFO     | mineru.backend.pipeline.pipeline_analyze:batch_image_analyze:189 | GPU Memory: 24 GB, Batch Ratio: 16. 
+2026-02-25 21:27:41 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:136 | infer finished, cost: 111.63, speed: 1.389 page/s
+2026-02-25 21:27:52 | INFO     | mineru.cli.common:_process_output:168 | local output dir is ./output/建筑照明设计_260225_212536/auto
+2026-02-25 21:27:53 | INFO     | mineru.cli.gradio_app:to_markdown:122 | Compression successful
+2026-02-25 21:28:24 | INFO     | main:add_process_time_header:141 | request completed: POST http://127.0.0.1:8008/ingest status=200 time=168.0665s
+2026-02-25 21:43:51 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-25 21:46:35 | INFO     | main:add_process_time_header:137 | request started: POST http://127.0.0.1:8008/ingest
+2026-02-25 21:47:45 | WARNING  | mineru.utils.pdf_page_id:get_end_page_id:8 | end_page_id is out of range, use images length
+2026-02-25 21:48:06 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:113 | load images cost: 18.1, speed: 8.564 images/s
+2026-02-25 21:48:06 | INFO     | mineru.backend.pipeline.pipeline_analyze:doc_analyze:129 | Batch 1/1: 155 pages/155 pages
+2026-02-25 21:48:07 | INFO     | mineru.backend.pipeline.pipeline_analyze:batch_image_analyze:189 | GPU Memory: 24 GB, Batch Ratio: 16. 
+2026-02-25 21:48:07 | INFO     | mineru.backend.pipeline.model_init:__init__:209 | DocAnalysis init, this may take some times......
+2026-02-25 21:48:21 | INFO     | mineru.backend.pipeline.model_init:__init__:271 | DocAnalysis init done!
+2026-02-25 21:48:21 | INFO     | mineru.backend.pipeline.pipeline_analyze:custom_model_init:65 | model init cost: 14.185442209243774
+2026-02-25 21:51:02 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:136 | infer finished, cost: 176.11, speed: 0.88 page/s
+2026-02-25 21:51:22 | INFO     | mineru.cli.common:_process_output:168 | local output dir is ./output/建筑照明设计_260225_214745/auto
+2026-02-25 21:51:23 | INFO     | mineru.cli.gradio_app:to_markdown:122 | Compression successful
+2026-02-26 09:48:06 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-26 09:48:23 | INFO     | main:add_process_time_header:137 | request started: POST http://127.0.0.1:8008/ingest
+2026-02-26 09:48:23 | WARNING  | mineru.utils.pdf_page_id:get_end_page_id:8 | end_page_id is out of range, use images length
+2026-02-26 09:48:34 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:113 | load images cost: 10.67, speed: 14.527 images/s
+2026-02-26 09:48:34 | INFO     | mineru.backend.pipeline.pipeline_analyze:doc_analyze:129 | Batch 1/1: 155 pages/155 pages
+2026-02-26 09:48:35 | INFO     | mineru.backend.pipeline.pipeline_analyze:batch_image_analyze:189 | GPU Memory: 24 GB, Batch Ratio: 16. 
+2026-02-26 09:48:35 | INFO     | mineru.backend.pipeline.model_init:__init__:209 | DocAnalysis init, this may take some times......
+2026-02-26 09:48:42 | INFO     | mineru.backend.pipeline.model_init:__init__:271 | DocAnalysis init done!
+2026-02-26 09:48:42 | INFO     | mineru.backend.pipeline.pipeline_analyze:custom_model_init:65 | model init cost: 7.333946466445923
+2026-02-26 09:50:40 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:136 | infer finished, cost: 125.79, speed: 1.232 page/s
+2026-02-26 09:50:50 | INFO     | mineru.cli.common:_process_output:168 | local output dir is ./output/建筑照明设计_260226_094823/auto
+2026-02-26 09:50:51 | INFO     | mineru.cli.gradio_app:to_markdown:122 | Compression successful
+2026-02-26 09:51:26 | INFO     | main:add_process_time_header:141 | request completed: POST http://127.0.0.1:8008/ingest status=200 time=182.9471s
+2026-02-26 10:07:09 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-26 10:09:00 | INFO     | main:add_process_time_header:146 | request started: POST http://127.0.0.1:8008/ingest
+2026-02-26 10:09:17 | WARNING  | mineru.utils.pdf_page_id:get_end_page_id:8 | end_page_id is out of range, use images length
+2026-02-26 10:09:37 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:113 | load images cost: 17.24, speed: 8.991 images/s
+2026-02-26 10:09:37 | INFO     | mineru.backend.pipeline.pipeline_analyze:doc_analyze:129 | Batch 1/1: 155 pages/155 pages
+2026-02-26 10:09:38 | INFO     | mineru.backend.pipeline.pipeline_analyze:batch_image_analyze:189 | GPU Memory: 24 GB, Batch Ratio: 16. 
+2026-02-26 10:09:38 | INFO     | mineru.backend.pipeline.model_init:__init__:209 | DocAnalysis init, this may take some times......
+2026-02-26 10:09:52 | INFO     | mineru.backend.pipeline.model_init:__init__:271 | DocAnalysis init done!
+2026-02-26 10:09:52 | INFO     | mineru.backend.pipeline.pipeline_analyze:custom_model_init:65 | model init cost: 13.949831008911133
+2026-02-26 10:12:28 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:136 | infer finished, cost: 170.29, speed: 0.91 page/s
+2026-02-26 10:12:47 | INFO     | mineru.cli.common:_process_output:168 | local output dir is ./output/建筑照明设计_260226_100917/auto
+2026-02-26 10:12:48 | INFO     | mineru.cli.gradio_app:to_markdown:122 | Compression successful
+2026-02-26 10:36:03 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-26 10:36:56 | INFO     | main:add_process_time_header:146 | request started: POST http://127.0.0.1:8008/ingest
+2026-02-26 10:37:01 | WARNING  | mineru.utils.pdf_page_id:get_end_page_id:8 | end_page_id is out of range, use images length
+2026-02-26 10:37:16 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:113 | load images cost: 12.12, speed: 12.789 images/s
+2026-02-26 10:37:16 | INFO     | mineru.backend.pipeline.pipeline_analyze:doc_analyze:129 | Batch 1/1: 155 pages/155 pages
+2026-02-26 10:37:17 | INFO     | mineru.backend.pipeline.pipeline_analyze:batch_image_analyze:189 | GPU Memory: 24 GB, Batch Ratio: 16. 
+2026-02-26 10:37:17 | INFO     | mineru.backend.pipeline.model_init:__init__:209 | DocAnalysis init, this may take some times......
+2026-02-26 10:37:26 | INFO     | mineru.backend.pipeline.model_init:__init__:271 | DocAnalysis init done!
+2026-02-26 10:37:26 | INFO     | mineru.backend.pipeline.pipeline_analyze:custom_model_init:65 | model init cost: 9.672012329101562
+2026-02-26 10:39:27 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:136 | infer finished, cost: 131.12, speed: 1.182 page/s
+2026-02-26 10:39:38 | INFO     | mineru.cli.common:_process_output:168 | local output dir is ./output/建筑照明设计_260226_103701/auto
+2026-02-26 10:39:39 | INFO     | mineru.cli.gradio_app:to_markdown:122 | Compression successful
+2026-02-26 11:17:31 | INFO     | main:add_process_time_header:150 | request completed: POST http://127.0.0.1:8008/ingest status=200 time=2429.7501s
+2026-02-26 11:44:21 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-26 11:44:31 | INFO     | main:add_process_time_header:170 | request started: POST http://127.0.0.1:8008/ingest
+2026-02-26 11:44:31 | WARNING  | mineru.utils.pdf_page_id:get_end_page_id:8 | end_page_id is out of range, use images length
+2026-02-26 11:44:42 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:113 | load images cost: 10.51, speed: 14.748 images/s
+2026-02-26 11:44:42 | INFO     | mineru.backend.pipeline.pipeline_analyze:doc_analyze:129 | Batch 1/1: 155 pages/155 pages
+2026-02-26 11:44:42 | INFO     | mineru.backend.pipeline.pipeline_analyze:batch_image_analyze:189 | GPU Memory: 24 GB, Batch Ratio: 16. 
+2026-02-26 11:44:42 | INFO     | mineru.backend.pipeline.model_init:__init__:209 | DocAnalysis init, this may take some times......
+2026-02-26 11:44:50 | INFO     | mineru.backend.pipeline.model_init:__init__:271 | DocAnalysis init done!
+2026-02-26 11:44:50 | INFO     | mineru.backend.pipeline.pipeline_analyze:custom_model_init:65 | model init cost: 7.557562351226807
+2026-02-26 11:46:52 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:136 | infer finished, cost: 130.16, speed: 1.191 page/s
+2026-02-26 11:47:02 | INFO     | mineru.cli.common:_process_output:168 | local output dir is ./output/建筑照明设计_260226_114431/auto
+2026-02-26 11:47:03 | INFO     | mineru.cli.gradio_app:to_markdown:122 | Compression successful
+2026-02-26 11:47:40 | INFO     | main:add_process_time_header:174 | request completed: POST http://127.0.0.1:8008/ingest status=200 time=189.4581s
+2026-02-26 11:49:23 | INFO     | main:add_process_time_header:170 | request started: POST http://127.0.0.1:8008/kg/llm-query
+2026-02-26 11:49:23 | INFO     | main:add_process_time_header:174 | request completed: POST http://127.0.0.1:8008/kg/llm-query status=422 time=0.0029s
+2026-02-26 11:50:15 | INFO     | main:add_process_time_header:170 | request started: POST http://127.0.0.1:8008/kg/llm-query
+2026-02-26 11:50:15 | INFO     | main:add_process_time_header:174 | request completed: POST http://127.0.0.1:8008/kg/llm-query status=422 time=0.0020s
+2026-02-26 11:50:35 | INFO     | main:add_process_time_header:170 | request started: POST http://127.0.0.1:8008/kg/llm-query
+2026-02-26 11:50:35 | INFO     | main:add_process_time_header:174 | request completed: POST http://127.0.0.1:8008/kg/llm-query status=422 time=0.0019s
+2026-02-26 11:51:18 | INFO     | main:add_process_time_header:170 | request started: POST http://127.0.0.1:8008/kg/llm-query
+2026-02-26 11:51:25 | INFO     | main:add_process_time_header:174 | request completed: POST http://127.0.0.1:8008/kg/llm-query status=503 time=7.4381s
+2026-02-26 11:53:00 | INFO     | main:add_process_time_header:170 | request started: GET http://127.0.0.1:8008/kg/status
+2026-02-26 11:53:00 | INFO     | main:add_process_time_header:174 | request completed: GET http://127.0.0.1:8008/kg/status status=200 time=0.1131s
+2026-02-26 11:57:03 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-26 11:57:51 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-26 11:58:22 | ERROR    | main:lifespan:82 | neo4j init failed: Couldn't connect to 127.0.0.1:7687 (resolved to ('127.0.0.1:7687',)):
+Failed to establish connection to ResolvedIPv4Address(('127.0.0.1', 7687)) (reason [Errno 111] Connection refused)
+2026-02-26 16:18:42 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-26 16:19:16 | ERROR    | main:lifespan:82 | neo4j init failed: Couldn't connect to 127.0.0.1:7474 (resolved to ('127.0.0.1:7474',)):
+Cannot to connect to Bolt service on ResolvedIPv4Address(('127.0.0.1', 7474)) (looks like HTTP)
+2026-02-26 16:20:23 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-26 16:20:23 | ERROR    | main:lifespan:82 | neo4j init failed: URI scheme 'http' is not supported. Supported URI schemes are ['bolt', 'bolt+ssc', 'bolt+s', 'neo4j', 'neo4j+ssc', 'neo4j+s']. Examples: bolt://host[:port] or neo4j://host[:port][?routing_context]
+2026-02-26 16:23:43 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-26 16:23:57 | INFO     | main:add_process_time_header:176 | request started: GET http://127.0.0.1:8008/kg/status
+2026-02-26 16:23:58 | INFO     | main:add_process_time_header:180 | request completed: GET http://127.0.0.1:8008/kg/status status=200 time=0.1383s
+2026-02-26 16:27:39 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/ingest
+2026-02-26 16:27:39 | WARNING  | mineru.utils.pdf_page_id:get_end_page_id:8 | end_page_id is out of range, use images length
+2026-02-26 16:27:50 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:113 | load images cost: 10.79, speed: 14.365 images/s
+2026-02-26 16:27:50 | INFO     | mineru.backend.pipeline.pipeline_analyze:doc_analyze:129 | Batch 1/1: 155 pages/155 pages
+2026-02-26 16:27:51 | INFO     | mineru.backend.pipeline.pipeline_analyze:batch_image_analyze:189 | GPU Memory: 24 GB, Batch Ratio: 16. 
+2026-02-26 16:27:51 | INFO     | mineru.backend.pipeline.model_init:__init__:209 | DocAnalysis init, this may take some times......
+2026-02-26 16:28:02 | INFO     | mineru.backend.pipeline.model_init:__init__:271 | DocAnalysis init done!
+2026-02-26 16:28:02 | INFO     | mineru.backend.pipeline.pipeline_analyze:custom_model_init:65 | model init cost: 10.732164859771729
+2026-02-26 16:30:01 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:136 | infer finished, cost: 130.76, speed: 1.185 page/s
+2026-02-26 16:30:12 | INFO     | mineru.cli.common:_process_output:168 | local output dir is ./output/建筑照明设计_260226_162739/auto
+2026-02-26 16:30:13 | INFO     | mineru.cli.gradio_app:to_markdown:122 | Compression successful
+2026-02-26 16:31:03 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/ingest status=200 time=203.7821s
+2026-02-26 16:54:48 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/kg/llm-query
+2026-02-26 16:54:48 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/kg/llm-query status=422 time=0.0040s
+2026-02-26 16:55:18 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/kg/llm-query
+2026-02-26 16:55:25 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/kg/llm-query status=200 time=6.9075s
+2026-02-26 16:56:17 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/kg/llm-query
+2026-02-26 16:56:24 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/kg/llm-query status=200 time=6.7304s
+2026-02-26 16:59:04 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-26 17:25:12 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/kg/llm-query
+2026-02-26 17:33:10 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-26 17:34:15 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/kg/llm-query

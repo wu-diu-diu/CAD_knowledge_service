@@ -21,10 +21,15 @@ from sentence_transformers import SentenceTransformer
 
 from mineru.cli.gradio_app import to_markdown
 from utils.transfer import process_markdown_file, fix_md_headings, process_images_in_markdown
+from kg.llm_query import llm_query_graph
+from kg.pipeline import ingest_markdown_to_kg, kg_already_ingested
+from kg.query import query_graph_requirements, kg_status
+from kg.store_neo4j import close_driver as close_neo4j_driver, neo4j_enabled, get_driver as get_neo4j_driver, run_cypher_query
 
 BASE_DIR = Path(__file__).resolve().parent
 DOCS_DIR = BASE_DIR / "docs"
 STORE_DIR = BASE_DIR / "rag_store"
+KG_STORE_DIR = BASE_DIR / "kg_store"
 UPLOAD_DIR = STORE_DIR / "uploads"
 INDEX_PATH = STORE_DIR / "index.faiss"
 META_PATH = STORE_DIR / "metadata.json"
@@ -45,9 +50,15 @@ EMBED_BATCH_SIZE = int(os.getenv("RAG_EMBED_BATCH_SIZE", "64"))
 EMBED_MULTI_GPU = os.getenv("RAG_EMBED_MULTI_GPU", "0").lower() in ("1", "true", "yes")
 CHUNK_SIZE = int(os.getenv("RAG_CHUNK_SIZE", "800"))
 CHUNK_OVERLAP = int(os.getenv("RAG_CHUNK_OVERLAP", "120"))
-MINERU_BACKEND = os.getenv("RAG_MINERU_BACKEND", "hybrid-auto-engine")
+MINERU_BACKEND = os.getenv("RAG_MINERU_BACKEND", "pipeline")
 MINERU_LANG = os.getenv("RAG_MINERU_LANG", "ch")
 MINERU_OCR = os.getenv("RAG_MINERU_OCR", "false").lower() in ("1", "true", "yes")
+# 设置neo4j环境变量
+os.environ['KG_NEO4J_ENABLED'] = '1'
+os.environ['KG_NEO4J_URI'] = 'bolt://127.0.0.1:7687'
+os.environ['KG_NEO4J_USER'] = 'neo4j'
+os.environ['KG_NEO4J_PASSWORD'] = 'password'
+os.environ['KG_NEO4J_DATABASE'] = 'neo4j' 
 MINERU_MAX_PAGES = int(os.getenv("RAG_MINERU_MAX_PAGES", "1000"))
 cad_logger = get_cad_logger("cad_api")
 _model: Optional[SentenceTransformer] = None
@@ -64,7 +75,13 @@ async def lifespan(app: FastAPI):
     _index = load_index()
     if _index is None and _metadata:
         rebuild_index_from_metadata()
+    if neo4j_enabled():
+        try:
+            get_neo4j_driver()
+        except Exception as e:
+            cad_logger.error(f"neo4j init failed: {e}")
     yield
+    close_neo4j_driver()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -79,6 +96,30 @@ app.add_middleware(
 class SearchRequest(BaseModel):
     query: str
     top_k: int = 5
+
+
+class KgQueryRequest(BaseModel):
+    query: str = ""
+    entity: Optional[str] = None
+    metric: Optional[str] = None
+    source_id: Optional[str] = None
+    top_k: int = 10
+
+
+class CypherQueryRequest(BaseModel):
+    cypher: str
+    params: Optional[dict] = None
+    top_k: int = 200
+
+
+class KgLlmQueryRequest(BaseModel):
+    question: str
+    entity: Optional[str] = None
+    metric: Optional[str] = None
+    source_id: Optional[str] = None
+    top_k: int = 20
+    model: Optional[str] = None
+    synthesize_answer: bool = True
 
 
 def _cad_response_to_payload(obj) -> dict:
@@ -162,6 +203,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 def ensure_dirs() -> None:
     STORE_DIR.mkdir(parents=True, exist_ok=True)
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    KG_STORE_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def file_sha256(path: Path) -> str:
@@ -428,25 +470,30 @@ async def parse_pdf(path: Path) -> str:
     fix_md_headings(output_path)
 
     processed = output_path.read_text(encoding="utf-8", errors="ignore")
-    # processed = process_markdown_file(processed)
-    # processed = process_images_in_markdown(processed, output_path)
+    processed = process_markdown_file(processed)
+    processed = process_images_in_markdown(processed, output_path)
     output_path.write_text(processed, encoding="utf-8")
 
     return processed
 
 
 async def load_text_from_file(path: Path) -> Tuple[str, str]:
+    raw_text, clean_text, source_type = await load_source_contents(path)
+    return clean_text, source_type
+
+
+async def load_source_contents(path: Path) -> Tuple[str, str, str]:
     suffix = path.suffix.lower()
     if suffix == ".pdf":
         md = await parse_pdf(path)
-        return clean_markdown(md), "pdf"
+        return md, clean_markdown(md), "pdf"
     if suffix == ".md":
         content = path.read_text(encoding="utf-8", errors="ignore")
-        return clean_markdown(content), "md"
+        return content, clean_markdown(content), "md"
     raise ValueError(f"Unsupported file type: {suffix}")
 
 
-async def ingest_path(path: Path) -> Tuple[int, int]:
+async def ingest_path(path: Path, mode: str = "vector") -> dict:
     if path.is_dir():
         files = [
             p for p in path.rglob("*")
@@ -456,52 +503,87 @@ async def ingest_path(path: Path) -> Tuple[int, int]:
         files = [path]
 
     if not files:
-        return 0, 0
+        return {
+            "files": 0,
+            "chunks": 0,
+            "kg_files": 0,
+            "kg_nodes": 0,
+            "kg_edges": 0,
+            "kg_requirements": 0,
+        }
+
+    if mode not in {"vector", "kg", "both"}:
+        raise ValueError(f"Unsupported ingest mode: {mode}")
 
     existing = {item.get("source_id") for item in _metadata}
     total_chunks = 0
     processed_files = 0
+    kg_files = 0
+    kg_nodes = 0
+    kg_edges = 0
+    kg_requirements = 0
 
     for file_path in files:
         source_id = file_sha256(file_path)
-        if source_id in existing:
-            continue
 
         try:
-            text, source_type = await load_text_from_file(file_path)
+            raw_text, vector_text, source_type = await load_source_contents(file_path)
         except Exception:
             continue
 
-        chunks = chunk_text(text)
-        if not chunks:
-            continue
+        if mode in {"vector", "both"} and source_id not in existing:
+            chunks = chunk_text(vector_text)
+            if chunks:
+                vectors = embed_texts(chunks)
+                index = ensure_index(vectors.shape[1])
+                index.add(vectors)
 
-        vectors = embed_texts(chunks)
-        index = ensure_index(vectors.shape[1])
-        index.add(vectors)
+                base_offset = len(_metadata)
+                for i, chunk in enumerate(chunks):
+                    _metadata.append(
+                        {
+                            "id": base_offset + i,
+                            "text": chunk,
+                            "source_path": str(file_path),
+                            "source_type": source_type,
+                            "source_id": source_id,
+                            "chunk_index": i,
+                        }
+                    )
+                total_chunks += len(chunks)
+                processed_files += 1
+                existing.add(source_id)
 
-        base_offset = len(_metadata)
-        for i, chunk in enumerate(chunks):
-            _metadata.append(
-                {
-                    "id": base_offset + i,
-                    "text": chunk,
-                    "source_path": str(file_path),
-                    "source_type": source_type,
-                    "source_id": source_id,
-                    "chunk_index": i,
-                }
+        should_ingest_kg = False
+        if mode in {"kg", "both"}:
+            local_kg_exists = kg_already_ingested(KG_STORE_DIR, source_id)
+            should_ingest_kg = (not local_kg_exists) or neo4j_enabled()
+
+        if should_ingest_kg:
+            kg_stats = ingest_markdown_to_kg(
+                md_text=raw_text,
+                store_dir=KG_STORE_DIR,
+                source_id=source_id,
+                source_path=str(file_path),
+                source_type=source_type,
             )
+            kg_files += 1
+            kg_nodes += kg_stats.get("nodes", 0)
+            kg_edges += kg_stats.get("edges", 0)
+            kg_requirements += kg_stats.get("requirements", 0)
 
-        total_chunks += len(chunks)
-        processed_files += 1
-        existing.add(source_id)
-
-    if processed_files > 0:
+    if mode in {"vector", "both"} and processed_files > 0:
         save_index(_index)
         save_metadata(_metadata)
 
-    return processed_files, total_chunks
+    return {
+        "files": processed_files,
+        "chunks": total_chunks,
+        "kg_files": kg_files,
+        "kg_nodes": kg_nodes,
+        "kg_edges": kg_edges,
+        "kg_requirements": kg_requirements,
+    }
 
 
 @app.get("/status")
@@ -518,12 +600,36 @@ async def status() -> dict:
     }
 
 
+@app.get("/kg/status")
+async def kg_status_endpoint() -> dict:
+    ensure_dirs()
+    stats = kg_status(KG_STORE_DIR)
+    neo4j_ok = False
+    neo4j_error = None
+    if neo4j_enabled():
+        try:
+            neo4j_ok = get_neo4j_driver() is not None
+        except Exception as e:
+            neo4j_error = str(e)
+    return {
+        "store_dir": str(KG_STORE_DIR),
+        "neo4j_enabled": neo4j_enabled(),
+        "neo4j_ok": neo4j_ok if neo4j_enabled() else None,
+        "neo4j_error": neo4j_error,
+        **stats,
+    }
+
+
 @app.post("/ingest")
 async def ingest(
     files: Optional[List[UploadFile]] = File(default=None),
     path: Optional[str] = Form(default=None),
+    mode: str = Form(default="vector"),
 ) -> dict:
     ensure_dirs()
+    mode = (mode or "vector").strip().lower()
+    if mode not in {"vector", "kg", "both"}:
+        raise HTTPException(status_code=400, detail="Invalid mode. Use vector, kg, or both.")
 
     targets: List[Path] = []
     if files:
@@ -543,14 +649,74 @@ async def ingest(
         else:
             raise HTTPException(status_code=400, detail="No files provided and docs directory not found.")
 
-    total_files = 0
-    total_chunks = 0
+    total_stats = {
+        "files": 0,
+        "chunks": 0,
+        "kg_files": 0,
+        "kg_nodes": 0,
+        "kg_edges": 0,
+        "kg_requirements": 0,
+    }
     for target in targets:
-        files_count, chunks_count = await ingest_path(target)
-        total_files += files_count
-        total_chunks += chunks_count
+        try:
+            stats = await ingest_path(target, mode=mode)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        for key in total_stats:
+            total_stats[key] += int(stats.get(key, 0))
 
-    return {"files": total_files, "chunks": total_chunks}
+    return {"mode": mode, **total_stats}
+
+
+@app.post("/kg/query")
+async def kg_query(req: KgQueryRequest) -> dict:
+    ensure_dirs()
+    if not req.query.strip() and not (req.entity or "").strip() and not (req.metric or "").strip():
+        raise HTTPException(status_code=400, detail="Provide query, entity, or metric.")
+    return query_graph_requirements(
+        store_dir=KG_STORE_DIR,
+        query=req.query,
+        entity=req.entity,
+        metric=req.metric,
+        source_id=req.source_id,
+        top_k=req.top_k,
+    )
+
+
+@app.post("/kg/cypher")
+async def kg_cypher(req: CypherQueryRequest) -> dict:
+    ensure_dirs()
+    try:
+        return run_cypher_query(
+            cypher=req.cypher,
+            params=req.params,
+            top_k=req.top_k,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+
+
+@app.post("/kg/llm-query")
+async def kg_llm_query(req: KgLlmQueryRequest) -> dict:
+    ensure_dirs()
+    if not req.question.strip():
+        raise HTTPException(status_code=400, detail="Question is empty.")
+    try:
+        return llm_query_graph(
+            question=req.question,
+            entity=req.entity,
+            metric=req.metric,
+            source_id=req.source_id,
+            top_k=req.top_k,
+            model=req.model,
+            synthesize_answer=req.synthesize_answer,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
 
 
 @app.post("/search")
@@ -598,6 +764,10 @@ async def root() -> dict:
             "rag_ingest": "/ingest",
             "rag_search": "/search",
             "rag_status": "/status",
+            "kg_query": "/kg/query",
+            "kg_cypher": "/kg/cypher",
+            "kg_llm_query": "/kg/llm-query",
+            "kg_status": "/kg/status",
             "cad_process": "/upload-and-process",
             "cad_health": "/health",
             "cad_default_params": "/default-cad-params",
