@@ -1,4 +1,7 @@
 #### 启动命令（单GPU）
+- neo4j连接：`docker run -d --name neo4j -p 7474:7474 -p 7687:7687 -e NEO4J_AUTH=neo4j/password neo4j:latest`，可以在浏览器（服务器本地）访问`http://localhost:7474`或者`http://服务器ip:7474`来访问网页版neo4j
+- 其中7687端口是用来python代码端访问
+- 可以运行`docker ps -a`查看已停止运行的容器，然后重行运行docker start
 - ` uv run uvicorn main:app --host 127.0.0.1 --port 8008`
 #### 启动命令（多GPU）
 ```python

@@ -7,7 +7,8 @@ from .contour_detector import find_all_inner_contours
 from .door_window_detector import find_door_and_window
 from .door_point_exclusion import process_all_rooms
 from .bounding_rectangle import process_room_bounding_rectangles, save_bounding_rectangles
-from .coordinate_converter import process_rooms_to_cad
+from .coordinate_converter import process_rooms_to_cad, DEFAULT_CAD_PARAMS
+from .lighting_layout import process_room_lighting_layout
 from .adaptive_shape_analyzer import process_adaptive_room_shapes, create_comparison_visualization
 import os
 import shutil
@@ -81,6 +82,16 @@ def process_single_image(image_path, cad_params=None, save_to_file=True):
         print("6. 转换坐标为CAD坐标...")
         cad_rooms = process_rooms_to_cad(room_rectangles, image_path, cad_params, save_to_file)
 
+        # 步骤7: 房间网格离散化 + 灯具布置(测试链路)
+        print("7. 房间网格离散化并生成灯具布置...")
+        effective_cad_params = cad_params if cad_params is not None else DEFAULT_CAD_PARAMS
+        lighting_payload = process_room_lighting_layout(
+            room_rectangles=room_rectangles,
+            image_path=image_path,
+            cad_params=effective_cad_params,
+            save_to_file=save_to_file,
+        )
+
     # # 步骤7：自适应形状分析 (解决不规则房间形状问题)
     # print("7. 自适应形状分析...")
     # adaptive_shapes = process_adaptive_room_shapes(processed_rooms, image_path)
@@ -95,7 +106,10 @@ def process_single_image(image_path, cad_params=None, save_to_file=True):
         print(f"计算了 {len(room_rectangles)} 个房间的最小外接矩形")
         print(f"处理结果目录: {output_dir}")
 
-        return cad_rooms
+        return {
+            "cad_rooms": cad_rooms,
+            "lighting_rooms": lighting_payload.get("rooms", {}),
+        }
     finally:
         if previous_output_dir is None:
             os.environ.pop("CAD_STEP_OUTPUT_DIR", None)

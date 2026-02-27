@@ -48,6 +48,25 @@ class RoomCADCoordinate(BaseModel):
     cad_coordinates: List[List[List[float]]] = Field(..., description="CAD坐标点列表")
 
 
+class LampPlacement(BaseModel):
+    """灯具放置点数据模型"""
+    lamp_type: str = Field(..., description="灯具类型")
+    grid_position: List[int] = Field(..., description="网格坐标[row, col]")
+    pixel_position: List[float] = Field(..., description="像素坐标[x, y]")
+    cad_position: List[float] = Field(..., description="CAD坐标[x, y]")
+
+
+class RoomLightingPlan(BaseModel):
+    """房间灯具布置结果"""
+    room_name: str = Field(..., description="房间名称")
+    grid_rows: int = Field(..., description="网格行数")
+    grid_cols: int = Field(..., description="网格列数")
+    cell_size_px: int = Field(..., description="网格边长(像素)")
+    bbox_pixel: List[int] = Field(..., description="房间包围框像素坐标[xmin, ymin, xmax, ymax]")
+    lamp_count: int = Field(..., description="灯具数量")
+    lamps: List[LampPlacement] = Field(default_factory=list, description="灯具布置点")
+
+
 class CADResponse(BaseModel):
     """CAD分析响应数据模型"""
     success: bool = Field(..., description="处理是否成功")
@@ -55,6 +74,10 @@ class CADResponse(BaseModel):
     total_images: int = Field(..., description="处理的图片总数")
     processed_images: int = Field(..., description="成功处理的图片数")
     results: Dict[str, List[RoomCADCoordinate]] = Field(..., description="每个图片的房间CAD坐标结果")
+    lighting_results: Dict[str, List[RoomLightingPlan]] = Field(
+        default_factory=dict,
+        description="每个图片的房间灯具布置结果",
+    )
     errors: Dict[str, str] = Field(default_factory=dict, description="处理错误信息")
 
 
@@ -173,6 +196,7 @@ class CADAnalysisService:
                 total_images=0,
                 processed_images=0,
                 results={},
+                lighting_results={},
                 errors={"validation": error_msg}
             )
         
@@ -187,6 +211,7 @@ class CADAnalysisService:
             
             # 执行批量处理
             logger.info("开始批量处理上传的图像...")
+            ## 开始处理图片
             processing_results = process_images_batch(
                 image_directory=temp_dir,
                 cad_params=cad_params_dict,
@@ -206,6 +231,7 @@ class CADAnalysisService:
             
             # 提取房间坐标
             room_coordinates = self.extract_room_coordinates(processing_results)
+            lighting_results = self.extract_lighting_results(processing_results)
             
             # 构建响应
             if processed_images > 0:
@@ -215,6 +241,7 @@ class CADAnalysisService:
                     total_images=total_images,
                     processed_images=processed_images,
                     results=room_coordinates,
+                    lighting_results=lighting_results,
                     errors=error_results
                 )
                 logger.info(f"CAD处理成功: 提取了 {sum(len(rooms) for rooms in room_coordinates.values())} 个房间的坐标")
@@ -225,6 +252,7 @@ class CADAnalysisService:
                     total_images=total_images,
                     processed_images=0,
                     results={},
+                    lighting_results={},
                     errors=error_results
                 )
                 logger.error("CAD处理失败: 所有图像处理均失败")
@@ -241,6 +269,7 @@ class CADAnalysisService:
                 total_images=0,
                 processed_images=0,
                 results={},
+                lighting_results={},
                 errors={"processing": str(e)}
             )
         
@@ -300,91 +329,62 @@ class CADAnalysisService:
             formatted_results[image_name] = image_rooms
         
         return formatted_results
+
+    def extract_lighting_results(self, processing_results: Dict[str, Any]) -> Dict[str, List[RoomLightingPlan]]:
+        """
+        从处理结果中提取灯具布置结果。
+        :param processing_results: 批量处理结果
+        :return: 格式化的房间灯具结果
+        """
+        formatted_results: Dict[str, List[RoomLightingPlan]] = {}
+
+        for image_name, result in processing_results.items():
+            if isinstance(result, dict) and "error" in result:
+                continue
+
+            image_rooms: List[RoomLightingPlan] = []
+            lighting_rooms = {}
+            if isinstance(result, dict) and "lighting_rooms" in result:
+                lighting_rooms = result.get("lighting_rooms", {}) or {}
+
+            if not isinstance(lighting_rooms, dict):
+                formatted_results[image_name] = image_rooms
+                continue
+
+            for room_name, room_plan in lighting_rooms.items():
+                if not isinstance(room_plan, dict):
+                    continue
+
+                lamps_raw = room_plan.get("lamps", []) or []
+                lamps = []
+                for lamp in lamps_raw:
+                    if not isinstance(lamp, dict):
+                        continue
+                    lamps.append(
+                        LampPlacement(
+                            lamp_type=str(lamp.get("lamp_type", "筒灯")),
+                            grid_position=list(lamp.get("grid_position", [0, 0])),
+                            pixel_position=list(lamp.get("pixel_position", [0.0, 0.0])),
+                            cad_position=list(lamp.get("cad_position", [0.0, 0.0])),
+                        )
+                    )
+
+                image_rooms.append(
+                    RoomLightingPlan(
+                        room_name=str(room_plan.get("room_name", room_name)),
+                        grid_rows=int(room_plan.get("grid_rows", 0)),
+                        grid_cols=int(room_plan.get("grid_cols", 0)),
+                        cell_size_px=int(room_plan.get("cell_size_px", 0)),
+                        bbox_pixel=list(room_plan.get("bbox_pixel", [0, 0, 0, 0])),
+                        lamp_count=int(room_plan.get("lamp_count", len(lamps))),
+                        lamps=lamps,
+                    )
+                )
+
+            formatted_results[image_name] = image_rooms
+
+        return formatted_results
     
-    def process_cad_request(self, request: CADRequest) -> CADResponse:
-        """
-        处理CAD分析请求
-        :param request: CAD分析请求
-        :return: CAD分析响应
-        """
-        logger.info(f"开始处理CAD请求: 目录={request.image_directory}")
-        
-        # 验证请求
-        is_valid, error_msg = self.validate_request(request)
-        if not is_valid:
-            logger.warning(f"请求验证失败: {error_msg}")
-            return CADResponse(
-                success=False,
-                message=f"请求验证失败: {error_msg}",
-                total_images=0,
-                processed_images=0,
-                results={},
-                errors={"validation": error_msg}
-            )
-        
-        try:
-            # 转换CAD参数
-            cad_params = self.convert_cad_params(request.cad_params)
-            logger.debug(f"使用CAD参数: {cad_params}")
-            
-            # 执行批量处理
-            logger.info("开始批量处理图像...")
-            processing_results = process_images_batch(
-                image_directory=request.image_directory,
-                cad_params=cad_params,
-                save_to_file=False  # 服务模式下不保存文件
-            )
-            
-            # 统计处理结果
-            total_images = len(processing_results)
-            error_results = {k: v['error'] for k, v in processing_results.items() 
-                           if 'error' in v}
-            processed_images = total_images - len(error_results)
-            
-            logger.info(f"批量处理完成: {processed_images}/{total_images} 个图像成功")
-            
-            if error_results:
-                logger.warning(f"处理失败的图像: {list(error_results.keys())}")
-            
-            # 提取房间坐标
-            room_coordinates = self.extract_room_coordinates(processing_results)
-            
-            # 构建响应
-            if processed_images > 0:
-                response = CADResponse(
-                    success=True,
-                    message=f"成功处理 {processed_images}/{total_images} 个图像",
-                    total_images=total_images,
-                    processed_images=processed_images,
-                    results=room_coordinates,
-                    errors=error_results
-                )
-                logger.info(f"CAD处理成功: 提取了 {sum(len(rooms) for rooms in room_coordinates.values())} 个房间的坐标")
-            else:
-                response = CADResponse(
-                    success=False,
-                    message="所有图像处理均失败",
-                    total_images=total_images,
-                    processed_images=0,
-                    results={},
-                    errors=error_results
-                )
-                logger.error("CAD处理失败: 所有图像处理均失败")
-            
-            return response
-            
-        except Exception as e:
-            logger.error(f"处理CAD请求时发生异常: {str(e)}")
-            logger.error(f"异常详情: {e.__class__.__name__}")
-            
-            return CADResponse(
-                success=False,
-                message=f"处理过程中发生错误: {str(e)}",
-                total_images=0,
-                processed_images=0,
-                results={},
-                errors={"processing": str(e)}
-            )
 
 
 # 全局服务实例

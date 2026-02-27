@@ -749,3 +749,545 @@ Cannot to connect to Bolt service on ResolvedIPv4Address(('127.0.0.1', 7474)) (l
 2026-02-26 17:25:12 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/kg/llm-query
 2026-02-26 17:33:10 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
 2026-02-26 17:34:15 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/kg/llm-query
+2026-02-27 11:58:07 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-27 17:11:56 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-27 17:12:31 | ERROR    | main:lifespan:82 | neo4j init failed: Couldn't connect to 127.0.0.1:7687 (resolved to ('127.0.0.1:7687',)):
+Failed to establish connection to ResolvedIPv4Address(('127.0.0.1', 7687)) (reason [Errno 111] Connection refused)
+2026-02-27 17:22:03 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-27 17:44:24 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 17:44:24 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 17:44:24 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_172251_688.png, size=144460 bytes
+2026-02-27 17:44:24 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 17:44:24 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-27 17:44:24 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_8b5rd158/output_20260227_172251_688.png
+2026-02-27 17:44:24 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 15638.3487579745, 'Ymin': 19360.9300681661, 'Xmax': 46721.8494499913, 'Ymax': 74620.4868539739}
+2026-02-27 17:44:24 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-27 17:49:56 | INFO     | preprocess.cad_service:process_uploaded_files:226 | 批量处理完成: 1/1 个图像成功
+2026-02-27 17:49:56 | INFO     | preprocess.cad_service:process_uploaded_files:246 | CAD处理成功: 提取了 18 个房间的坐标
+2026-02-27 17:49:56 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_8b5rd158
+2026-02-27 17:49:56 | INFO     | main:upload_and_process_cad:863 | CAD processing finished: success=1/1
+2026-02-27 17:49:56 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=332.0252s
+2026-02-27 17:53:14 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-27 17:53:28 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 17:53:28 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 17:53:28 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_172251_688.png, size=144460 bytes
+2026-02-27 17:53:28 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 17:53:28 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-27 17:53:28 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_xa8hkc4d/output_20260227_172251_688.png
+2026-02-27 17:53:28 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 15638.3487579745, 'Ymin': 19360.9300681661, 'Xmax': 46721.8494499913, 'Ymax': 74620.4868539739}
+2026-02-27 17:53:28 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-27 17:53:56 | INFO     | preprocess.cad_service:process_uploaded_files:226 | 批量处理完成: 1/1 个图像成功
+2026-02-27 17:53:56 | INFO     | preprocess.cad_service:process_uploaded_files:246 | CAD处理成功: 提取了 18 个房间的坐标
+2026-02-27 17:53:56 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_xa8hkc4d
+2026-02-27 17:53:56 | INFO     | main:upload_and_process_cad:863 | CAD processing finished: success=1/1
+2026-02-27 17:53:56 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=28.4068s
+2026-02-27 17:54:25 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 17:54:25 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 17:54:25 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_172251_688.png, size=144460 bytes
+2026-02-27 17:54:25 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 17:54:25 | INFO     | main:upload_and_process_cad:856 | CAD result cache hit within 60s: reuse previous response
+2026-02-27 17:54:25 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=0.0090s
+2026-02-27 17:57:20 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 17:57:20 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 17:57:20 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_175558_397.png, size=119367 bytes
+2026-02-27 17:57:20 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 17:57:20 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-27 17:57:20 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_zpeksinb/output_20260227_175558_397.png
+2026-02-27 17:57:20 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 28612.9477683626, 'Ymin': 44219.3507277594, 'Xmax': 46526.4498693183, 'Ymax': 54064.9396687427}
+2026-02-27 17:57:20 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-27 17:57:34 | INFO     | preprocess.cad_service:process_uploaded_files:226 | 批量处理完成: 1/1 个图像成功
+2026-02-27 17:57:34 | INFO     | preprocess.cad_service:process_uploaded_files:246 | CAD处理成功: 提取了 0 个房间的坐标
+2026-02-27 17:57:34 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_zpeksinb
+2026-02-27 17:57:34 | INFO     | main:upload_and_process_cad:863 | CAD processing finished: success=1/1
+2026-02-27 17:57:34 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=14.2571s
+2026-02-27 17:58:36 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 17:58:36 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 17:58:36 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_175558_397.png, size=119367 bytes
+2026-02-27 17:58:36 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 17:58:36 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-27 17:58:36 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_cqwwufg2/output_20260227_175558_397.png
+2026-02-27 17:58:36 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 28612.9477683626, 'Ymin': 44219.3507277594, 'Xmax': 46526.4498693183, 'Ymax': 54064.9396687427}
+2026-02-27 17:58:36 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-27 17:58:50 | INFO     | preprocess.cad_service:process_uploaded_files:226 | 批量处理完成: 1/1 个图像成功
+2026-02-27 17:58:50 | INFO     | preprocess.cad_service:process_uploaded_files:246 | CAD处理成功: 提取了 0 个房间的坐标
+2026-02-27 17:58:50 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_cqwwufg2
+2026-02-27 17:58:50 | INFO     | main:upload_and_process_cad:863 | CAD processing finished: success=1/1
+2026-02-27 17:58:50 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=13.9201s
+2026-02-27 18:00:35 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 18:00:35 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 18:00:35 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_175906_927.png, size=119144 bytes
+2026-02-27 18:00:35 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 18:00:35 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-27 18:00:35 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_qq_3qv7n/output_20260227_175906_927.png
+2026-02-27 18:00:35 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 28811.4353130234, 'Ymin': 44734.6152812573, 'Xmax': 45862.5028956128, 'Ymax': 54106.1944106194}
+2026-02-27 18:00:35 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-27 18:00:48 | INFO     | preprocess.cad_service:process_uploaded_files:226 | 批量处理完成: 1/1 个图像成功
+2026-02-27 18:00:48 | INFO     | preprocess.cad_service:process_uploaded_files:246 | CAD处理成功: 提取了 0 个房间的坐标
+2026-02-27 18:00:48 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_qq_3qv7n
+2026-02-27 18:00:48 | INFO     | main:upload_and_process_cad:863 | CAD processing finished: success=1/1
+2026-02-27 18:00:48 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=13.3606s
+2026-02-27 18:01:57 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 18:01:57 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 18:01:57 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_180110_950.png, size=115884 bytes
+2026-02-27 18:01:57 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 18:01:57 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-27 18:01:57 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_a9jbty9q/output_20260227_180110_950.png
+2026-02-27 18:01:57 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 16420.2238594251, 'Ymin': 23469.6299035758, 'Xmax': 33445.5348022775, 'Ymax': 32827.0527118611}
+2026-02-27 18:01:57 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-27 18:02:10 | INFO     | preprocess.cad_service:process_uploaded_files:226 | 批量处理完成: 1/1 个图像成功
+2026-02-27 18:02:10 | INFO     | preprocess.cad_service:process_uploaded_files:246 | CAD处理成功: 提取了 0 个房间的坐标
+2026-02-27 18:02:10 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_a9jbty9q
+2026-02-27 18:02:10 | INFO     | main:upload_and_process_cad:863 | CAD processing finished: success=1/1
+2026-02-27 18:02:10 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=13.1778s
+2026-02-27 18:03:31 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-27 18:03:55 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 18:03:55 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 18:03:55 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_180110_950.png, size=115884 bytes
+2026-02-27 18:03:55 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 18:03:55 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-27 18:03:55 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_kpj4yz2g/output_20260227_180110_950.png
+2026-02-27 18:03:55 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 16420.2238594251, 'Ymin': 23469.6299035758, 'Xmax': 33445.5348022775, 'Ymax': 32827.0527118611}
+2026-02-27 18:03:55 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-27 18:06:19 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-27 18:07:20 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 18:07:20 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 18:07:20 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_180625_070.png, size=127411 bytes
+2026-02-27 18:07:20 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 18:07:20 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-27 18:07:20 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_gvkl48uh/output_20260227_180625_070.png
+2026-02-27 18:07:20 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 17478.637597927, 'Ymin': 22298.3374734176, 'Xmax': 45227.7993797692, 'Ymax': 37549.785170308}
+2026-02-27 18:07:20 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-27 18:08:24 | INFO     | preprocess.cad_service:process_uploaded_files:226 | 批量处理完成: 1/1 个图像成功
+2026-02-27 18:08:24 | INFO     | preprocess.cad_service:process_uploaded_files:246 | CAD处理成功: 提取了 4 个房间的坐标
+2026-02-27 18:08:24 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_gvkl48uh
+2026-02-27 18:08:24 | INFO     | main:upload_and_process_cad:863 | CAD processing finished: success=1/1
+2026-02-27 18:08:24 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=64.5133s
+2026-02-27 18:10:17 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 18:10:17 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 18:10:17 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_180940_146.png, size=118958 bytes
+2026-02-27 18:10:17 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 18:10:17 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-27 18:10:17 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_bkndcz_4/output_20260227_180940_146.png
+2026-02-27 18:10:17 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 28721.9059908355, 'Ymin': 23664.3650834124, 'Xmax': 41611.0617036067, 'Ymax': 30748.4812003553}
+2026-02-27 18:10:17 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-27 18:11:18 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-27 18:11:23 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 18:11:23 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 18:11:23 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_180940_146.png, size=118958 bytes
+2026-02-27 18:11:23 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 18:11:23 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-27 18:11:23 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_v3pdoth9/output_20260227_180940_146.png
+2026-02-27 18:11:23 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 28721.9059908355, 'Ymin': 23664.3650834124, 'Xmax': 41611.0617036067, 'Ymax': 30748.4812003553}
+2026-02-27 18:11:23 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-27 18:48:10 | INFO     | preprocess.cad_service:process_uploaded_files:226 | 批量处理完成: 1/1 个图像成功
+2026-02-27 18:48:10 | INFO     | preprocess.cad_service:process_uploaded_files:246 | CAD处理成功: 提取了 0 个房间的坐标
+2026-02-27 18:48:10 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_v3pdoth9
+2026-02-27 18:48:10 | INFO     | main:upload_and_process_cad:863 | CAD processing finished: success=1/1
+2026-02-27 18:48:10 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=2206.4661s
+2026-02-27 18:48:10 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 18:48:28 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 18:48:28 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_184116_051.png, size=146465 bytes
+2026-02-27 18:48:28 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 18:48:28 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-27 18:48:28 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_ff6ifysn/output_20260227_184116_051.png
+2026-02-27 18:48:28 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 17124.0085611844, 'Ymin': 21810.5310433184, 'Xmax': 45117.8678857976, 'Ymax': 71577.3920648529}
+2026-02-27 18:48:28 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-27 18:50:49 | INFO     | preprocess.cad_service:process_uploaded_files:226 | 批量处理完成: 1/1 个图像成功
+2026-02-27 18:50:49 | INFO     | preprocess.cad_service:process_uploaded_files:246 | CAD处理成功: 提取了 18 个房间的坐标
+2026-02-27 18:50:49 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_ff6ifysn
+2026-02-27 18:50:49 | INFO     | main:upload_and_process_cad:863 | CAD processing finished: success=1/1
+2026-02-27 18:50:49 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=159.0340s
+2026-02-27 20:20:36 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 20:20:36 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 20:20:36 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_184116_051.png, size=146465 bytes
+2026-02-27 20:20:36 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 20:20:36 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-27 20:20:36 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_euyv87v5/output_20260227_184116_051.png
+2026-02-27 20:20:36 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 17124.0085611844, 'Ymin': 21810.5310433184, 'Xmax': 45117.8678857976, 'Ymax': 71577.3920648529}
+2026-02-27 20:20:36 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-27 20:22:51 | INFO     | preprocess.cad_service:process_uploaded_files:226 | 批量处理完成: 1/1 个图像成功
+2026-02-27 20:22:51 | INFO     | preprocess.cad_service:process_uploaded_files:246 | CAD处理成功: 提取了 18 个房间的坐标
+2026-02-27 20:22:51 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_euyv87v5
+2026-02-27 20:22:51 | INFO     | main:upload_and_process_cad:863 | CAD processing finished: success=1/1
+2026-02-27 20:22:51 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=134.7399s
+2026-02-27 20:33:02 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 20:33:02 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 20:33:02 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_203215_650.png, size=145679 bytes
+2026-02-27 20:33:02 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 20:33:02 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-27 20:33:02 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_oqfo47al/output_20260227_203215_650.png
+2026-02-27 20:33:02 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 16767.2541862737, 'Ymin': 21009.2002433415, 'Xmax': 45803.3416197028, 'Ymax': 72628.9112361043}
+2026-02-27 20:33:02 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-27 20:34:22 | INFO     | preprocess.cad_service:process_uploaded_files:226 | 批量处理完成: 1/1 个图像成功
+2026-02-27 20:34:22 | INFO     | preprocess.cad_service:process_uploaded_files:246 | CAD处理成功: 提取了 18 个房间的坐标
+2026-02-27 20:34:22 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_oqfo47al
+2026-02-27 20:34:22 | INFO     | main:upload_and_process_cad:863 | CAD processing finished: success=1/1
+2026-02-27 20:34:22 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=80.0118s
+2026-02-27 20:55:05 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 20:55:05 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 20:55:05 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_203215_650.png, size=145679 bytes
+2026-02-27 20:55:05 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 20:55:05 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-27 20:55:05 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_gy3w104t/output_20260227_203215_650.png
+2026-02-27 20:55:05 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 16767.2541862737, 'Ymin': 21009.2002433415, 'Xmax': 45803.3416197028, 'Ymax': 72628.9112361043}
+2026-02-27 20:55:05 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-27 20:57:34 | INFO     | preprocess.cad_service:process_uploaded_files:226 | 批量处理完成: 1/1 个图像成功
+2026-02-27 20:57:34 | INFO     | preprocess.cad_service:process_uploaded_files:246 | CAD处理成功: 提取了 18 个房间的坐标
+2026-02-27 20:57:34 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_gy3w104t
+2026-02-27 20:57:34 | INFO     | main:upload_and_process_cad:863 | CAD processing finished: success=1/1
+2026-02-27 20:57:34 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=148.5067s
+2026-02-27 21:15:52 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 21:15:52 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 21:15:52 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_211320_234.png, size=146488 bytes
+2026-02-27 21:15:52 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 21:15:52 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-27 21:15:52 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_9ip11s5i/output_20260227_211320_234.png
+2026-02-27 21:15:52 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 17444.9461334034, 'Ymin': 20963.4605308032, 'Xmax': 45408.1929307622, 'Ymax': 70675.8992816634}
+2026-02-27 21:15:52 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-27 21:17:06 | INFO     | preprocess.cad_service:process_uploaded_files:226 | 批量处理完成: 1/1 个图像成功
+2026-02-27 21:17:06 | INFO     | preprocess.cad_service:process_uploaded_files:246 | CAD处理成功: 提取了 18 个房间的坐标
+2026-02-27 21:17:06 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_9ip11s5i
+2026-02-27 21:17:06 | INFO     | main:upload_and_process_cad:863 | CAD processing finished: success=1/1
+2026-02-27 21:17:06 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=73.4194s
+2026-02-27 21:17:16 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 21:17:16 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 21:17:16 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_211320_234.png, size=146488 bytes
+2026-02-27 21:17:16 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 21:17:16 | INFO     | main:upload_and_process_cad:856 | CAD result cache hit within 60s: reuse previous response
+2026-02-27 21:17:16 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=0.0140s
+2026-02-27 21:17:21 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 21:17:21 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 21:17:21 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_211320_234.png, size=146488 bytes
+2026-02-27 21:17:21 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 21:17:21 | INFO     | main:upload_and_process_cad:856 | CAD result cache hit within 60s: reuse previous response
+2026-02-27 21:17:21 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=0.0079s
+2026-02-27 21:17:26 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 21:17:26 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 21:17:26 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_211320_234.png, size=146488 bytes
+2026-02-27 21:17:26 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 21:17:26 | INFO     | main:upload_and_process_cad:856 | CAD result cache hit within 60s: reuse previous response
+2026-02-27 21:17:26 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=0.0084s
+2026-02-27 21:17:36 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 21:17:36 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 21:17:36 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_211320_234.png, size=146488 bytes
+2026-02-27 21:17:36 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 21:17:36 | INFO     | main:upload_and_process_cad:856 | CAD result cache hit within 60s: reuse previous response
+2026-02-27 21:17:36 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=0.0085s
+2026-02-27 21:18:44 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 21:18:44 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 21:18:44 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_211740_796.png, size=146235 bytes
+2026-02-27 21:18:44 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 21:18:44 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-27 21:18:44 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_u0ac7lv_/output_20260227_211740_796.png
+2026-02-27 21:18:44 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 17515.7083041288, 'Ymin': 21346.9003985566, 'Xmax': 45649.9841382777, 'Ymax': 71363.3907703768}
+2026-02-27 21:18:44 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-27 21:20:22 | INFO     | preprocess.cad_service:process_uploaded_files:226 | 批量处理完成: 1/1 个图像成功
+2026-02-27 21:22:59 | INFO     | preprocess.cad_service:process_uploaded_files:246 | CAD处理成功: 提取了 18 个房间的坐标
+2026-02-27 21:22:59 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_u0ac7lv_
+2026-02-27 21:22:59 | INFO     | main:upload_and_process_cad:863 | CAD processing finished: success=1/1
+2026-02-27 21:22:59 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=255.4240s
+2026-02-27 21:27:25 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 21:27:25 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 21:27:25 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_212640_429.png, size=145716 bytes
+2026-02-27 21:27:25 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 21:27:25 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-27 21:27:25 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_jf0p2j9_/output_20260227_212640_429.png
+2026-02-27 21:27:25 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 16973.0950457239, 'Ymin': 21181.1010534467, 'Xmax': 45453.2957212449, 'Ymax': 71812.5689210396}
+2026-02-27 21:27:25 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-27 21:28:14 | INFO     | preprocess.cad_service:process_uploaded_files:226 | 批量处理完成: 1/1 个图像成功
+2026-02-27 21:28:14 | INFO     | preprocess.cad_service:process_uploaded_files:246 | CAD处理成功: 提取了 18 个房间的坐标
+2026-02-27 21:28:14 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_jf0p2j9_
+2026-02-27 21:28:14 | INFO     | main:upload_and_process_cad:863 | CAD processing finished: success=1/1
+2026-02-27 21:28:14 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=48.5231s
+2026-02-27 21:31:54 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 21:31:54 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 21:31:54 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_212640_429.png, size=145716 bytes
+2026-02-27 21:31:54 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 21:31:54 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-27 21:31:54 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_dosddddz/output_20260227_212640_429.png
+2026-02-27 21:31:54 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 16973.0950457239, 'Ymin': 21181.1010534467, 'Xmax': 45453.2957212449, 'Ymax': 71812.5689210396}
+2026-02-27 21:31:54 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-27 21:32:35 | INFO     | preprocess.cad_service:process_uploaded_files:226 | 批量处理完成: 1/1 个图像成功
+2026-02-27 21:32:35 | INFO     | preprocess.cad_service:process_uploaded_files:246 | CAD处理成功: 提取了 18 个房间的坐标
+2026-02-27 21:32:35 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_dosddddz
+2026-02-27 21:32:35 | INFO     | main:upload_and_process_cad:863 | CAD processing finished: success=1/1
+2026-02-27 21:32:35 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=40.9954s
+2026-02-27 21:44:55 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 21:44:55 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 21:44:55 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_214400_029.png, size=145739 bytes
+2026-02-27 21:44:55 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 21:44:55 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-27 21:44:55 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_i3vza92e/output_20260227_214400_029.png
+2026-02-27 21:44:55 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 17475.0352626692, 'Ymin': 20930.7778011259, 'Xmax': 46027.4401862002, 'Ymax': 71690.6087762921}
+2026-02-27 21:44:55 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-27 21:45:38 | INFO     | preprocess.cad_service:process_uploaded_files:226 | 批量处理完成: 1/1 个图像成功
+2026-02-27 21:45:38 | INFO     | preprocess.cad_service:process_uploaded_files:246 | CAD处理成功: 提取了 18 个房间的坐标
+2026-02-27 21:45:38 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_i3vza92e
+2026-02-27 21:45:38 | INFO     | main:upload_and_process_cad:863 | CAD processing finished: success=1/1
+2026-02-27 21:45:38 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=43.1134s
+2026-02-27 21:55:26 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 21:55:26 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 21:55:26 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_214400_029.png, size=145739 bytes
+2026-02-27 21:55:26 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 21:55:26 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-27 21:55:26 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_cztrx6u4/output_20260227_214400_029.png
+2026-02-27 21:55:26 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 17475.0352626692, 'Ymin': 20930.7778011259, 'Xmax': 46027.4401862002, 'Ymax': 71690.6087762921}
+2026-02-27 21:55:26 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-27 21:56:19 | INFO     | preprocess.cad_service:process_uploaded_files:226 | 批量处理完成: 1/1 个图像成功
+2026-02-27 21:56:19 | INFO     | preprocess.cad_service:process_uploaded_files:246 | CAD处理成功: 提取了 18 个房间的坐标
+2026-02-27 21:56:19 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_cztrx6u4
+2026-02-27 21:56:19 | INFO     | main:upload_and_process_cad:863 | CAD processing finished: success=1/1
+2026-02-27 21:56:19 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=52.9787s
+2026-02-27 21:57:52 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 21:57:52 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 21:57:52 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_214400_029.png, size=145739 bytes
+2026-02-27 21:57:52 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 21:57:52 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-27 21:57:52 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_bqz6qln9/output_20260227_214400_029.png
+2026-02-27 21:57:52 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 17475.0352626692, 'Ymin': 20930.7778011259, 'Xmax': 46027.4401862002, 'Ymax': 71690.6087762921}
+2026-02-27 21:57:52 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-27 21:58:48 | INFO     | preprocess.cad_service:process_uploaded_files:226 | 批量处理完成: 1/1 个图像成功
+2026-02-27 21:58:48 | INFO     | preprocess.cad_service:process_uploaded_files:246 | CAD处理成功: 提取了 18 个房间的坐标
+2026-02-27 21:58:48 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_bqz6qln9
+2026-02-27 21:58:48 | INFO     | main:upload_and_process_cad:863 | CAD processing finished: success=1/1
+2026-02-27 21:58:48 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=56.0562s
+2026-02-27 21:59:29 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 21:59:29 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 21:59:29 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_214400_029.png, size=145739 bytes
+2026-02-27 21:59:29 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 21:59:29 | INFO     | main:upload_and_process_cad:856 | CAD result cache hit within 60s: reuse previous response
+2026-02-27 21:59:29 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=0.0177s
+2026-02-27 21:59:33 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 21:59:33 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 21:59:33 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_214400_029.png, size=145739 bytes
+2026-02-27 21:59:33 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 21:59:33 | INFO     | main:upload_and_process_cad:856 | CAD result cache hit within 60s: reuse previous response
+2026-02-27 21:59:33 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=0.0082s
+2026-02-27 21:59:34 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 21:59:34 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 21:59:34 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_214400_029.png, size=145739 bytes
+2026-02-27 21:59:34 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 21:59:34 | INFO     | main:upload_and_process_cad:856 | CAD result cache hit within 60s: reuse previous response
+2026-02-27 21:59:34 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=0.0074s
+2026-02-27 21:59:36 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 21:59:36 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 21:59:36 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_214400_029.png, size=145739 bytes
+2026-02-27 21:59:36 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 21:59:36 | INFO     | main:upload_and_process_cad:856 | CAD result cache hit within 60s: reuse previous response
+2026-02-27 21:59:36 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=0.0090s
+2026-02-27 22:00:35 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 22:00:35 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 22:00:35 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_215939_386.png, size=144207 bytes
+2026-02-27 22:00:35 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 22:00:35 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-27 22:00:35 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_lxqiu708/output_20260227_215939_386.png
+2026-02-27 22:00:35 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 15258.6635598672, 'Ymin': 18416.834794639, 'Xmax': 46418.5939087942, 'Ymax': 73812.2665260648}
+2026-02-27 22:00:35 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-27 22:01:46 | INFO     | preprocess.cad_service:process_uploaded_files:226 | 批量处理完成: 1/1 个图像成功
+2026-02-27 22:01:46 | INFO     | preprocess.cad_service:process_uploaded_files:246 | CAD处理成功: 提取了 18 个房间的坐标
+2026-02-27 22:01:46 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_lxqiu708
+2026-02-27 22:01:46 | INFO     | main:upload_and_process_cad:863 | CAD processing finished: success=1/1
+2026-02-27 22:01:46 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=71.4044s
+2026-02-27 22:02:27 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 22:02:27 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 22:02:27 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_215939_386.png, size=144207 bytes
+2026-02-27 22:02:27 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 22:02:27 | INFO     | main:upload_and_process_cad:856 | CAD result cache hit within 60s: reuse previous response
+2026-02-27 22:02:27 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=0.0154s
+2026-02-27 22:03:17 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-27 22:03:36 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 22:03:36 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 22:03:36 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_215939_386.png, size=144207 bytes
+2026-02-27 22:03:36 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 22:03:36 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-27 22:03:36 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_b4pcw0h0/output_20260227_215939_386.png
+2026-02-27 22:03:36 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 15258.6635598672, 'Ymin': 18416.834794639, 'Xmax': 46418.5939087942, 'Ymax': 73812.2665260648}
+2026-02-27 22:03:36 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-27 22:06:54 | INFO     | preprocess.cad_service:process_uploaded_files:227 | 批量处理完成: 1/1 个图像成功
+2026-02-27 22:06:54 | INFO     | preprocess.cad_service:process_uploaded_files:247 | CAD处理成功: 提取了 18 个房间的坐标
+2026-02-27 22:06:54 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_b4pcw0h0
+2026-02-27 22:06:54 | INFO     | main:upload_and_process_cad:863 | CAD processing finished: success=1/1
+2026-02-27 22:06:54 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=197.3855s
+2026-02-27 22:22:05 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 22:22:05 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 22:22:05 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_215939_386.png, size=144207 bytes
+2026-02-27 22:22:05 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 22:22:05 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-27 22:22:05 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_7i7sifsv/output_20260227_215939_386.png
+2026-02-27 22:22:05 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 15258.6635598672, 'Ymin': 18416.834794639, 'Xmax': 46418.5939087942, 'Ymax': 73812.2665260648}
+2026-02-27 22:22:05 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-27 22:22:58 | INFO     | preprocess.cad_service:process_uploaded_files:227 | 批量处理完成: 1/1 个图像成功
+2026-02-27 22:22:58 | INFO     | preprocess.cad_service:process_uploaded_files:247 | CAD处理成功: 提取了 18 个房间的坐标
+2026-02-27 22:22:58 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_7i7sifsv
+2026-02-27 22:22:58 | INFO     | main:upload_and_process_cad:863 | CAD processing finished: success=1/1
+2026-02-27 22:22:58 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=52.6827s
+2026-02-27 22:24:30 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-27 22:24:53 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 22:24:53 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 22:24:53 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_215939_386.png, size=144207 bytes
+2026-02-27 22:24:53 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 22:24:53 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-27 22:24:53 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_orectvmr/output_20260227_215939_386.png
+2026-02-27 22:24:53 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 15258.6635598672, 'Ymin': 18416.834794639, 'Xmax': 46418.5939087942, 'Ymax': 73812.2665260648}
+2026-02-27 22:24:53 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-27 22:25:26 | INFO     | preprocess.cad_service:process_uploaded_files:227 | 批量处理完成: 1/1 个图像成功
+2026-02-27 22:25:26 | INFO     | preprocess.cad_service:process_uploaded_files:247 | CAD处理成功: 提取了 18 个房间的坐标
+2026-02-27 22:25:26 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_orectvmr
+2026-02-27 22:25:26 | INFO     | main:upload_and_process_cad:863 | CAD processing finished: success=1/1
+2026-02-27 22:25:26 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=32.8074s
+2026-02-27 22:40:40 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 22:40:40 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 22:40:40 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_215939_386.png, size=144207 bytes
+2026-02-27 22:40:40 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 22:40:40 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-27 22:40:40 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_crpfxuie/output_20260227_215939_386.png
+2026-02-27 22:40:40 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 15258.6635598672, 'Ymin': 18416.834794639, 'Xmax': 46418.5939087942, 'Ymax': 73812.2665260648}
+2026-02-27 22:40:40 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-27 22:41:30 | INFO     | preprocess.cad_service:process_uploaded_files:227 | 批量处理完成: 1/1 个图像成功
+2026-02-27 22:41:30 | INFO     | preprocess.cad_service:process_uploaded_files:247 | CAD处理成功: 提取了 18 个房间的坐标
+2026-02-27 22:41:30 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_crpfxuie
+2026-02-27 22:41:30 | INFO     | main:upload_and_process_cad:863 | CAD processing finished: success=1/1
+2026-02-27 22:41:30 | INFO     | main:add_process_time_header:180 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=49.9438s
+2026-02-27 22:43:40 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-27 22:44:22 | INFO     | main:add_process_time_header:176 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 22:44:22 | INFO     | main:upload_and_process_cad:800 | upload request received: file_count=1
+2026-02-27 22:44:22 | INFO     | main:upload_and_process_cad:820 | read file: output_20260227_215939_386.png, size=144207 bytes
+2026-02-27 22:44:22 | INFO     | main:upload_and_process_cad:832 | using custom CAD parameters
+2026-02-27 22:44:22 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-27 22:44:22 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_t383a9ty/output_20260227_215939_386.png
+2026-02-27 22:44:22 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 15258.6635598672, 'Ymin': 18416.834794639, 'Xmax': 46418.5939087942, 'Ymax': 73812.2665260648}
+2026-02-27 22:44:22 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-27 22:52:23 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-27 22:56:29 | INFO     | main:add_process_time_header:178 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 22:56:29 | INFO     | main:upload_and_process_cad:802 | upload request received: file_count=1
+2026-02-27 22:56:29 | INFO     | main:upload_and_process_cad:822 | read file: output_20260227_215939_386.png, size=144207 bytes
+2026-02-27 22:56:29 | INFO     | main:upload_and_process_cad:834 | using custom CAD parameters
+2026-02-27 22:56:29 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-27 22:56:29 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_wuwgmujc/output_20260227_215939_386.png
+2026-02-27 22:56:29 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 15258.6635598672, 'Ymin': 18416.834794639, 'Xmax': 46418.5939087942, 'Ymax': 73812.2665260648}
+2026-02-27 22:56:29 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-27 22:59:30 | INFO     | preprocess.cad_service:process_uploaded_files:227 | 批量处理完成: 1/1 个图像成功
+2026-02-27 22:59:30 | INFO     | preprocess.cad_service:process_uploaded_files:247 | CAD处理成功: 提取了 18 个房间的坐标
+2026-02-27 22:59:30 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_wuwgmujc
+2026-02-27 22:59:30 | INFO     | main:upload_and_process_cad:865 | CAD processing finished: success=1/1
+2026-02-27 22:59:30 | INFO     | main:add_process_time_header:182 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=181.0211s
+2026-02-27 23:07:53 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-27 23:09:38 | INFO     | main:add_process_time_header:178 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 23:09:38 | INFO     | main:upload_and_process_cad:802 | upload request received: file_count=1
+2026-02-27 23:09:38 | INFO     | main:upload_and_process_cad:822 | read file: output_20260227_215939_386.png, size=144207 bytes
+2026-02-27 23:09:38 | INFO     | main:upload_and_process_cad:834 | using custom CAD parameters
+2026-02-27 23:09:38 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-27 23:09:38 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_iq1zag5r/output_20260227_215939_386.png
+2026-02-27 23:09:38 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 15258.6635598672, 'Ymin': 18416.834794639, 'Xmax': 46418.5939087942, 'Ymax': 73812.2665260648}
+2026-02-27 23:09:38 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-27 23:11:46 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-27 23:12:19 | INFO     | main:add_process_time_header:178 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 23:12:19 | INFO     | main:upload_and_process_cad:802 | upload request received: file_count=1
+2026-02-27 23:12:19 | INFO     | main:upload_and_process_cad:822 | read file: output_20260227_215939_386.png, size=144207 bytes
+2026-02-27 23:12:19 | INFO     | main:upload_and_process_cad:834 | using custom CAD parameters
+2026-02-27 23:12:19 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-27 23:12:19 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_upk1o7j3/output_20260227_215939_386.png
+2026-02-27 23:12:19 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 15258.6635598672, 'Ymin': 18416.834794639, 'Xmax': 46418.5939087942, 'Ymax': 73812.2665260648}
+2026-02-27 23:12:19 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-27 23:14:34 | INFO     | preprocess.cad_service:process_uploaded_files:227 | 批量处理完成: 1/1 个图像成功
+2026-02-27 23:14:34 | INFO     | preprocess.cad_service:process_uploaded_files:247 | CAD处理成功: 提取了 18 个房间的坐标
+2026-02-27 23:14:34 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_upk1o7j3
+2026-02-27 23:14:34 | INFO     | main:upload_and_process_cad:865 | CAD processing finished: success=1/1
+2026-02-27 23:14:34 | INFO     | main:add_process_time_header:182 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=134.7791s
+2026-02-27 23:32:35 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-27 23:32:51 | INFO     | main:add_process_time_header:181 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 23:32:51 | INFO     | main:upload_and_process_cad:805 | upload request received: file_count=1
+2026-02-27 23:32:51 | INFO     | main:upload_and_process_cad:825 | read file: output_20260227_215939_386.png, size=144207 bytes
+2026-02-27 23:32:51 | INFO     | main:upload_and_process_cad:837 | using custom CAD parameters
+2026-02-27 23:32:51 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-27 23:32:51 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_cw6zb7d3/output_20260227_215939_386.png
+2026-02-27 23:32:51 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 15258.6635598672, 'Ymin': 18416.834794639, 'Xmax': 46418.5939087942, 'Ymax': 73812.2665260648}
+2026-02-27 23:32:51 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-27 23:34:30 | INFO     | preprocess.cad_service:process_uploaded_files:227 | 批量处理完成: 1/1 个图像成功
+2026-02-27 23:34:30 | INFO     | preprocess.cad_service:process_uploaded_files:247 | CAD处理成功: 提取了 18 个房间的坐标
+2026-02-27 23:34:30 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_cw6zb7d3
+2026-02-27 23:34:30 | INFO     | main:upload_and_process_cad:868 | CAD processing finished: success=1/1
+2026-02-27 23:34:30 | INFO     | main:add_process_time_header:185 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=99.3776s
+2026-02-27 23:36:43 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-27 23:37:29 | INFO     | main:add_process_time_header:181 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-27 23:37:29 | INFO     | main:upload_and_process_cad:805 | upload request received: file_count=1
+2026-02-27 23:37:29 | INFO     | main:upload_and_process_cad:825 | read file: output_20260227_215939_386.png, size=144207 bytes
+2026-02-27 23:37:29 | INFO     | main:upload_and_process_cad:837 | using custom CAD parameters
+2026-02-27 23:37:29 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-27 23:37:29 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_z5_ivskl/output_20260227_215939_386.png
+2026-02-27 23:37:29 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 15258.6635598672, 'Ymin': 18416.834794639, 'Xmax': 46418.5939087942, 'Ymax': 73812.2665260648}
+2026-02-27 23:37:29 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-27 23:38:32 | INFO     | preprocess.cad_service:process_uploaded_files:227 | 批量处理完成: 1/1 个图像成功
+2026-02-27 23:38:32 | INFO     | preprocess.cad_service:process_uploaded_files:247 | CAD处理成功: 提取了 18 个房间的坐标
+2026-02-27 23:38:32 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_z5_ivskl
+2026-02-27 23:38:32 | INFO     | main:upload_and_process_cad:868 | CAD processing finished: success=1/1
+2026-02-27 23:38:32 | INFO     | main:add_process_time_header:185 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=63.0112s
+2026-02-28 00:03:18 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-28 00:03:22 | INFO     | main:add_process_time_header:181 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-28 00:03:22 | INFO     | main:upload_and_process_cad:805 | upload request received: file_count=1
+2026-02-28 00:03:22 | INFO     | main:upload_and_process_cad:825 | read file: output_20260227_215939_386.png, size=144207 bytes
+2026-02-28 00:03:22 | INFO     | main:upload_and_process_cad:837 | using custom CAD parameters
+2026-02-28 00:03:22 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-28 00:03:22 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_8weiq8de/output_20260227_215939_386.png
+2026-02-28 00:03:22 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 15258.6635598672, 'Ymin': 18416.834794639, 'Xmax': 46418.5939087942, 'Ymax': 73812.2665260648}
+2026-02-28 00:03:22 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-28 00:03:55 | INFO     | preprocess.cad_service:process_uploaded_files:227 | 批量处理完成: 1/1 个图像成功
+2026-02-28 00:03:55 | INFO     | preprocess.cad_service:process_uploaded_files:247 | CAD处理成功: 提取了 18 个房间的坐标
+2026-02-28 00:03:55 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_8weiq8de
+2026-02-28 00:03:55 | INFO     | main:upload_and_process_cad:868 | CAD processing finished: success=1/1
+2026-02-28 00:03:55 | INFO     | main:add_process_time_header:185 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=33.0919s
+2026-02-28 00:06:09 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-28 00:06:38 | INFO     | main:add_process_time_header:181 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-28 00:06:38 | INFO     | main:upload_and_process_cad:805 | upload request received: file_count=1
+2026-02-28 00:06:38 | INFO     | main:upload_and_process_cad:825 | read file: output_20260227_215939_386.png, size=144207 bytes
+2026-02-28 00:06:38 | INFO     | main:upload_and_process_cad:837 | using custom CAD parameters
+2026-02-28 00:06:38 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-28 00:06:38 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_z69ytk68/output_20260227_215939_386.png
+2026-02-28 00:06:38 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 15258.6635598672, 'Ymin': 18416.834794639, 'Xmax': 46418.5939087942, 'Ymax': 73812.2665260648}
+2026-02-28 00:06:38 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-28 00:18:49 | INFO     | preprocess.cad_service:process_uploaded_files:227 | 批量处理完成: 1/1 个图像成功
+2026-02-28 00:18:49 | INFO     | preprocess.cad_service:process_uploaded_files:247 | CAD处理成功: 提取了 18 个房间的坐标
+2026-02-28 00:18:49 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_z69ytk68
+2026-02-28 00:18:49 | INFO     | main:upload_and_process_cad:868 | CAD processing finished: success=1/1
+2026-02-28 00:18:49 | INFO     | main:add_process_time_header:185 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=731.3039s
+2026-02-28 00:23:30 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-28 00:24:25 | INFO     | main:add_process_time_header:181 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-28 00:24:25 | INFO     | main:upload_and_process_cad:805 | upload request received: file_count=1
+2026-02-28 00:24:25 | INFO     | main:upload_and_process_cad:825 | read file: output_20260227_215939_386.png, size=144207 bytes
+2026-02-28 00:24:25 | INFO     | main:upload_and_process_cad:837 | using custom CAD parameters
+2026-02-28 00:24:25 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-28 00:24:25 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_mko1abja/output_20260227_215939_386.png
+2026-02-28 00:24:25 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 15258.6635598672, 'Ymin': 18416.834794639, 'Xmax': 46418.5939087942, 'Ymax': 73812.2665260648}
+2026-02-28 00:24:25 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-28 00:25:06 | INFO     | preprocess.cad_service:process_uploaded_files:227 | 批量处理完成: 1/1 个图像成功
+2026-02-28 00:25:06 | INFO     | preprocess.cad_service:process_uploaded_files:247 | CAD处理成功: 提取了 18 个房间的坐标
+2026-02-28 00:25:06 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_mko1abja
+2026-02-28 00:25:06 | INFO     | main:upload_and_process_cad:868 | CAD processing finished: success=1/1
+2026-02-28 00:25:06 | INFO     | main:add_process_time_header:185 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=41.0844s
+2026-02-28 00:30:09 | INFO     | main:add_process_time_header:181 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-28 00:30:09 | INFO     | main:upload_and_process_cad:805 | upload request received: file_count=1
+2026-02-28 00:30:09 | INFO     | main:upload_and_process_cad:825 | read file: output_20260227_215939_386.png, size=144207 bytes
+2026-02-28 00:30:09 | INFO     | main:upload_and_process_cad:837 | using custom CAD parameters
+2026-02-28 00:30:09 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-28 00:30:09 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_prh0uikw/output_20260227_215939_386.png
+2026-02-28 00:30:09 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 15258.6635598672, 'Ymin': 18416.834794639, 'Xmax': 46418.5939087942, 'Ymax': 73812.2665260648}
+2026-02-28 00:30:09 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-28 00:30:56 | INFO     | preprocess.cad_service:process_uploaded_files:227 | 批量处理完成: 1/1 个图像成功
+2026-02-28 00:30:56 | INFO     | preprocess.cad_service:process_uploaded_files:247 | CAD处理成功: 提取了 18 个房间的坐标
+2026-02-28 00:30:56 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_prh0uikw
+2026-02-28 00:30:56 | INFO     | main:upload_and_process_cad:868 | CAD processing finished: success=1/1
+2026-02-28 00:30:56 | INFO     | main:add_process_time_header:185 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=46.4416s
+2026-02-28 00:31:26 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-02-28 00:31:40 | INFO     | main:add_process_time_header:181 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-02-28 00:31:40 | INFO     | main:upload_and_process_cad:805 | upload request received: file_count=1
+2026-02-28 00:31:40 | INFO     | main:upload_and_process_cad:825 | read file: output_20260227_215939_386.png, size=144207 bytes
+2026-02-28 00:31:40 | INFO     | main:upload_and_process_cad:837 | using custom CAD parameters
+2026-02-28 00:31:40 | INFO     | preprocess.cad_service:process_uploaded_files:187 | 开始处理上传的文件，共 1 个文件
+2026-02-28 00:31:40 | DEBUG    | preprocess.cad_service:save_uploaded_files:157 | 保存上传文件: /tmp/cad_upload_rspdfh60/output_20260227_215939_386.png
+2026-02-28 00:31:40 | DEBUG    | preprocess.cad_service:process_uploaded_files:210 | 使用CAD参数: {'Xmin': 15258.6635598672, 'Ymin': 18416.834794639, 'Xmax': 46418.5939087942, 'Ymax': 73812.2665260648}
+2026-02-28 00:31:40 | INFO     | preprocess.cad_service:process_uploaded_files:213 | 开始批量处理上传的图像...
+2026-02-28 00:37:52 | INFO     | preprocess.cad_service:process_uploaded_files:227 | 批量处理完成: 1/1 个图像成功
+2026-02-28 00:37:52 | INFO     | preprocess.cad_service:process_uploaded_files:247 | CAD处理成功: 提取了 18 个房间的坐标
+2026-02-28 00:37:52 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:174 | 清理临时目录: /tmp/cad_upload_rspdfh60
+2026-02-28 00:37:52 | INFO     | main:upload_and_process_cad:868 | CAD processing finished: success=1/1
+2026-02-28 00:37:52 | INFO     | main:add_process_time_header:185 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=371.2364s

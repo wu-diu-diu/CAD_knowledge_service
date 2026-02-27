@@ -59,6 +59,11 @@ os.environ['KG_NEO4J_URI'] = 'bolt://127.0.0.1:7687'
 os.environ['KG_NEO4J_USER'] = 'neo4j'
 os.environ['KG_NEO4J_PASSWORD'] = 'password'
 os.environ['KG_NEO4J_DATABASE'] = 'neo4j' 
+# 设置cad房间离散化步骤环境变量
+os.environ["CAD_LIGHTING_USE_LLM"] = "1"
+os.environ["CAD_LIGHTING_LLM_PROVIDER"] = "deepseek"
+os.environ["CAD_LIGHTING_LLM_MODEL"] = "deepseek-chat"
+
 MINERU_MAX_PAGES = int(os.getenv("RAG_MINERU_MAX_PAGES", "1000"))
 cad_logger = get_cad_logger("cad_api")
 _model: Optional[SentenceTransformer] = None
@@ -858,7 +863,7 @@ async def upload_and_process_cad(
                 status_code=int(cached_response["status_code"]),
                 content=cached_response["content"],
             )
-
+        ## 真正处理图片的地方
         result = cad_service.process_uploaded_files(file_contents, filenames, cad_params_obj)
         cad_logger.info(
             f"CAD processing finished: success={result.processed_images}/{result.total_images}"
