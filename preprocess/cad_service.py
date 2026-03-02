@@ -48,12 +48,21 @@ class RoomCADCoordinate(BaseModel):
     cad_coordinates: List[List[List[float]]] = Field(..., description="CAD坐标点列表")
 
 
-class LampPlacement(BaseModel):
-    """灯具放置点数据模型"""
+class LampsPlan(BaseModel):
+    """房间统一灯具配置（同类型灯具聚合）"""
     lamp_type: str = Field(..., description="灯具类型")
-    grid_position: List[int] = Field(..., description="网格坐标[row, col]")
-    pixel_position: List[float] = Field(..., description="像素坐标[x, y]")
-    cad_position: List[float] = Field(..., description="CAD坐标[x, y]")
+    count: int = Field(..., description="灯具数量")
+    grid_positions: List[List[int]] = Field(default_factory=list, description="所有灯具网格坐标[[row,col], ...]")
+    pixel_positions: List[List[float]] = Field(default_factory=list, description="所有灯具像素坐标[[x,y], ...]")
+    cad_positions: List[List[float]] = Field(default_factory=list, description="所有灯具CAD坐标[[x,y], ...]")
+
+
+class SwitchPlacement(BaseModel):
+    """开关放置点数据模型"""
+    switch_type: str = Field("单联开关", description="开关类型")
+    grid_position: List[int] = Field(default_factory=list, description="网格坐标[row, col]")
+    pixel_position: List[float] = Field(default_factory=list, description="像素坐标[x, y]")
+    cad_position: List[float] = Field(default_factory=list, description="CAD坐标[x, y]")
 
 
 class RoomLightingPlan(BaseModel):
@@ -64,7 +73,9 @@ class RoomLightingPlan(BaseModel):
     cell_size_px: int = Field(..., description="网格边长(像素)")
     bbox_pixel: List[int] = Field(..., description="房间包围框像素坐标[xmin, ymin, xmax, ymax]")
     lamp_count: int = Field(..., description="灯具数量")
-    lamps: List[LampPlacement] = Field(default_factory=list, description="灯具布置点")
+    lamps: LampsPlan = Field(default_factory=lambda: LampsPlan(lamp_type="筒灯", count=0), description="灯具布置")
+    switch_count: int = Field(0, description="开关数量")
+    switches: List[SwitchPlacement] = Field(default_factory=list, description="开关布置点")
 
 
 class CADResponse(BaseModel):
@@ -355,17 +366,58 @@ class CADAnalysisService:
                 if not isinstance(room_plan, dict):
                     continue
 
-                lamps_raw = room_plan.get("lamps", []) or []
-                lamps = []
-                for lamp in lamps_raw:
-                    if not isinstance(lamp, dict):
-                        continue
-                    lamps.append(
-                        LampPlacement(
-                            lamp_type=str(lamp.get("lamp_type", "筒灯")),
-                            grid_position=list(lamp.get("grid_position", [0, 0])),
-                            pixel_position=list(lamp.get("pixel_position", [0.0, 0.0])),
-                            cad_position=list(lamp.get("cad_position", [0.0, 0.0])),
+                # 兼容新旧格式:
+                # 新格式: lamps = {lamp_type,count,grid_positions,pixel_positions,cad_positions}
+                # 旧格式: lamps = [{lamp_type,grid_position,pixel_position,cad_position}, ...]
+                lamps_raw = room_plan.get("lamps", {}) or {}
+                if isinstance(lamps_raw, dict):
+                    lamps_plan = LampsPlan(
+                        lamp_type=str(lamps_raw.get("lamp_type", "筒灯")),
+                        count=int(lamps_raw.get("count", room_plan.get("lamp_count", 0))),
+                        grid_positions=[list(x) for x in lamps_raw.get("grid_positions", []) or []],
+                        pixel_positions=[list(x) for x in lamps_raw.get("pixel_positions", []) or []],
+                        cad_positions=[list(x) for x in lamps_raw.get("cad_positions", []) or []],
+                    )
+                else:
+                    old_list = lamps_raw if isinstance(lamps_raw, list) else []
+                    grid_positions = [list(x.get("grid_position", [0, 0])) for x in old_list if isinstance(x, dict)]
+                    pixel_positions = [list(x.get("pixel_position", [0.0, 0.0])) for x in old_list if isinstance(x, dict)]
+                    cad_positions = [list(x.get("cad_position", [0.0, 0.0])) for x in old_list if isinstance(x, dict)]
+                    lamp_type = "筒灯"
+                    for x in old_list:
+                        if isinstance(x, dict) and x.get("lamp_type"):
+                            lamp_type = str(x.get("lamp_type"))
+                            break
+                    lamps_plan = LampsPlan(
+                        lamp_type=lamp_type,
+                        count=int(len(grid_positions)),
+                        grid_positions=grid_positions,
+                        pixel_positions=pixel_positions,
+                        cad_positions=cad_positions,
+                    )
+
+                switches_raw = room_plan.get("switches", []) or []
+                switch_list: List[SwitchPlacement] = []
+                if isinstance(switches_raw, list):
+                    for sw in switches_raw:
+                        if not isinstance(sw, dict):
+                            continue
+                        switch_list.append(
+                            SwitchPlacement(
+                                switch_type=str(sw.get("switch_type", "单联开关")),
+                                grid_position=list(sw.get("grid_position", [])),
+                                pixel_position=list(sw.get("pixel_position", [])),
+                                cad_position=list(sw.get("cad_position", [])),
+                            )
+                        )
+                elif isinstance(room_plan.get("switch"), dict):
+                    sw = room_plan.get("switch", {})
+                    switch_list.append(
+                        SwitchPlacement(
+                            switch_type=str(sw.get("switch_type", "单联开关")),
+                            grid_position=list(sw.get("grid_position", [])),
+                            pixel_position=list(sw.get("pixel_position", [])),
+                            cad_position=list(sw.get("cad_position", [])),
                         )
                     )
 
@@ -376,8 +428,10 @@ class CADAnalysisService:
                         grid_cols=int(room_plan.get("grid_cols", 0)),
                         cell_size_px=int(room_plan.get("cell_size_px", 0)),
                         bbox_pixel=list(room_plan.get("bbox_pixel", [0, 0, 0, 0])),
-                        lamp_count=int(room_plan.get("lamp_count", len(lamps))),
-                        lamps=lamps,
+                        lamp_count=int(room_plan.get("lamp_count", lamps_plan.count)),
+                        lamps=lamps_plan,
+                        switch_count=int(room_plan.get("switch_count", len(switch_list))),
+                        switches=switch_list,
                     )
                 )
 

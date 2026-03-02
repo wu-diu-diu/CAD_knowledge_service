@@ -13,3 +13,11 @@ Failed to establish connection to ResolvedIPv4Address(('127.0.0.1', 7687)) (reas
 2026-03-01 10:43:25 | ERROR    | preprocess.cad_service:process_uploaded_files:258 | CAD处理失败: 所有图像处理均失败
 2026-03-01 10:45:43 | ERROR    | preprocess.cad_service:process_uploaded_files:258 | CAD处理失败: 所有图像处理均失败
 2026-03-01 10:50:28 | ERROR    | preprocess.cad_service:process_uploaded_files:258 | CAD处理失败: 所有图像处理均失败
+2026-03-02 19:32:39 | ERROR    | preprocess.cad_service:process_uploaded_files:269 | CAD处理失败: 所有图像处理均失败
+2026-03-02 20:11:29 | ERROR    | preprocess.cad_service:process_uploaded_files:269 | CAD处理失败: 所有图像处理均失败
+2026-03-02 20:12:49 | ERROR    | preprocess.cad_service:process_uploaded_files:269 | CAD处理失败: 所有图像处理均失败
+2026-03-02 20:16:29 | ERROR    | preprocess.cad_service:process_uploaded_files:269 | CAD处理失败: 所有图像处理均失败
+2026-03-02 20:51:19 | ERROR    | preprocess.cad_service:process_uploaded_files:269 | CAD处理失败: 所有图像处理均失败
+2026-03-02 20:52:30 | ERROR    | preprocess.cad_service:process_uploaded_files:269 | CAD处理失败: 所有图像处理均失败
+2026-03-02 20:53:50 | ERROR    | preprocess.cad_service:process_uploaded_files:269 | CAD处理失败: 所有图像处理均失败
+2026-03-02 20:56:50 | ERROR    | preprocess.cad_service:process_uploaded_files:269 | CAD处理失败: 所有图像处理均失败

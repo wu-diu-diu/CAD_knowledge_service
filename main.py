@@ -61,9 +61,10 @@ os.environ['KG_NEO4J_PASSWORD'] = 'password'
 os.environ['KG_NEO4J_DATABASE'] = 'neo4j' 
 # 设置cad房间离散化步骤环境变量
 os.environ["CAD_LIGHTING_USE_LLM"] = "1"
-os.environ["CAD_LIGHTING_LLM_PROVIDER"] = "deepseek"
-os.environ["CAD_LIGHTING_LLM_MODEL"] = "deepseek-chat"
-
+os.environ["CAD_LIGHTING_STAGE1_PROVIDER"] = "deepseek"
+os.environ["CAD_LIGHTING_STAGE2_PROVIDER"] =  "qwen"
+os.environ["CAD_LIGHTING_STAGE1_MODEL"] = "deepseek-chat"
+os.environ["CAD_LIGHTING_STAGE2_MODEL"] = "qwen-plus"
 MINERU_MAX_PAGES = int(os.getenv("RAG_MINERU_MAX_PAGES", "1000"))
 cad_logger = get_cad_logger("cad_api")
 _model: Optional[SentenceTransformer] = None

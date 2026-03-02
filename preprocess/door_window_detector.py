@@ -439,11 +439,6 @@ def find_door_and_window(
                 room_name = primary_match["room_name"]
                 assign_mode = "candidate_ranked"
                 assign_dist = primary_match["distance_center"]
-                ccx, ccy = primary_match["cluster_center"]
-                cv2.line(img, (int(round(cx)), int(round(cy))), (int(round(ccx)), int(round(ccy))), (255, 0, 0), 2)
-                if secondary_match is not None:
-                    sccx, sccy = secondary_match["cluster_center"]
-                    cv2.line(img, (int(round(cx)), int(round(cy))), (int(round(sccx)), int(round(sccy))), (255, 255, 0), 2)
             else:
                 room_name, assign_mode, assign_dist = _find_room_for_center(
                     (cx, cy),
@@ -490,11 +485,6 @@ def find_door_and_window(
                 room_name = primary_match["room_name"]
                 assign_mode = "candidate_ranked"
                 assign_dist = primary_match["distance_center"]
-                ccx, ccy = primary_match["cluster_center"]
-                cv2.line(img, (int(round(cx)), int(round(cy))), (int(round(ccx)), int(round(ccy))), (255, 0, 0), 2)
-                if secondary_match is not None:
-                    sccx, sccy = secondary_match["cluster_center"]
-                    cv2.line(img, (int(round(cx)), int(round(cy))), (int(round(sccx)), int(round(sccy))), (255, 255, 0), 2)
             else:
                 room_name, assign_mode, assign_dist = _find_room_for_center(
                     (cx, cy),

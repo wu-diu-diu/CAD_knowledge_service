@@ -98,24 +98,16 @@ def process_single_image(image_path, cad_params=None, save_to_file=True):
         print("6. 转换坐标为CAD坐标...")
         cad_rooms = process_rooms_to_cad(room_rectangles, image_path, cad_params, save_to_file)
 
-        # 步骤7: 房间网格离散化 + 灯具布置(测试链路)
+        # 步骤7: 房间网格离散化 + 灯具布置
         print("7. 房间网格离散化并生成灯具布置...")
         effective_cad_params = cad_params if cad_params is not None else DEFAULT_CAD_PARAMS
         lighting_payload = process_room_lighting_layout(
             room_rectangles=room_rectangles,
             image_path=image_path,
             cad_params=effective_cad_params,
+            door_assignments=doors_and_windows.get("door_assignments", []),
             save_to_file=save_to_file,
         )
-
-    # # 步骤7：自适应形状分析 (解决不规则房间形状问题)
-    # print("7. 自适应形状分析...")
-    # adaptive_shapes = process_adaptive_room_shapes(processed_rooms, image_path)
-
-    # if save_to_file:
-    #     # 创建形状方法对比可视化
-    #     print("8. 生成形状分析对比图...")
-    #     create_comparison_visualization(adaptive_shapes, image_path)
 
         print(f"=== 图像处理完成: {os.path.basename(image_path)} ===")
         print(f"成功处理 {len(processed_rooms)} 个房间的轮廓数据")
