@@ -709,7 +709,6 @@ def _select_cells_with_llm(
 
     target_lux = float(_get_target_lux_for_room(room_name))
     plan_prompt = lighting_type_count_prompt(
-        lamp_options=lamp_options,
         room_name=room_name,
         room_area_m2=float(room_area_m2),
         target_lux=target_lux,
@@ -862,7 +861,7 @@ def _select_cells_with_llm(
         "lamp_count": int(len(picked)),
         "lamps": picked,
         "switch": switch_cell,
-        "lamp_lm": lamp_flux_lm_map,
+        "lamp_lm": lamp_flux_lm_map.get(planned_lamp_type, 1000.0),
     }
 
 
@@ -1309,6 +1308,22 @@ def process_room_lighting_layout(
             "grid_rows": int(grid.shape[0]),
             "grid_cols": int(grid.shape[1]),
             "cell_size_px": cell_size_px,
+            "bbox_pixel": [min_x, min_y, min_x + room_w - 1, min_y + room_h - 1],
+            "lamp_count": int(len(lamp_grid_positions)),
+            "room_area_px": room_area_px,
+            "room_area_mm2": room_area_mm2,
+            "room_area_m2": room_area_m2,
+            "estimated_lamp_count": int(estimated_lamp_count),
+            "is_regular": bool(is_regular),
+            "assigned_door": assigned_door,
+            "door_grid_position": door_grid_position,
+            "door_side": door_side,
+            "door_edge_cells": door_edge_cells,
+            "placement_method": placement_method,
+            "stage1_provider": stage1_provider,
+            "stage1_model": stage1_model,
+            "stage2_provider": stage2_provider,
+            "stage2_model": stage2_model,
             "switch": switch_info,
             "switch_count": 1 if switch_info else 0,
             "switches": [switch_info] if switch_info else [],
@@ -1320,6 +1335,19 @@ def process_room_lighting_layout(
             "grid_rows": int(grid.shape[0]),
             "grid_cols": int(grid.shape[1]),
             "cell_size_px": cell_size_px,
+            "bbox_pixel": [min_x, min_y, min_x + room_w - 1, min_y + room_h - 1],
+            "room_area_px": room_area_px,
+            "room_area_mm2": room_area_mm2,
+            "room_area_m2": room_area_m2,
+            "estimated_lamp_count": int(estimated_lamp_count),
+            "is_regular": bool(is_regular),
+            "assigned_door": assigned_door,
+            "door_grid_position": door_grid_position,
+            "door_side": door_side,
+            "door_edge_cells": door_edge_cells,
+            "lamp_grid_positions": lamp_grid_positions,
+            "switch_grid_positions": [switch_info["grid_position"]] if switch_info else [],
+            "matrix": grid.tolist(),
         }
 
     payload = {

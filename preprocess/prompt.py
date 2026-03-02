@@ -43,7 +43,6 @@ def lighting_layout_prompt(lamp_count, switch_count, matrix_col, matrix_row, mat
 
 
 def lighting_type_count_prompt(
-    lamp_options,
     room_name,
     room_area_m2,
     target_lux,
@@ -62,8 +61,7 @@ def lighting_type_count_prompt(
 - 房间名称: {room_name}
 - 房间面积: {room_area_m2} m²
 - 房间照度要求: {target_lux} lx
-- 可选灯具类型: {lamp_options}
-- 灯具光通量数据: {lamp_flux_lm_map}
+- 可选灯具类型及其光通量: {lamp_flux_lm_map}
 
 # 计算规则
 使用公式:
