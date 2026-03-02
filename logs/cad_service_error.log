@@ -7,3 +7,9 @@ Cannot to connect to Bolt service on ResolvedIPv4Address(('127.0.0.1', 7474)) (l
 2026-02-26 16:20:23 | ERROR    | main:lifespan:82 | neo4j init failed: URI scheme 'http' is not supported. Supported URI schemes are ['bolt', 'bolt+ssc', 'bolt+s', 'neo4j', 'neo4j+ssc', 'neo4j+s']. Examples: bolt://host[:port] or neo4j://host[:port][?routing_context]
 2026-02-27 17:12:31 | ERROR    | main:lifespan:82 | neo4j init failed: Couldn't connect to 127.0.0.1:7687 (resolved to ('127.0.0.1:7687',)):
 Failed to establish connection to ResolvedIPv4Address(('127.0.0.1', 7687)) (reason [Errno 111] Connection refused)
+2026-03-01 10:35:00 | ERROR    | preprocess.cad_service:process_uploaded_files:258 | CAD处理失败: 所有图像处理均失败
+2026-03-01 10:37:37 | ERROR    | preprocess.cad_service:process_uploaded_files:258 | CAD处理失败: 所有图像处理均失败
+2026-03-01 10:39:48 | ERROR    | preprocess.cad_service:process_uploaded_files:258 | CAD处理失败: 所有图像处理均失败
+2026-03-01 10:43:25 | ERROR    | preprocess.cad_service:process_uploaded_files:258 | CAD处理失败: 所有图像处理均失败
+2026-03-01 10:45:43 | ERROR    | preprocess.cad_service:process_uploaded_files:258 | CAD处理失败: 所有图像处理均失败
+2026-03-01 10:50:28 | ERROR    | preprocess.cad_service:process_uploaded_files:258 | CAD处理失败: 所有图像处理均失败

@@ -69,8 +69,6 @@ cad_logger = get_cad_logger("cad_api")
 _model: Optional[SentenceTransformer] = None
 _index: Optional[faiss.Index] = None
 _metadata: List[dict] = []
-CAD_RESULT_CACHE_SECONDS = float(os.getenv("CAD_RESULT_CACHE_SECONDS", "60"))
-_cad_recent_results: dict[str, tuple[float, dict]] = {}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -135,44 +133,6 @@ def _cad_response_to_payload(obj) -> dict:
     if isinstance(obj, dict):
         return obj
     return {"value": str(obj)}
-
-
-def _cad_params_to_stable_dict(cad_params_obj: Optional[CADParams]) -> dict:
-    if cad_params_obj is None:
-        return {}
-    if hasattr(cad_params_obj, "model_dump"):
-        return cad_params_obj.model_dump()
-    return cad_params_obj.dict()
-
-
-def _build_cad_result_cache_key(file_contents: List[bytes], cad_params_obj: Optional[CADParams]) -> str:
-    h = hashlib.sha256()
-    content_hashes = [hashlib.sha256(content).hexdigest() for content in file_contents]
-    content_hashes.sort()
-    h.update(json.dumps(content_hashes, ensure_ascii=False, sort_keys=True).encode("utf-8"))
-    stable_params = _cad_params_to_stable_dict(cad_params_obj)
-    h.update(json.dumps(stable_params, ensure_ascii=False, sort_keys=True).encode("utf-8"))
-    return h.hexdigest()
-
-
-def _cad_result_cache_get(key: str) -> Optional[dict]:
-    now = time.time()
-    expired = [
-        cache_key
-        for cache_key, (ts, _) in _cad_recent_results.items()
-        if now - ts > CAD_RESULT_CACHE_SECONDS
-    ]
-    for cache_key in expired:
-        _cad_recent_results.pop(cache_key, None)
-    entry = _cad_recent_results.get(key)
-    if entry is None:
-        return None
-    _, payload = entry
-    return payload
-
-
-def _cad_result_cache_set(key: str, status_code: int, content: dict) -> None:
-    _cad_recent_results[key] = (time.time(), {"status_code": int(status_code), "content": content})
 
 
 @app.middleware("http")
@@ -855,15 +815,7 @@ async def upload_and_process_cad(
         else:
             cad_logger.info("using default CAD parameters")
 
-        cache_key = _build_cad_result_cache_key(file_contents, cad_params_obj)
-        cached_response = _cad_result_cache_get(cache_key)
-        if cached_response is not None:
-            cad_logger.info("CAD result cache hit within 60s: reuse previous response")
-            return JSONResponse(
-                status_code=int(cached_response["status_code"]),
-                content=cached_response["content"],
-            )
-        ## 真正处理图片的地方
+        # 真正处理图片的地方
         result = cad_service.process_uploaded_files(file_contents, filenames, cad_params_obj)
         cad_logger.info(
             f"CAD processing finished: success={result.processed_images}/{result.total_images}"
@@ -873,11 +825,9 @@ async def upload_and_process_cad(
             if result.total_images == 0:
                 raise HTTPException(status_code=400, detail=result.message)
             payload = _cad_response_to_payload(result)
-            _cad_result_cache_set(cache_key, 207, payload)
             return JSONResponse(status_code=207, content=payload)
 
         payload = _cad_response_to_payload(result)
-        _cad_result_cache_set(cache_key, 200, payload)
         return result
     except HTTPException:
         raise

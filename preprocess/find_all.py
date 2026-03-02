@@ -54,13 +54,29 @@ def process_single_image(image_path, cad_params=None, save_to_file=True):
 
         # 步骤2: 检测房间轮廓
         print("2. 检测房间内轮廓...")
-        inner_contours, approx_points = find_all_inner_contours(image_path, room_dict)
+        inner_contours, approx_points, room_door_candidates = find_all_inner_contours(
+            image_path,
+            room_dict,
+        )
+        total_step2_door_candidates = sum(len(v) for v in room_door_candidates.values())
+        print(f"step2 门候选凹口点: {total_step2_door_candidates}")
 
         # 步骤3: 检测门窗
         print("3. 检测门窗...")
-        doors_and_windows = find_door_and_window(image_path)
+        doors_and_windows = find_door_and_window(
+            image_path,
+            room_contours_by_name=approx_points,
+            room_door_candidates=room_door_candidates,
+        )
         print(f"检测结果: {len(doors_and_windows['doors'])} 个门, "
               f"{len(doors_and_windows['windows'])} 个窗")
+        if "door_assignments" in doors_and_windows:
+            assigned_count = len([d for d in doors_and_windows["door_assignments"] if d.get("room")])
+            print(
+                f"门中心归属: 总门数={len(doors_and_windows['door_assignments'])}, "
+                f"已归属={assigned_count}, "
+                f"未归属={len(doors_and_windows['door_assignments']) - assigned_count}"
+            )
 
         # 步骤4: 处理房间轮廓点（排除门区域 + 轮廓简化）
         print("4. 处理房间轮廓点（排除门区域 + 轮廓简化）...")
