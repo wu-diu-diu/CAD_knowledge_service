@@ -1160,6 +1160,7 @@ def process_room_lighting_layout(
     room_assigned_doors = _build_room_single_door_assignment(room_rectangles, door_assignments)
 
     lighting_rooms: Dict[str, Dict[str, Any]] = {}
+    lighting_rooms_internal: Dict[str, Dict[str, Any]] = {}
     grid_dump: Dict[str, Dict[str, Any]] = {}
 
     for room_name, room_shapes in room_rectangles.items():
@@ -1297,18 +1298,40 @@ def process_room_lighting_layout(
                     height=image_h,
                 )
                 switch_info = {
-                    "switch_type": "单联开关",
+                    "switch_type": "开关",
                     "grid_position": [srow, scol],
                     "pixel_position": [float(spx), float(spy)],
                     "cad_position": [float(sx_cad), float(sy_cad)],
                 }
 
+        # 对外返回的精简结果（客户端只关心CAD坐标）
+        compact_switch_info = None
+        if switch_info:
+            compact_switch_info = {
+                "switch_type": str(switch_info.get("switch_type", "开关")),
+                "cad_position": list(switch_info.get("cad_position", [])),
+            }
+
         lighting_rooms[room_name] = {
+            "room_name": room_name,
+            "lamp_count": int(len(lamp_grid_positions)),
+            "room_area_m2": room_area_m2,
+            "switch": compact_switch_info,
+            "switch_count": 1 if compact_switch_info else 0,
+            "lamps": {
+                "lamp_type": selected_lamp_type,
+                "count": int(len(lamp_cad_positions)),
+                "cad_positions": lamp_cad_positions,
+            },
+        }
+        # 内部使用的完整结果（供step8布线）
+        lighting_rooms_internal[room_name] = {
             "room_name": room_name,
             "grid_rows": int(grid.shape[0]),
             "grid_cols": int(grid.shape[1]),
             "cell_size_px": cell_size_px,
             "bbox_pixel": [min_x, min_y, min_x + room_w - 1, min_y + room_h - 1],
+            "matrix": grid.tolist(),
             "lamp_count": int(len(lamp_grid_positions)),
             "room_area_px": room_area_px,
             "room_area_mm2": room_area_mm2,
@@ -1355,6 +1378,7 @@ def process_room_lighting_layout(
         "image_height": int(image_h),
         "cell_size_px": cell_size_px,
         "rooms": lighting_rooms,
+        "rooms_internal": lighting_rooms_internal,
     }
 
     if save_to_file:
@@ -1378,7 +1402,17 @@ def process_room_lighting_layout(
 
         plan_file = os.path.join(output_dir, "step7_lighting_layout.json")
         with open(plan_file, "w", encoding="utf-8") as f:
-            json.dump(payload, f, ensure_ascii=False, indent=2)
+            json.dump(
+                {
+                    "image_width": int(image_w),
+                    "image_height": int(image_h),
+                    "cell_size_px": cell_size_px,
+                    "rooms": lighting_rooms,
+                },
+                f,
+                ensure_ascii=False,
+                indent=2,
+            )
 
         vis_alpha = float(os.getenv("CAD_GRID_VIS_ALPHA", "0.35"))
         vis_path = _save_grid_visualization_overlay(

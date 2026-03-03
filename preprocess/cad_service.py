@@ -52,30 +52,40 @@ class LampsPlan(BaseModel):
     """房间统一灯具配置（同类型灯具聚合）"""
     lamp_type: str = Field(..., description="灯具类型")
     count: int = Field(..., description="灯具数量")
-    grid_positions: List[List[int]] = Field(default_factory=list, description="所有灯具网格坐标[[row,col], ...]")
-    pixel_positions: List[List[float]] = Field(default_factory=list, description="所有灯具像素坐标[[x,y], ...]")
     cad_positions: List[List[float]] = Field(default_factory=list, description="所有灯具CAD坐标[[x,y], ...]")
 
 
 class SwitchPlacement(BaseModel):
     """开关放置点数据模型"""
-    switch_type: str = Field("单联开关", description="开关类型")
-    grid_position: List[int] = Field(default_factory=list, description="网格坐标[row, col]")
-    pixel_position: List[float] = Field(default_factory=list, description="像素坐标[x, y]")
+    switch_type: str = Field("开关", description="开关类型")
     cad_position: List[float] = Field(default_factory=list, description="CAD坐标[x, y]")
 
 
 class RoomLightingPlan(BaseModel):
     """房间灯具布置结果"""
     room_name: str = Field(..., description="房间名称")
-    grid_rows: int = Field(..., description="网格行数")
-    grid_cols: int = Field(..., description="网格列数")
-    cell_size_px: int = Field(..., description="网格边长(像素)")
-    bbox_pixel: List[int] = Field(..., description="房间包围框像素坐标[xmin, ymin, xmax, ymax]")
     lamp_count: int = Field(..., description="灯具数量")
+    room_area_m2: float = Field(0.0, description="房间面积（平方米）")
     lamps: LampsPlan = Field(default_factory=lambda: LampsPlan(lamp_type="筒灯", count=0), description="灯具布置")
+    switch: Optional[SwitchPlacement] = Field(default=None, description="开关布置点")
     switch_count: int = Field(0, description="开关数量")
-    switches: List[SwitchPlacement] = Field(default_factory=list, description="开关布置点")
+
+
+class WiringSegment(BaseModel):
+    """布线线段（用于CAD插入）"""
+    start_cad: List[float] = Field(default_factory=list, description="起点CAD坐标[x, y, z]")
+    end_cad: List[float] = Field(default_factory=list, description="终点CAD坐标[x, y, z]")
+    layer_name: str = Field("wiringlayer", description="线段图层名")
+    line_width: float = Field(20.0, description="线宽")
+    color: str = Field("yellow", description="颜色")
+
+
+class RoomWiringPlan(BaseModel):
+    """房间布线结果"""
+    room_name: str = Field(..., description="房间名称")
+    status: str = Field("ok", description="布线状态: ok/partial/skipped")
+    segment_count: int = Field(0, description="线段数量")
+    segments: List[WiringSegment] = Field(default_factory=list, description="布线线段列表")
 
 
 class CADResponse(BaseModel):
@@ -88,6 +98,10 @@ class CADResponse(BaseModel):
     lighting_results: Dict[str, List[RoomLightingPlan]] = Field(
         default_factory=dict,
         description="每个图片的房间灯具布置结果",
+    )
+    wiring_results: Dict[str, List[RoomWiringPlan]] = Field(
+        default_factory=dict,
+        description="每个图片的房间布线结果",
     )
     errors: Dict[str, str] = Field(default_factory=dict, description="处理错误信息")
 
@@ -208,6 +222,7 @@ class CADAnalysisService:
                 processed_images=0,
                 results={},
                 lighting_results={},
+                wiring_results={},
                 errors={"validation": error_msg}
             )
         
@@ -243,6 +258,7 @@ class CADAnalysisService:
             # 提取房间坐标
             room_coordinates = self.extract_room_coordinates(processing_results)
             lighting_results = self.extract_lighting_results(processing_results)
+            wiring_results = self.extract_wiring_results(processing_results)
             
             # 构建响应
             if processed_images > 0:
@@ -253,6 +269,7 @@ class CADAnalysisService:
                     processed_images=processed_images,
                     results=room_coordinates,
                     lighting_results=lighting_results,
+                    wiring_results=wiring_results,
                     errors=error_results
                 )
                 logger.info(f"CAD处理成功: 提取了 {sum(len(rooms) for rooms in room_coordinates.values())} 个房间的坐标")
@@ -264,6 +281,7 @@ class CADAnalysisService:
                     processed_images=0,
                     results={},
                     lighting_results={},
+                    wiring_results={},
                     errors=error_results
                 )
                 logger.error("CAD处理失败: 所有图像处理均失败")
@@ -281,6 +299,7 @@ class CADAnalysisService:
                 processed_images=0,
                 results={},
                 lighting_results={},
+                wiring_results={},
                 errors={"processing": str(e)}
             )
         
@@ -374,14 +393,10 @@ class CADAnalysisService:
                     lamps_plan = LampsPlan(
                         lamp_type=str(lamps_raw.get("lamp_type", "筒灯")),
                         count=int(lamps_raw.get("count", room_plan.get("lamp_count", 0))),
-                        grid_positions=[list(x) for x in lamps_raw.get("grid_positions", []) or []],
-                        pixel_positions=[list(x) for x in lamps_raw.get("pixel_positions", []) or []],
                         cad_positions=[list(x) for x in lamps_raw.get("cad_positions", []) or []],
                     )
                 else:
                     old_list = lamps_raw if isinstance(lamps_raw, list) else []
-                    grid_positions = [list(x.get("grid_position", [0, 0])) for x in old_list if isinstance(x, dict)]
-                    pixel_positions = [list(x.get("pixel_position", [0.0, 0.0])) for x in old_list if isinstance(x, dict)]
                     cad_positions = [list(x.get("cad_position", [0.0, 0.0])) for x in old_list if isinstance(x, dict)]
                     lamp_type = "筒灯"
                     for x in old_list:
@@ -390,48 +405,110 @@ class CADAnalysisService:
                             break
                     lamps_plan = LampsPlan(
                         lamp_type=lamp_type,
-                        count=int(len(grid_positions)),
-                        grid_positions=grid_positions,
-                        pixel_positions=pixel_positions,
+                        count=int(len(cad_positions)),
                         cad_positions=cad_positions,
                     )
 
-                switches_raw = room_plan.get("switches", []) or []
-                switch_list: List[SwitchPlacement] = []
-                if isinstance(switches_raw, list):
-                    for sw in switches_raw:
-                        if not isinstance(sw, dict):
-                            continue
-                        switch_list.append(
-                            SwitchPlacement(
-                                switch_type=str(sw.get("switch_type", "单联开关")),
-                                grid_position=list(sw.get("grid_position", [])),
-                                pixel_position=list(sw.get("pixel_position", [])),
-                                cad_position=list(sw.get("cad_position", [])),
-                            )
-                        )
-                elif isinstance(room_plan.get("switch"), dict):
-                    sw = room_plan.get("switch", {})
-                    switch_list.append(
-                        SwitchPlacement(
-                            switch_type=str(sw.get("switch_type", "单联开关")),
-                            grid_position=list(sw.get("grid_position", [])),
-                            pixel_position=list(sw.get("pixel_position", [])),
-                            cad_position=list(sw.get("cad_position", [])),
-                        )
+                switch_obj: Optional[SwitchPlacement] = None
+                sw = room_plan.get("switch")
+                if isinstance(sw, dict):
+                    switch_obj = SwitchPlacement(
+                        switch_type=str(sw.get("switch_type", "开关")),
+                        cad_position=list(sw.get("cad_position", [])),
                     )
+                else:
+                    switches_raw = room_plan.get("switches", []) or []
+                    if isinstance(switches_raw, list) and switches_raw:
+                        sw0 = switches_raw[0]
+                        if isinstance(sw0, dict):
+                            switch_obj = SwitchPlacement(
+                                switch_type=str(sw0.get("switch_type", "开关")),
+                                cad_position=list(sw0.get("cad_position", [])),
+                            )
 
                 image_rooms.append(
                     RoomLightingPlan(
                         room_name=str(room_plan.get("room_name", room_name)),
-                        grid_rows=int(room_plan.get("grid_rows", 0)),
-                        grid_cols=int(room_plan.get("grid_cols", 0)),
-                        cell_size_px=int(room_plan.get("cell_size_px", 0)),
-                        bbox_pixel=list(room_plan.get("bbox_pixel", [0, 0, 0, 0])),
                         lamp_count=int(room_plan.get("lamp_count", lamps_plan.count)),
+                        room_area_m2=float(room_plan.get("room_area_m2", 0.0)),
                         lamps=lamps_plan,
-                        switch_count=int(room_plan.get("switch_count", len(switch_list))),
-                        switches=switch_list,
+                        switch=switch_obj,
+                        switch_count=int(room_plan.get("switch_count", 1 if switch_obj else 0)),
+                    )
+                )
+
+            formatted_results[image_name] = image_rooms
+
+        return formatted_results
+
+    def extract_wiring_results(self, processing_results: Dict[str, Any]) -> Dict[str, List[RoomWiringPlan]]:
+        """
+        从处理结果中提取步骤8布线结果。
+        输出每条线段的两个端点以及CAD绘制参数。
+        """
+        formatted_results: Dict[str, List[RoomWiringPlan]] = {}
+
+        layer_name = os.getenv("CAD_WIRING_LAYER_NAME", "wiringlayer")
+        color = os.getenv("CAD_WIRING_COLOR", "yellow")
+        try:
+            line_width = float(os.getenv("CAD_WIRING_LINE_WIDTH", "20"))
+        except Exception:
+            line_width = 20.0
+
+        for image_name, result in processing_results.items():
+            if isinstance(result, dict) and "error" in result:
+                continue
+
+            image_rooms: List[RoomWiringPlan] = []
+            wiring_rooms = {}
+            if isinstance(result, dict) and "wiring_rooms" in result:
+                wiring_rooms = result.get("wiring_rooms", {}) or {}
+
+            if not isinstance(wiring_rooms, dict):
+                formatted_results[image_name] = image_rooms
+                continue
+
+            for room_name, room_plan in wiring_rooms.items():
+                if not isinstance(room_plan, dict):
+                    continue
+
+                status = str(room_plan.get("status", "ok"))
+                segments: List[WiringSegment] = []
+
+                merged_segments = room_plan.get("merged_segments_cad", []) or []
+                if isinstance(merged_segments, list):
+                    for seg in merged_segments:
+                        if not isinstance(seg, list) or len(seg) != 2:
+                            continue
+                        p1, p2 = seg[0], seg[1]
+                        if (
+                            not isinstance(p1, list)
+                            or not isinstance(p2, list)
+                            or len(p1) < 2
+                            or len(p2) < 2
+                        ):
+                            continue
+                        try:
+                            start = [float(p1[0]), float(p1[1]), 0.0]
+                            end = [float(p2[0]), float(p2[1]), 0.0]
+                        except Exception:
+                            continue
+                        segments.append(
+                            WiringSegment(
+                                start_cad=start,
+                                end_cad=end,
+                                layer_name=layer_name,
+                                line_width=line_width,
+                                color=color,
+                            )
+                        )
+
+                image_rooms.append(
+                    RoomWiringPlan(
+                        room_name=str(room_plan.get("room_name", room_name)),
+                        status=status,
+                        segment_count=len(segments),
+                        segments=segments,
                     )
                 )
 

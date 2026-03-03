@@ -9,6 +9,7 @@ from .door_point_exclusion import process_all_rooms
 from .bounding_rectangle import process_room_bounding_rectangles, save_bounding_rectangles
 from .coordinate_converter import process_rooms_to_cad, DEFAULT_CAD_PARAMS
 from .lighting_layout import process_room_lighting_layout
+from .wiring_layout import process_room_wiring_layout
 from .adaptive_shape_analyzer import process_adaptive_room_shapes, create_comparison_visualization
 import os
 import shutil
@@ -109,6 +110,15 @@ def process_single_image(image_path, cad_params=None, save_to_file=True):
             save_to_file=save_to_file,
         )
 
+        # 步骤8: 开关到灯具布线（MST + A*）
+        print("8. 生成房间布线（MST + A*）...")
+        wiring_payload = process_room_wiring_layout(
+            lighting_payload=lighting_payload,
+            image_path=image_path,
+            cad_params=effective_cad_params,
+            save_to_file=save_to_file,
+        )
+
         print(f"=== 图像处理完成: {os.path.basename(image_path)} ===")
         print(f"成功处理 {len(processed_rooms)} 个房间的轮廓数据")
         print(f"计算了 {len(room_rectangles)} 个房间的最小外接矩形")
@@ -117,6 +127,7 @@ def process_single_image(image_path, cad_params=None, save_to_file=True):
         return {
             "cad_rooms": cad_rooms,
             "lighting_rooms": lighting_payload.get("rooms", {}),
+            "wiring_rooms": wiring_payload.get("rooms", {}),
         }
     finally:
         if previous_output_dir is None:
