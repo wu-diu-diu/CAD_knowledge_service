@@ -432,28 +432,84 @@ def _select_lamp_cells_regular_grid(
     room_cols = int(c_max - c_min + 1)
 
     rows, cols = _choose_regular_grid_shape(lamp_count, room_rows, room_cols)
-    target_points: List[Tuple[float, float]] = []
-    for r in range(rows):
-        rr = float(r_min) + (r + 0.5) * (float(room_rows) / max(1, rows))
-        for c in range(cols):
-            cc = float(c_min) + (c + 0.5) * (float(room_cols) / max(1, cols))
-            target_points.append((rr, cc))
 
+    # 1) 先在行轴/列轴上各自选出“对齐锚点”（尽量均匀且离目标中心最近）
+    row_targets = [
+        float(r_min) + (r + 0.5) * (float(room_rows) / max(1, rows))
+        for r in range(rows)
+    ]
+    col_targets = [
+        float(c_min) + (c + 0.5) * (float(room_cols) / max(1, cols))
+        for c in range(cols)
+    ]
+    unique_rows = sorted({int(x) for x in valid[:, 0].tolist()})
+    unique_cols = sorted({int(x) for x in valid[:, 1].tolist()})
+
+    def _pick_axis_levels(values: List[int], targets: List[float], count: int) -> List[int]:
+        if not values or count <= 0:
+            return []
+        pool = list(values)
+        picked_axis: List[int] = []
+        for t in targets:
+            if not pool:
+                break
+            idx = min(range(len(pool)), key=lambda i: abs(float(pool[i]) - float(t)))
+            picked_axis.append(int(pool.pop(idx)))
+        while len(picked_axis) < count:
+            t = targets[min(len(picked_axis), len(targets) - 1)] if targets else float(values[0])
+            picked_axis.append(int(min(values, key=lambda v: abs(float(v) - float(t)))))
+        picked_axis = sorted(picked_axis[:count])
+        return picked_axis
+
+    row_levels = _pick_axis_levels(unique_rows, row_targets, rows)
+    col_levels = _pick_axis_levels(unique_cols, col_targets, cols)
+    if not row_levels or not col_levels:
+        return _complete_lamp_cells([], grid, lamp_count)
+
+    # 2) 生成行列对齐的理想槽位（笛卡尔积），必要时等间距抽样到 lamp_count
+    ideal_slots = [(rr, cc) for rr in row_levels for cc in col_levels]
+    if len(ideal_slots) > lamp_count:
+        idxs = np.linspace(0, len(ideal_slots) - 1, num=lamp_count, dtype=int).tolist()
+        sampled: List[Tuple[int, int]] = []
+        for i in idxs:
+            slot = ideal_slots[int(i)]
+            if slot not in sampled:
+                sampled.append(slot)
+        # 若 linspace 四舍五入后重复，补齐缺口
+        for slot in ideal_slots:
+            if len(sampled) >= lamp_count:
+                break
+            if slot not in sampled:
+                sampled.append(slot)
+        ideal_slots = sampled[:lamp_count]
+
+    # 3) 优先严格使用交点；若少量交点不可用，再做“同轴近邻投影”补齐
     free = {(int(p[0]), int(p[1])) for p in valid.tolist()}
     picked: List[Tuple[int, int]] = []
-    for tp in target_points:
-        nearest = None
-        best_dist = 1e18
-        for fr, fc in free:
-            d2 = (float(fr) - tp[0]) ** 2 + (float(fc) - tp[1]) ** 2
-            if d2 < best_dist:
-                best_dist = d2
-                nearest = (fr, fc)
-        if nearest is not None:
-            picked.append(nearest)
-            free.discard(nearest)
-        if len(picked) >= lamp_count:
-            break
+    for slot in ideal_slots:
+        if slot in free:
+            picked.append(slot)
+            free.discard(slot)
+
+    if len(picked) < lamp_count:
+        for tr, tc in ideal_slots:
+            if len(picked) >= lamp_count:
+                break
+            if (tr, tc) in picked:
+                continue
+            # 优先同一行，保持“行对齐”
+            same_row = [p for p in free if p[0] == tr]
+            cand = None
+            if same_row:
+                cand = min(same_row, key=lambda p: abs(p[1] - tc))
+            else:
+                # 次选同一列，保持“列对齐”
+                same_col = [p for p in free if p[1] == tc]
+                if same_col:
+                    cand = min(same_col, key=lambda p: abs(p[0] - tr))
+            if cand is not None:
+                picked.append(cand)
+                free.discard(cand)
 
     return _complete_lamp_cells(picked, grid, lamp_count)
 
