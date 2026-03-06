@@ -65,6 +65,9 @@ os.environ["CAD_LIGHTING_STAGE1_PROVIDER"] = "deepseek"
 os.environ["CAD_LIGHTING_STAGE2_PROVIDER"] =  "qwen"
 os.environ["CAD_LIGHTING_STAGE1_MODEL"] = "deepseek-chat"
 os.environ["CAD_LIGHTING_STAGE2_MODEL"] = "qwen-plus"
+# 设置规则布灯或者LLM布灯的环境变量
+os.environ["CAD_LIGHTING_PLACEMENT_MODE"] = "rule"  # 可选值: "rule" 或 "llm"
+
 MINERU_MAX_PAGES = int(os.getenv("RAG_MINERU_MAX_PAGES", "1000"))
 cad_logger = get_cad_logger("cad_api")
 _model: Optional[SentenceTransformer] = None

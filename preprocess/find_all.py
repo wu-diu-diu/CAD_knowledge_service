@@ -102,11 +102,13 @@ def process_single_image(image_path, cad_params=None, save_to_file=True):
         # 步骤7: 房间网格离散化 + 灯具布置
         print("7. 房间网格离散化并生成灯具布置...")
         effective_cad_params = cad_params if cad_params is not None else DEFAULT_CAD_PARAMS
+        lighting_mode = os.getenv("CAD_LIGHTING_PLACEMENT_MODE", "llm").strip().lower()
         lighting_payload = process_room_lighting_layout(
             room_rectangles=room_rectangles,
             image_path=image_path,
             cad_params=effective_cad_params,
             door_assignments=doors_and_windows.get("door_assignments", []),
+            placement_mode=lighting_mode,
             save_to_file=save_to_file,
         )
 

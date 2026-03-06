@@ -373,6 +373,91 @@ def _select_cells_heuristic(grid: np.ndarray, lamp_count: int) -> List[Tuple[int
     return selected[:need]
 
 
+def _choose_regular_grid_shape(
+    lamp_count: int,
+    grid_rows: int,
+    grid_cols: int,
+) -> Tuple[int, int]:
+    """
+    为规则矩形房间选择近似均匀的行列数(rows, cols)。
+    - 若房间横向更长，优先 cols >= rows；
+    - 若房间纵向更长，优先 rows >= cols。
+    """
+    n = max(1, int(lamp_count))
+    aspect = float(max(1, grid_cols)) / float(max(1, grid_rows))
+    prefer_cols_major = bool(grid_cols >= grid_rows)
+
+    best = (1, n)
+    best_score = 1e18
+    for rows in range(1, n + 1):
+        cols = int(math.ceil(n / float(rows)))
+        extra = int(rows * cols - n)
+
+        # 形状匹配
+        shape_aspect = float(cols) / float(max(1, rows))
+        shape_score = abs(shape_aspect - aspect)
+
+        # 朝向约束
+        orient_penalty = 0.0
+        if prefer_cols_major and cols < rows:
+            orient_penalty = 2.0
+        if (not prefer_cols_major) and rows < cols:
+            orient_penalty = 2.0
+
+        score = 3.0 * extra + shape_score + orient_penalty
+        if score < best_score:
+            best_score = score
+            best = (rows, cols)
+
+    return best
+
+
+def _select_lamp_cells_regular_grid(
+    grid: np.ndarray,
+    lamp_count: int,
+) -> List[Tuple[int, int]]:
+    """
+    规则矩形房间均匀布置：
+    1) 先按房间长宽比确定 rows x cols（例如6盏 -> 2x3 或 3x2）
+    2) 在均匀目标点上投影到最近可用网格(值=1)
+    """
+    lamp_count = max(1, int(lamp_count))
+    valid = np.argwhere(grid == 1)
+    if len(valid) == 0:
+        return []
+
+    r_min, c_min = valid.min(axis=0)
+    r_max, c_max = valid.max(axis=0)
+    room_rows = int(r_max - r_min + 1)
+    room_cols = int(c_max - c_min + 1)
+
+    rows, cols = _choose_regular_grid_shape(lamp_count, room_rows, room_cols)
+    target_points: List[Tuple[float, float]] = []
+    for r in range(rows):
+        rr = float(r_min) + (r + 0.5) * (float(room_rows) / max(1, rows))
+        for c in range(cols):
+            cc = float(c_min) + (c + 0.5) * (float(room_cols) / max(1, cols))
+            target_points.append((rr, cc))
+
+    free = {(int(p[0]), int(p[1])) for p in valid.tolist()}
+    picked: List[Tuple[int, int]] = []
+    for tp in target_points:
+        nearest = None
+        best_dist = 1e18
+        for fr, fc in free:
+            d2 = (float(fr) - tp[0]) ** 2 + (float(fc) - tp[1]) ** 2
+            if d2 < best_dist:
+                best_dist = d2
+                nearest = (fr, fc)
+        if nearest is not None:
+            picked.append(nearest)
+            free.discard(nearest)
+        if len(picked) >= lamp_count:
+            break
+
+    return _complete_lamp_cells(picked, grid, lamp_count)
+
+
 def _extract_json_obj(text: str) -> Optional[dict]:
     if not text:
         return None
@@ -668,6 +753,139 @@ def _complete_lamp_cells(
     return unique_selected[:target_count]
 
 
+def _select_lamp_cells_rule_based(
+    grid: np.ndarray,
+    lamp_count: int,
+    max_iter: int = 8,
+) -> List[Tuple[int, int]]:
+    """
+    固定灯具数量下的规则布置（适配不规则房间）：
+    - 初始化: farthest-point sampling
+    - 迭代: cluster分配 + medoid更新
+    """
+    lamp_count = max(0, int(lamp_count))
+    if lamp_count <= 0:
+        return []
+
+    valid = np.argwhere(grid == 1)
+    if len(valid) == 0:
+        return []
+    if lamp_count == 1:
+        center = np.mean(valid, axis=0)
+        idx = int(np.argmin(np.sum((valid - center) ** 2, axis=1)))
+        return [(int(valid[idx][0]), int(valid[idx][1]))]
+
+    n = len(valid)
+    k = min(lamp_count, n)
+    pts = valid.astype(np.int32)
+
+    # 1) farthest-point 初始化
+    centroid = np.mean(pts, axis=0)
+    first_idx = int(np.argmin(np.sum((pts - centroid) ** 2, axis=1)))
+    center_idx: List[int] = [first_idx]
+    min_dist2 = np.sum((pts - pts[first_idx]) ** 2, axis=1).astype(np.float64)
+    for _ in range(1, k):
+        next_idx = int(np.argmax(min_dist2))
+        center_idx.append(next_idx)
+        d2 = np.sum((pts - pts[next_idx]) ** 2, axis=1).astype(np.float64)
+        min_dist2 = np.minimum(min_dist2, d2)
+
+    # 2) medoid 迭代
+    for _ in range(max(1, int(max_iter))):
+        centers = pts[center_idx]  # [k,2]
+        dist2 = np.sum((pts[:, None, :] - centers[None, :, :]) ** 2, axis=2)  # [n,k]
+        labels = np.argmin(dist2, axis=1)
+        new_center_idx = center_idx.copy()
+        changed = False
+        for c in range(k):
+            cluster_ids = np.where(labels == c)[0]
+            if len(cluster_ids) == 0:
+                continue
+            # 限制 medoid 计算规模，避免大房间 O(n^2) 过慢
+            if len(cluster_ids) > 250:
+                sample_sel = np.linspace(0, len(cluster_ids) - 1, 250, dtype=int)
+                cluster_ids = cluster_ids[sample_sel]
+            cluster_pts = pts[cluster_ids]
+            pairwise = np.sum((cluster_pts[:, None, :] - cluster_pts[None, :, :]) ** 2, axis=2)
+            medoid_local = int(np.argmin(np.sum(pairwise, axis=1)))
+            medoid_global = int(cluster_ids[medoid_local])
+            if medoid_global != center_idx[c]:
+                new_center_idx[c] = medoid_global
+                changed = True
+        center_idx = new_center_idx
+        if not changed:
+            break
+
+    centers = [(int(pts[i][0]), int(pts[i][1])) for i in center_idx]
+    return _complete_lamp_cells(centers, grid, lamp_count)
+
+
+def _select_switch_near_door(
+    grid: np.ndarray,
+    door_edge_cells: Optional[List[List[int]]] = None,
+    door_side: Optional[str] = None,
+) -> Optional[Tuple[int, int]]:
+    """
+    开关规则:
+    - 放在门旁边，优先沿墙边方向朝房间中心偏移1格
+    - 例如门在右下角 -> 优先上移一格；门在右上角 -> 优先下移一格
+    """
+    rows, cols = grid.shape
+    if not door_edge_cells:
+        return _select_switch_heuristic(grid, door_edge_cells, door_side)
+
+    valid_door_cells: List[Tuple[int, int]] = []
+    for item in door_edge_cells:
+        if _is_point(item):
+            r, c = int(item[0]), int(item[1])
+            if 0 <= r < rows and 0 <= c < cols:
+                valid_door_cells.append((r, c))
+    if not valid_door_cells:
+        return _select_switch_heuristic(grid, door_edge_cells, door_side)
+
+    free_cells = np.argwhere(grid == 1)
+    if len(free_cells) == 0:
+        return None
+    center_r, center_c = np.mean(free_cells, axis=0)
+
+    # 用最接近房间中心的门格作为锚点
+    anchor = min(
+        valid_door_cells,
+        key=lambda rc: (rc[0] - center_r) ** 2 + (rc[1] - center_c) ** 2,
+    )
+    ar, ac = anchor
+
+    dr = 1 if center_r > ar else -1
+    dc = 1 if center_c > ac else -1
+
+    candidates: List[Tuple[int, int]] = []
+    if door_side in ("left", "right"):
+        # 沿墙边方向先移动到更靠中心的一格
+        candidates.extend([(ar + dr, ac), (ar - dr, ac)])
+        # 次选：向室内偏移
+        inward_c = ac + (1 if door_side == "left" else -1)
+        candidates.extend([(ar, inward_c), (ar + dr, inward_c), (ar - dr, inward_c)])
+    elif door_side in ("top", "bottom"):
+        # 沿墙边方向先移动到更靠中心的一格
+        candidates.extend([(ar, ac + dc), (ar, ac - dc)])
+        # 次选：向室内偏移
+        inward_r = ar + (1 if door_side == "top" else -1)
+        candidates.extend([(inward_r, ac), (inward_r, ac + dc), (inward_r, ac - dc)])
+    else:
+        candidates.extend([(ar + dr, ac), (ar, ac + dc), (ar - dr, ac), (ar, ac - dc)])
+
+    for rr, cc in candidates:
+        if 0 <= rr < rows and 0 <= cc < cols and int(grid[rr, cc]) == 1:
+            return (int(rr), int(cc))
+
+    # 兜底：就近找可布置格
+    nearest = min(
+        [(int(r), int(c)) for r, c in free_cells.tolist()],
+        key=lambda rc: (rc[0] - ar) ** 2 + (rc[1] - ac) ** 2,
+    )
+    return nearest
+
+
 
 
 def _select_cells_with_llm(
@@ -682,8 +900,13 @@ def _select_cells_with_llm(
     stage1_model: Optional[str] = None,
     stage2_provider: str = "qwen",
     stage2_model: Optional[str] = None,
+    enabled: Optional[bool] = None,
 ) -> Optional[Dict[str, Any]]:
-    use_llm = os.getenv("CAD_LIGHTING_USE_LLM", "0").lower() in ("1", "true", "yes")
+    use_llm = (
+        bool(enabled)
+        if enabled is not None
+        else os.getenv("CAD_LIGHTING_USE_LLM", "0").lower() in ("1", "true", "yes")
+    )
     if not use_llm:
         return None
 
@@ -1134,13 +1357,17 @@ def process_room_lighting_layout(
     image_path: str,
     cad_params: Dict[str, float],
     door_assignments: Optional[List[Dict[str, Any]]] = None,
+    placement_mode: str = "llm",
     save_to_file: bool = True,
     ) -> Dict[str, Any]:
     """
     步骤7:
     1) 将每个房间离散为0/1网格，并把门所在方位的边缘格标记为2
-    2) 调用LLM(可选)基于房间名+面积选择灯具类型、数量、网格位置与开关位置
-    3) 反解像素坐标 -> CAD坐标
+    2) 按 placement_mode 选择布置方式:
+       - llm: 使用大模型布置灯具
+       - rule: 使用规则算法布置灯具
+    3) 开关位置按门位置规则放置（靠门、沿边向房间中心偏移）
+    4) 反解像素坐标 -> CAD坐标
     """
     img = cv2.imread(image_path)
     if img is None:
@@ -1156,6 +1383,9 @@ def process_room_lighting_layout(
     stage2_provider = os.getenv("CAD_LIGHTING_STAGE2_PROVIDER", "qwen").strip().lower()
     stage1_model = os.getenv("CAD_LIGHTING_STAGE1_MODEL", "").strip() or None
     stage2_model = os.getenv("CAD_LIGHTING_STAGE2_MODEL", "").strip() or None
+    placement_mode = (placement_mode or "llm").strip().lower()
+    if placement_mode not in ("llm", "rule"):
+        placement_mode = "llm"
 
     room_assigned_doors = _build_room_single_door_assignment(room_rectangles, door_assignments)
 
@@ -1200,38 +1430,53 @@ def process_room_lighting_layout(
             if door_edge_cells:
                 door_grid_position = door_edge_cells[0]
 
-        llm_selection = _select_cells_with_llm(
-            room_name=room_name,
-            room_area_m2=room_area_m2,
-            grid=grid,
-            suggested_lamp_count=estimated_lamp_count,
-            default_lamp_type=default_lamp_type,
-            door_side=door_side,
-            door_edge_cells=door_edge_cells,
-            stage1_provider=stage1_provider,
-            stage1_model=stage1_model,
-            stage2_provider=stage2_provider,
-            stage2_model=stage2_model,
-        )
-        placement_method = "llm"
-        if llm_selection is None:
-            selected_lamp_type = default_lamp_type
-            selected_lamp_cells = _select_cells_heuristic(grid, estimated_lamp_count)
-            switch_cell = _select_switch_heuristic(
+        llm_selection = None
+        if placement_mode == "llm":
+            llm_selection = _select_cells_with_llm(
+                room_name=room_name,
+                room_area_m2=room_area_m2,
                 grid=grid,
-                door_edge_cells=door_edge_cells,
+                suggested_lamp_count=estimated_lamp_count,
+                default_lamp_type=default_lamp_type,
                 door_side=door_side,
+                door_edge_cells=door_edge_cells,
+                stage1_provider=stage1_provider,
+                stage1_model=stage1_model,
+                stage2_provider=stage2_provider,
+                stage2_model=stage2_model,
+                enabled=True,
             )
-            placement_method = "heuristic"
-        else:
+
+        if llm_selection is not None:
+            placement_method = "llm"
             selected_lamp_type = str(llm_selection.get("lamp_type", default_lamp_type))
+            planned_lamp_count = max(1, int(llm_selection.get("lamp_count", estimated_lamp_count)))
             selected_lamp_cells = llm_selection.get("lamps", []) or []
-            switch_cell = llm_selection.get("switch")
+            selected_lamp_cells = _complete_lamp_cells(selected_lamp_cells, grid, planned_lamp_count)
+            lamp_lm_info = llm_selection.get("lamp_lm")
+        else:
+            placement_method = "rule"
+            selected_lamp_type = default_lamp_type
+            planned_lamp_count = max(1, int(estimated_lamp_count))
+            if is_regular:
+                selected_lamp_cells = _select_lamp_cells_regular_grid(grid, planned_lamp_count)
+            else:
+                selected_lamp_cells = _select_lamp_cells_rule_based(grid, planned_lamp_count)
+            selected_lamp_cells = _complete_lamp_cells(selected_lamp_cells, grid, planned_lamp_count)
+            lamp_lm_info = None
+
+        # 开关统一使用规则定位：门旁边、靠房间中心方向
+        switch_cell = _select_switch_near_door(
+            grid=grid,
+            door_edge_cells=door_edge_cells,
+            door_side=door_side,
+        )
         print(
             f"[step7] room='{room_name}' "
+            f"mode={placement_mode} method={placement_method} "
             f"stage1={stage1_provider}/{stage1_model} "
             f"stage2={stage2_provider}/{stage2_model} "
-            f"lamp_type={selected_lamp_type} lamp_count={len(selected_lamp_cells)} switch={'yes' if switch_cell else 'no'} lamp_lm={llm_selection.get('lamp_lm')} "
+            f"lamp_type={selected_lamp_type} lamp_count={len(selected_lamp_cells)} switch={'yes' if switch_cell else 'no'} lamp_lm={lamp_lm_info} "
         )
 
         lamp_grid_positions: List[List[int]] = []
