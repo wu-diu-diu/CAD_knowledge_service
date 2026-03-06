@@ -4,6 +4,7 @@
     // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
     
         {
             "name": "文件解析测试",
@@ -26,5 +27,20 @@
             "python": "${command:python.interpreterPath}",
             "console": "integratedTerminal"
         },
+        {
+            "name": "CAD Agent Debug",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/agent/image_process.py",
+            "args": [],
+            "console": "integratedTerminal",
+            "env": {
+                "CAD_AGENT_PROVIDER": "deepseek",
+                "CAD_AGENT_MODEL": "deepseek-chat",
+                "CAD_AGENT_MAX_STEPS": "8",
+                "default_image": "test_files/agent_test.png"
+            },
+            "cwd": "${workspaceFolder}"
+        }
     ]
 }
