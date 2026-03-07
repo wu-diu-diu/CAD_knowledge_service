@@ -14,6 +14,7 @@ import json
 import os
 import shutil
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -36,7 +37,6 @@ from preprocess.lighting_layout import (
     _is_regular_room_shape,
     _mark_door_edge_cells,
     _mask_to_grid,
-    _save_grid_visualization_overlay,
 )
 from preprocess.ocr_extractor import extract_text_boxes
 from preprocess.wiring_layout import process_room_wiring_layout
@@ -45,6 +45,27 @@ try:
     from .react_agent import ReActLightingAgent, RoomAgentState
 except ImportError:
     from agent.react_agent import ReActLightingAgent, RoomAgentState
+
+
+def _create_timestamped_output_dir(base_dir: Path) -> Path:
+    """
+    在给定输出根目录下创建一次运行专属子目录，避免覆盖历史结果。
+    子目录命名: YYYYMMDD_HHMMSS(_N)
+    """
+    base_dir.mkdir(parents=True, exist_ok=True)
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_dir = base_dir / ts
+    if not run_dir.exists():
+        run_dir.mkdir(parents=True, exist_ok=False)
+        return run_dir
+
+    idx = 1
+    while True:
+        candidate = base_dir / f"{ts}_{idx}"
+        if not candidate.exists():
+            candidate.mkdir(parents=True, exist_ok=False)
+            return candidate
+        idx += 1
 
 
 def process_image_to_agent_input(
@@ -128,7 +149,6 @@ def process_image_to_agent_input(
         )
 
         rooms: Dict[str, Dict[str, Any]] = {}
-        grid_dump: Dict[str, Dict[str, Any]] = {}
         for room_name, room_shapes in room_rectangles.items():
             mask, min_x, min_y, room_w, room_h = _build_room_mask(room_shapes)
             if mask is None:
@@ -175,25 +195,6 @@ def process_image_to_agent_input(
             }
             rooms[room_name] = room_payload
 
-            grid_dump[room_name] = {
-                "room_name": room_name,
-                "lamp_type": "",
-                "grid_rows": room_payload["grid_rows"],
-                "grid_cols": room_payload["grid_cols"],
-                "cell_size_px": room_payload["cell_size_px"],
-                "bbox_pixel": room_payload["bbox_pixel"],
-                "room_area_px": room_payload["room_area_px"],
-                "room_area_mm2": room_payload["room_area_mm2"],
-                "room_area_m2": room_payload["room_area_m2"],
-                "is_regular": room_payload["is_regular"],
-                "assigned_door": room_payload["assigned_door"],
-                "door_side": room_payload["door_side"],
-                "door_edge_cells": room_payload["door_edge_cells"],
-                "lamp_grid_positions": [],
-                "switch_grid_positions": [],
-                "matrix": room_payload["matrix"],
-            }
-
         payload = {
             "image_path": str(image_path),
             "image_width": int(image_w),
@@ -208,23 +209,6 @@ def process_image_to_agent_input(
             with output_json.open("w", encoding="utf-8") as f:
                 json.dump(payload, f, ensure_ascii=False, indent=2)
             print(f"[agent-image] saved: {output_json}")
-
-            # 网格可视化（仅用于初始输入检查）
-            vis_alpha = float(os.getenv("CAD_GRID_VIS_ALPHA", "0.35"))
-            vis_dir = _save_grid_visualization_overlay(
-                image_path=str(image_path),
-                grid_dump=grid_dump,
-                output_dir=str(output_dir),
-                alpha=vis_alpha,
-            )
-            if vis_dir:
-                src_dir = Path(vis_dir)
-                dst_dir = output_dir / "agent_initial_grid_visualization"
-                if src_dir.exists():
-                    if dst_dir.exists():
-                        shutil.rmtree(dst_dir)
-                    src_dir.rename(dst_dir)
-                print(f"[agent-image] saved visualization: {dst_dir}")
 
         return payload
     finally:
@@ -399,24 +383,26 @@ def run_agent_pipeline(
         cad_params = dict(DEFAULT_CAD_PARAMS)
     if output_dir is None:
         output_dir = REPO_ROOT / "agent_output"
-    output_dir.mkdir(parents=True, exist_ok=True)
+    run_output_dir = _create_timestamped_output_dir(Path(output_dir))
+    print(f"[agent-image] run_output_dir: {run_output_dir}")
 
     initial_input = process_image_to_agent_input(
         image_path=image_path,
         cad_params=cad_params,
-        output_dir=output_dir,
+        output_dir=run_output_dir,
         save_to_file=True,
     )
     final_payload = run_agent_design(
         initial_input=initial_input,
         image_path=image_path,
         cad_params=cad_params,
-        output_dir=output_dir,
+        output_dir=run_output_dir,
         provider=provider,
         model_name=model_name,
         max_steps=max_steps,
     )
     return {
+        "output_dir": str(run_output_dir),
         "initial_input": initial_input,
         "final_result": final_payload,
     }
@@ -438,7 +424,8 @@ def main() -> None:
     )
     print(
         f"[agent-image] done. rooms={len((result.get('initial_input', {}) or {}).get('rooms', {}))}, "
-        f"final_rooms={len((result.get('final_result', {}) or {}).get('rooms', {}))}"
+        f"final_rooms={len((result.get('final_result', {}) or {}).get('rooms', {}))}, "
+        f"output_dir={result.get('output_dir')}"
     )
 
 

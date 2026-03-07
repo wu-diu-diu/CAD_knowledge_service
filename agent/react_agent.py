@@ -112,7 +112,7 @@ class AgentRunLogger:
     def tool_io(self, tool_name: str, tool_input: Dict[str, Any], tool_output: Dict[str, Any]) -> None:
         in_line = self._one_line_json(tool_input, max_len=180)
         out_line = self._one_line_json(tool_output, max_len=220)
-        self._emit("TOOL Calling", f"{tool_name} input={in_line} output={out_line}", self.BLUE)
+        self._emit("TOOL", f"{tool_name} input={in_line} output={out_line}", self.BLUE)
 
     def error(self, message: str) -> None:
         self._emit("ERROR", message, self.RED)
@@ -211,6 +211,35 @@ def _is_point(item: Any) -> bool:
         and isinstance(item[0], (int, float, np.integer, np.floating))
         and isinstance(item[1], (int, float, np.integer, np.floating))
     )
+
+
+def _count_binary_components(mask: np.ndarray) -> int:
+    """
+    统计二值mask中的4邻域连通块数量。
+    True/1 表示前景，False/0 表示背景。
+    """
+    if mask is None:
+        return 0
+    arr = np.array(mask, dtype=np.uint8)
+    if arr.ndim != 2 or arr.size == 0:
+        return 0
+    h, w = arr.shape
+    visited = np.zeros((h, w), dtype=np.uint8)
+    count = 0
+    for r in range(h):
+        for c in range(w):
+            if arr[r, c] == 0 or visited[r, c] == 1:
+                continue
+            count += 1
+            stack = [(r, c)]
+            visited[r, c] = 1
+            while stack:
+                cr, cc = stack.pop()
+                for nr, nc in ((cr - 1, cc), (cr + 1, cc), (cr, cc - 1), (cr, cc + 1)):
+                    if 0 <= nr < h and 0 <= nc < w and arr[nr, nc] == 1 and visited[nr, nc] == 0:
+                        visited[nr, nc] = 1
+                        stack.append((nr, nc))
+    return int(count)
 
 
 class AgentStateManager:
@@ -329,7 +358,7 @@ class LightingTools:
         - is_regular: 可选，是否规则房间；为空时自动判断。
         - min_spacing_m/max_spacing_m: 期望间距范围(米)。
         - max_lamps: 灯具数量上限。
-        - switch_count: 开关数量（可选覆盖）。
+        - switch_count: 开关数量（可选覆盖）；不传时按门数量自动估计（1门=1开关）。
 
         输出:
         - lamp_count/switch_count: 建议灯具与开关数量
@@ -371,7 +400,7 @@ class LightingTools:
         lamp_count = int(grid_rows * grid_cols)
 
         if switch_count is None:
-            switch_count_val = 1 if len(valid) > 0 else 0
+            switch_count_val = int(_count_binary_components(state.matrix == 2))
         else:
             switch_count_val = max(0, int(switch_count))
 
@@ -1110,9 +1139,9 @@ class ReActLightingAgent:
             view = self.tools.tool_read_matrix_state(state)
             validation = self.tools.tool_validate_layout(state)
             action = self._decide_action(state, view, validation)
-            self.run_logger.action(action if isinstance(action, dict) else {"action": "invalid", "raw": str(action)})
             if isinstance(action, dict) and action.get("thought"):
                 self.run_logger.thought(str(action.get("thought")))
+            self.run_logger.action(action if isinstance(action, dict) else {"action": "invalid", "raw": str(action)})
             if action.get("action") == "finish":
                 final_reason = str(action.get("reason", "done"))
                 state.record("finish", {}, {"reason": final_reason, "strategy": action.get("strategy", "")})
@@ -1656,6 +1685,7 @@ REACT_SYSTEM_PROMPT = """
    args: {"room_name":"可选"}
 2) tool_estimate_component_count
    args: {"is_regular":可选,"min_spacing_m":可选,"max_spacing_m":可选,"max_lamps":可选,"switch_count":可选}
+   说明: switch_count不传时按门数量估计（1门=1开关）。
 3) tool_calc_required_flux_per_lamp
    args: {"target_lux":可选,"lamp_count":可选,"uf":可选,"mf":可选}
 4) tool_retrieve_lamp_model
