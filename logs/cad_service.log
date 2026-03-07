@@ -2081,3 +2081,40 @@ Failed to establish connection to ResolvedIPv4Address(('127.0.0.1', 7687)) (reas
 2026-03-06 22:11:36 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
 2026-03-06 22:12:56 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
 2026-03-06 22:49:01 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-07 13:07:21 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-07 13:07:47 | INFO     | main:add_process_time_header:145 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-03-07 13:07:47 | INFO     | main:upload_and_process_cad:769 | upload request received: file_count=1
+2026-03-07 13:07:47 | INFO     | main:upload_and_process_cad:789 | read file: output_20260305_211532_843.png, size=145691 bytes
+2026-03-07 13:07:47 | INFO     | main:upload_and_process_cad:801 | using custom CAD parameters
+2026-03-07 13:07:47 | INFO     | preprocess.cad_service:process_uploaded_files:212 | 开始处理上传的文件，共 1 个文件
+2026-03-07 13:07:47 | DEBUG    | preprocess.cad_service:save_uploaded_files:182 | 保存上传文件: /tmp/cad_upload_ahhkqq4v/output_20260305_211532_843.png
+2026-03-07 13:07:47 | DEBUG    | preprocess.cad_service:process_uploaded_files:236 | 使用CAD参数: {'Xmin': 17661.1174388472, 'Ymin': 21082.085565022, 'Xmax': 46217.2188605184, 'Ymax': 71848.4880924376}
+2026-03-07 13:07:47 | INFO     | preprocess.cad_service:process_uploaded_files:239 | 开始批量处理上传的图像...
+2026-03-07 13:07:47 | INFO     | preprocess.find_all:process_images_batch:152 | 开始批量处理目录: /tmp/cad_upload_ahhkqq4v
+2026-03-07 13:07:47 | INFO     | preprocess.find_all:process_images_batch:166 | 找到 1 个PNG文件
+2026-03-07 13:07:47 | INFO     | preprocess.find_all:process_images_batch:171 | 处理第 1/1 个图像
+2026-03-07 13:07:47 | INFO     | preprocess.find_all:process_single_image:30 | 开始处理图像: /tmp/cad_upload_ahhkqq4v/output_20260305_211532_843.png
+2026-03-07 13:07:47 | INFO     | preprocess.find_all:process_single_image:46 | 本次运行输出目录: images/output_20260307_130747
+2026-03-07 13:07:47 | INFO     | preprocess.find_all:process_single_image:47 | 已复制原始图像到: images/output_20260307_130747/original_output_20260305_211532_843.png
+2026-03-07 13:07:47 | INFO     | preprocess.find_all:process_single_image:56 | 1. 提取房间名称和坐标...
+2026-03-07 13:08:03 | INFO     | preprocess.find_all:process_single_image:60 | 2. 检测房间内轮廓...
+2026-03-07 13:08:05 | INFO     | preprocess.find_all:process_single_image:66 | step2 门候选凹口点: 190
+2026-03-07 13:08:05 | INFO     | preprocess.find_all:process_single_image:69 | 3. 检测门窗...
+2026-03-07 13:08:06 | INFO     | preprocess.find_all:process_single_image:75 | 检测结果: 18 个门, 18 个窗
+2026-03-07 13:08:06 | INFO     | preprocess.find_all:process_single_image:79 | 门中心归属: 总门数=18, 已归属=18, 未归属=0
+2026-03-07 13:08:06 | INFO     | preprocess.find_all:process_single_image:86 | 4. 处理房间轮廓点（排除门区域 + 轮廓简化）...
+2026-03-07 13:08:07 | INFO     | preprocess.find_all:process_single_image:98 | 5. 计算房间最小外接矩形...
+2026-03-07 13:08:22 | INFO     | preprocess.find_all:process_single_image:102 | 6. 转换坐标为CAD坐标...
+2026-03-07 13:08:22 | INFO     | preprocess.find_all:process_single_image:106 | 7. 房间网格离散化并生成灯具布置...
+2026-03-07 13:08:24 | INFO     | preprocess.find_all:process_single_image:119 | 8. 生成房间布线（MST + A*）...
+2026-03-07 13:08:26 | INFO     | preprocess.find_all:process_single_image:127 | 图像处理完成: output_20260305_211532_843.png
+2026-03-07 13:08:26 | INFO     | preprocess.find_all:process_single_image:128 | 成功处理 18 个房间的轮廓数据
+2026-03-07 13:08:26 | INFO     | preprocess.find_all:process_single_image:129 | 计算了 18 个房间的最小外接矩形
+2026-03-07 13:08:26 | INFO     | preprocess.find_all:process_single_image:130 | 处理结果目录: images/output_20260307_130747
+2026-03-07 13:08:26 | INFO     | preprocess.find_all:process_images_batch:180 | 批量处理完成，成功处理 1 个图像
+2026-03-07 13:08:26 | INFO     | preprocess.cad_service:process_uploaded_files:253 | 批量处理完成: 1/1 个图像成功
+2026-03-07 13:08:26 | INFO     | preprocess.cad_service:process_uploaded_files:275 | CAD处理成功: 提取了 18 个房间的坐标
+2026-03-07 13:08:26 | DEBUG    | preprocess.cad_service:cleanup_temp_directory:199 | 清理临时目录: /tmp/cad_upload_ahhkqq4v
+2026-03-07 13:08:26 | INFO     | main:upload_and_process_cad:824 | CAD processing finished: success=1/1
+2026-03-07 13:08:26 | INFO     | main:add_process_time_header:149 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=38.6823s
+2026-03-07 13:10:14 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs

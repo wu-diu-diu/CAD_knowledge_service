@@ -2,6 +2,7 @@
 CAD图纸房间分析主程序 - 重构版本
 整合了OCR文本识别、轮廓检测、门窗识别和转折点处理的完整流程
 """
+from .logger import get_logger
 from .ocr_extractor import extract_text_boxes
 from .contour_detector import find_all_inner_contours
 from .door_window_detector import find_door_and_window
@@ -15,6 +16,8 @@ import os
 import shutil
 from datetime import datetime
 
+logger = get_logger("find_all")
+
 
 def process_single_image(image_path, cad_params=None, save_to_file=True):
     """
@@ -24,7 +27,7 @@ def process_single_image(image_path, cad_params=None, save_to_file=True):
     :param save_to_file: 是否保存到文件
     :return: 处理结果字典
     """
-    print(f"=== 开始处理图像: {image_path} ===")
+    logger.info(f"开始处理图像: {image_path}")
 
     # 为当前运行创建独立输出目录: images/output_YYYYMMDD_HHMMSS
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -40,8 +43,8 @@ def process_single_image(image_path, cad_params=None, save_to_file=True):
     input_filename = os.path.basename(image_path)
     copied_input_path = os.path.join(output_dir, f"original_{input_filename}")
     shutil.copy2(image_path, copied_input_path)
-    print(f"本次运行输出目录: {output_dir}")
-    print(f"已复制原始图像到: {copied_input_path}")
+    logger.info(f"本次运行输出目录: {output_dir}")
+    logger.info(f"已复制原始图像到: {copied_input_path}")
 
     # 通过环境变量统一各步骤输出目录
     previous_output_dir = os.environ.get("CAD_STEP_OUTPUT_DIR")
@@ -50,37 +53,37 @@ def process_single_image(image_path, cad_params=None, save_to_file=True):
     try:
 
         # 步骤1: 提取房间名称和坐标
-        print("1. 提取房间名称和坐标...")
+        logger.info("1. 提取房间名称和坐标...")
         room_dict = extract_text_boxes(image_path)
 
         # 步骤2: 检测房间轮廓
-        print("2. 检测房间内轮廓...")
+        logger.info("2. 检测房间内轮廓...")
         inner_contours, approx_points, room_door_candidates = find_all_inner_contours(
             image_path,
             room_dict,
         )
         total_step2_door_candidates = sum(len(v) for v in room_door_candidates.values())
-        print(f"step2 门候选凹口点: {total_step2_door_candidates}")
+        logger.info(f"step2 门候选凹口点: {total_step2_door_candidates}")
 
         # 步骤3: 检测门窗
-        print("3. 检测门窗...")
+        logger.info("3. 检测门窗...")
         doors_and_windows = find_door_and_window(
             image_path,
             room_contours_by_name=approx_points,
             room_door_candidates=room_door_candidates,
         )
-        print(f"检测结果: {len(doors_and_windows['doors'])} 个门, "
+        logger.info(f"检测结果: {len(doors_and_windows['doors'])} 个门, "
               f"{len(doors_and_windows['windows'])} 个窗")
         if "door_assignments" in doors_and_windows:
             assigned_count = len([d for d in doors_and_windows["door_assignments"] if d.get("room")])
-            print(
+            logger.info(
                 f"门中心归属: 总门数={len(doors_and_windows['door_assignments'])}, "
                 f"已归属={assigned_count}, "
                 f"未归属={len(doors_and_windows['door_assignments']) - assigned_count}"
             )
 
         # 步骤4: 处理房间轮廓点（排除门区域 + 轮廓简化）
-        print("4. 处理房间轮廓点（排除门区域 + 轮廓简化）...")
+        logger.info("4. 处理房间轮廓点（排除门区域 + 轮廓简化）...")
         processed_rooms = process_all_rooms(
             approx_points,
             doors_and_windows,
@@ -92,15 +95,15 @@ def process_single_image(image_path, cad_params=None, save_to_file=True):
         )
 
         # 步骤5: 计算房间最小外接矩形
-        print("5. 计算房间最小外接矩形...")
+        logger.info("5. 计算房间最小外接矩形...")
         room_rectangles = process_room_bounding_rectangles(processed_rooms, image_path)
 
         # 步骤6：转换坐标为CAD坐标
-        print("6. 转换坐标为CAD坐标...")
+        logger.info("6. 转换坐标为CAD坐标...")
         cad_rooms = process_rooms_to_cad(room_rectangles, image_path, cad_params, save_to_file)
 
         # 步骤7: 房间网格离散化 + 灯具布置
-        print("7. 房间网格离散化并生成灯具布置...")
+        logger.info("7. 房间网格离散化并生成灯具布置...")
         effective_cad_params = cad_params if cad_params is not None else DEFAULT_CAD_PARAMS
         lighting_mode = os.getenv("CAD_LIGHTING_PLACEMENT_MODE", "llm").strip().lower()
         lighting_payload = process_room_lighting_layout(
@@ -113,7 +116,7 @@ def process_single_image(image_path, cad_params=None, save_to_file=True):
         )
 
         # 步骤8: 开关到灯具布线（MST + A*）
-        print("8. 生成房间布线（MST + A*）...")
+        logger.info("8. 生成房间布线（MST + A*）...")
         wiring_payload = process_room_wiring_layout(
             lighting_payload=lighting_payload,
             image_path=image_path,
@@ -121,10 +124,10 @@ def process_single_image(image_path, cad_params=None, save_to_file=True):
             save_to_file=save_to_file,
         )
 
-        print(f"=== 图像处理完成: {os.path.basename(image_path)} ===")
-        print(f"成功处理 {len(processed_rooms)} 个房间的轮廓数据")
-        print(f"计算了 {len(room_rectangles)} 个房间的最小外接矩形")
-        print(f"处理结果目录: {output_dir}")
+        logger.info(f"图像处理完成: {os.path.basename(image_path)}")
+        logger.info(f"成功处理 {len(processed_rooms)} 个房间的轮廓数据")
+        logger.info(f"计算了 {len(room_rectangles)} 个房间的最小外接矩形")
+        logger.info(f"处理结果目录: {output_dir}")
 
         return {
             "cad_rooms": cad_rooms,
@@ -146,7 +149,7 @@ def process_images_batch(image_directory, cad_params=None, save_to_file=True):
     :param save_to_file: 是否保存中间结果到文件
     :return: 批量处理结果字典
     """
-    print(f"=== 开始批量处理目录: {image_directory} ===")
+    logger.info(f"开始批量处理目录: {image_directory}")
 
     if not os.path.exists(image_directory):
         raise FileNotFoundError(f"指定目录不存在: {image_directory}")
@@ -160,21 +163,21 @@ def process_images_batch(image_directory, cad_params=None, save_to_file=True):
     if not png_files:
         raise ValueError(f"目录中没有找到PNG文件: {image_directory}")
 
-    print(f"找到 {len(png_files)} 个PNG文件")
+    logger.info(f"找到 {len(png_files)} 个PNG文件")
 
     # 处理每个图像
     results = {}
     for i, image_path in enumerate(png_files, 1):
-        print(f"\n--- 处理第 {i}/{len(png_files)} 个图像 ---")
+        logger.info(f"处理第 {i}/{len(png_files)} 个图像")
         try:
             result = process_single_image(image_path, cad_params, save_to_file)
             image_name = os.path.basename(image_path)
             results[image_name] = result
         except Exception as e:
-            print(f"处理图像 {image_path} 时出错: {e}")
+            logger.error(f"处理图像 {image_path} 时出错: {e}")
             results[os.path.basename(image_path)] = {'error': str(e)}
 
-    print(f"\n=== 批量处理完成，成功处理 {len([r for r in results.values() if 'error' not in r])} 个图像 ===")
+    logger.info(f"批量处理完成，成功处理 {len([r for r in results.values() if 'error' not in r])} 个图像")
 
     return results
 
@@ -183,14 +186,13 @@ def main():
     """
     主处理流程（兼容性保持）
     """
-    # 输入图像路径
     image_path = '/home/chen/punchy/CAD_knowledge_service/images/test_8K.png'
 
-    print("=== CAD图纸房间分析开始 ===")
+    logger.info("CAD图纸房间分析开始")
 
     result = process_single_image(image_path, save_to_file=True)
 
-    print("\n=== 处理完成 ===")
+    logger.info("处理完成")
 
     return result
 
@@ -198,8 +200,8 @@ def main():
 if __name__ == "__main__":
     try:
         results = main()
-        print("程序执行成功！")
+        logger.info("程序执行成功！")
     except Exception as e:
-        print(f"程序执行出错: {e}")
+        logger.error(f"程序执行出错: {e}")
         import traceback
         traceback.print_exc()
