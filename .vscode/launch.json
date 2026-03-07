@@ -31,13 +31,13 @@
             "name": "CAD Agent Debug",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/agent/image_process.py",
+            "program": "${workspaceFolder}/agent/run.py",
             "args": [],
             "console": "integratedTerminal",
             "env": {
                 "CAD_AGENT_PROVIDER": "deepseek",
                 "CAD_AGENT_MODEL": "deepseek-chat",
-                "CAD_AGENT_MAX_STEPS": "8",
+                "CAD_AGENT_MAX_STEPS": "16",
                 "default_image": "test_files/agent_test.png"
             },
             "cwd": "${workspaceFolder}"

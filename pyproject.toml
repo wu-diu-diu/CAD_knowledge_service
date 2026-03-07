@@ -20,4 +20,5 @@ dependencies = [
     "llama-index>=0.12.42",
     "llama-index-llms-deepseek>=0.2.0",
     "llama-index-llms-dashscope>=0.4.1",
+    "anthropic>=0.84.0",
 ]
