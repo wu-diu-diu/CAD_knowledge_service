@@ -21,3 +21,24 @@ Failed to establish connection to ResolvedIPv4Address(('127.0.0.1', 7687)) (reas
 2026-03-02 20:52:30 | ERROR    | preprocess.cad_service:process_uploaded_files:269 | CAD处理失败: 所有图像处理均失败
 2026-03-02 20:53:50 | ERROR    | preprocess.cad_service:process_uploaded_files:269 | CAD处理失败: 所有图像处理均失败
 2026-03-02 20:56:50 | ERROR    | preprocess.cad_service:process_uploaded_files:269 | CAD处理失败: 所有图像处理均失败
+2026-03-11 05:36:56 | ERROR    | main:lifespan:91 | neo4j init failed: Couldn't connect to 127.0.0.1:7687 (resolved to ('127.0.0.1:7687',)):
+Failed to establish connection to ResolvedIPv4Address(('127.0.0.1', 7687)) (reason [Errno 1] Operation not permitted)
+2026-03-11 06:38:04 | ERROR    | main:chat_turn:967 | unexpected chat turn error: 'Xmin'
+2026-03-11 06:38:04 | ERROR    | main:chat_turn:968 | Traceback (most recent call last):
+  File "/home/chen/punchy/CAD_knowledge_service/main.py", line 947, in chat_turn
+    result = cad_service.process_chat_turn(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/preprocess/cad_service.py", line 1589, in process_chat_turn
+    agent_result = agent.run_for_room(
+                   ^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/agent/react_agent.py", line 221, in run_for_room
+    latest_wiring = self.tools.tool_generate_wiring(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/agent/tools.py", line 640, in tool_generate_wiring
+    cad_path = _pixel_path_to_cad_path(
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/preprocess/wiring_layout.py", line 275, in _pixel_path_to_cad_path
+    Xmin=cad_params["Xmin"],
+         ~~~~~~~~~~^^^^^^^^
+KeyError: 'Xmin'
+

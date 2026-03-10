@@ -2402,3 +2402,343 @@ Failed to establish connection to ResolvedIPv4Address(('127.0.0.1', 7687)) (reas
 2026-03-11 03:51:39 | INFO     | preprocess.find_all:_prepare_output_dir:52 | 已复制原始图像到: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260311_035049_ab5c7630/layouts/output_20260311_034949_033_20260311_035139/original_output_20260311_034949_033.png
 2026-03-11 03:53:23 | INFO     | main:process_all_rooms:872 | CAD layout processing finished: session_id=20260311_035049_ab5c7630, placement_mode=llm, success=1/1
 2026-03-11 03:53:23 | INFO     | main:add_process_time_header:149 | request completed: POST http://127.0.0.1:8008/process-all-rooms status=200 time=104.5469s
+2026-03-11 04:25:09 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-11 04:25:16 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-11 04:38:12 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-11 04:38:28 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-11 04:38:54 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-11 04:47:27 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-11 05:02:28 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-11 05:02:41 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-11 05:02:55 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-11 05:03:47 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-11 05:05:59 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-11 05:08:05 | INFO     | main:add_process_time_header:179 | request started: POST http://127.0.0.1:8008/search
+2026-03-11 05:08:05 | INFO     | main:add_process_time_header:183 | request completed: POST http://127.0.0.1:8008/search status=200 time=0.0102s
+2026-03-11 05:21:03 | INFO     | main:add_process_time_header:179 | request started: POST http://127.0.0.1:8008/search
+2026-03-11 05:21:03 | INFO     | main:add_process_time_header:183 | request completed: POST http://127.0.0.1:8008/search status=200 time=0.0026s
+2026-03-11 05:22:22 | INFO     | main:add_process_time_header:179 | request started: POST http://127.0.0.1:8008/search
+2026-03-11 05:22:22 | INFO     | main:add_process_time_header:183 | request completed: POST http://127.0.0.1:8008/search status=200 time=0.0020s
+2026-03-11 05:24:44 | INFO     | main:add_process_time_header:179 | request started: POST http://127.0.0.1:8008/search
+2026-03-11 05:24:44 | INFO     | main:add_process_time_header:183 | request completed: POST http://127.0.0.1:8008/search status=200 time=0.0022s
+2026-03-11 05:26:23 | INFO     | main:add_process_time_header:179 | request started: POST http://127.0.0.1:8008/search
+2026-03-11 05:26:23 | INFO     | main:add_process_time_header:183 | request completed: POST http://127.0.0.1:8008/search status=200 time=0.0020s
+2026-03-11 05:28:06 | INFO     | main:add_process_time_header:179 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-03-11 05:28:06 | INFO     | main:upload_and_process_cad:807 | upload request received: file_count=1
+2026-03-11 05:28:06 | INFO     | main:upload_and_process_cad:827 | read file: output_20260311_052642_131.png, size=145567 bytes
+2026-03-11 05:28:06 | INFO     | main:upload_and_process_cad:839 | using custom CAD parameters
+2026-03-11 05:28:06 | INFO     | preprocess.cad_service:process_uploaded_files:925 | 开始处理上传的文件，共 1 个文件
+2026-03-11 05:28:06 | DEBUG    | preprocess.cad_service:save_uploaded_files:890 | 保存上传文件: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260311_052806_8454f7ce/uploads/output_20260311_052642_131.png
+2026-03-11 05:28:06 | DEBUG    | preprocess.cad_service:process_uploaded_files:952 | 使用CAD参数: {'Xmin': 17176.4573221351, 'Ymin': 20429.4967055137, 'Xmax': 46199.1486268062, 'Ymax': 72025.3923582624}
+2026-03-11 05:28:06 | INFO     | preprocess.cad_service:process_uploaded_files:955 | 开始批量处理上传的图像...
+2026-03-11 05:28:06 | INFO     | preprocess.find_all:process_images_batch:224 | 开始批量处理目录: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260311_052806_8454f7ce/uploads
+2026-03-11 05:28:06 | INFO     | preprocess.find_all:process_images_batch:238 | 找到 1 个PNG文件
+2026-03-11 05:28:06 | INFO     | preprocess.find_all:process_images_batch:243 | 处理第 1/1 个图像
+2026-03-11 05:28:06 | INFO     | preprocess.find_all:process_single_image:116 | 开始处理图像: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260311_052806_8454f7ce/uploads/output_20260311_052642_131.png
+2026-03-11 05:28:06 | INFO     | preprocess.find_all:_prepare_output_dir:51 | 本次运行输出目录: images/output_20260311_052806
+2026-03-11 05:28:06 | INFO     | preprocess.find_all:_prepare_output_dir:52 | 已复制原始图像到: images/output_20260311_052806/original_output_20260311_052642_131.png
+2026-03-11 05:28:06 | INFO     | preprocess.find_all:process_single_image:128 | 1. 提取房间名称和坐标...
+2026-03-11 05:28:23 | INFO     | preprocess.find_all:process_single_image:132 | 2. 检测房间内轮廓...
+2026-03-11 05:28:25 | INFO     | preprocess.find_all:process_single_image:138 | step2 门候选凹口点: 186
+2026-03-11 05:28:25 | INFO     | preprocess.find_all:process_single_image:141 | 3. 检测门窗...
+2026-03-11 05:28:26 | INFO     | preprocess.find_all:process_single_image:147 | 检测结果: 18 个门, 18 个窗
+2026-03-11 05:28:26 | INFO     | preprocess.find_all:process_single_image:151 | 门中心归属: 总门数=18, 已归属=18, 未归属=0
+2026-03-11 05:28:26 | INFO     | preprocess.find_all:process_single_image:158 | 4. 处理房间轮廓点（排除门区域 + 轮廓简化）...
+2026-03-11 05:28:27 | INFO     | preprocess.find_all:process_single_image:170 | 5. 计算房间最小外接矩形...
+2026-03-11 05:28:42 | INFO     | preprocess.find_all:process_single_image:174 | 6. 转换坐标为CAD坐标...
+2026-03-11 05:28:43 | INFO     | preprocess.find_all:process_single_image:177 | 已完成步骤1-6，跳过步骤7-8
+2026-03-11 05:28:43 | INFO     | preprocess.find_all:process_images_batch:252 | 批量处理完成，成功处理 1 个图像
+2026-03-11 05:28:43 | INFO     | preprocess.cad_service:process_uploaded_files:970 | 批量处理完成: 1/1 个图像成功
+2026-03-11 05:28:43 | INFO     | preprocess.cad_service:process_uploaded_files:1020 | CAD处理成功: 提取了 18 个房间的坐标
+2026-03-11 05:28:43 | INFO     | main:upload_and_process_cad:867 | CAD preprocessing finished: success=1/1, session_id=20260311_052806_8454f7ce
+2026-03-11 05:28:43 | INFO     | main:add_process_time_header:183 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=37.1256s
+2026-03-11 05:33:29 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-11 05:34:42 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-11 05:34:45 | INFO     | main:worker:1011 | chat turn stream completed: session_id=20260311_035049_ab5c7630, conversation_id=20260311_053443_5c7d7723, intent_type=design_room, room_name=办公室
+2026-03-11 05:35:28 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-11 05:35:48 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-11 05:35:51 | INFO     | main:worker:1011 | chat turn stream completed: session_id=20260311_035049_ab5c7630, conversation_id=20260311_053549_1ab30159, intent_type=design_room, room_name=办公室
+2026-03-11 05:36:23 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-11 05:36:56 | ERROR    | main:lifespan:91 | neo4j init failed: Couldn't connect to 127.0.0.1:7687 (resolved to ('127.0.0.1:7687',)):
+Failed to establish connection to ResolvedIPv4Address(('127.0.0.1', 7687)) (reason [Errno 1] Operation not permitted)
+2026-03-11 05:37:03 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-11 05:43:36 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-11 05:43:46 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-03-11 05:43:46 | INFO     | main:upload_and_process_cad:814 | upload request received: file_count=1
+2026-03-11 05:43:46 | INFO     | main:upload_and_process_cad:834 | read file: output_20260311_054258_092.png, size=146423 bytes
+2026-03-11 05:43:46 | INFO     | main:upload_and_process_cad:846 | using custom CAD parameters
+2026-03-11 05:43:46 | INFO     | preprocess.cad_service:process_uploaded_files:944 | 开始处理上传的文件，共 1 个文件
+2026-03-11 05:43:46 | DEBUG    | preprocess.cad_service:save_uploaded_files:909 | 保存上传文件: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260311_054346_23233887/uploads/output_20260311_054258_092.png
+2026-03-11 05:43:46 | DEBUG    | preprocess.cad_service:process_uploaded_files:971 | 使用CAD参数: {'Xmin': 17240.3385026048, 'Ymin': 21113.1401401143, 'Xmax': 45209.3647756342, 'Ymax': 70835.8535143889}
+2026-03-11 05:43:46 | INFO     | preprocess.cad_service:process_uploaded_files:974 | 开始批量处理上传的图像...
+2026-03-11 05:43:46 | INFO     | preprocess.find_all:process_images_batch:224 | 开始批量处理目录: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260311_054346_23233887/uploads
+2026-03-11 05:43:46 | INFO     | preprocess.find_all:process_images_batch:238 | 找到 1 个PNG文件
+2026-03-11 05:43:46 | INFO     | preprocess.find_all:process_images_batch:243 | 处理第 1/1 个图像
+2026-03-11 05:43:46 | INFO     | preprocess.find_all:process_single_image:116 | 开始处理图像: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260311_054346_23233887/uploads/output_20260311_054258_092.png
+2026-03-11 05:43:46 | INFO     | preprocess.find_all:_prepare_output_dir:51 | 本次运行输出目录: images/output_20260311_054346
+2026-03-11 05:43:46 | INFO     | preprocess.find_all:_prepare_output_dir:52 | 已复制原始图像到: images/output_20260311_054346/original_output_20260311_054258_092.png
+2026-03-11 05:43:46 | INFO     | preprocess.find_all:process_single_image:128 | 1. 提取房间名称和坐标...
+2026-03-11 05:44:02 | INFO     | preprocess.find_all:process_single_image:132 | 2. 检测房间内轮廓...
+2026-03-11 05:44:04 | INFO     | preprocess.find_all:process_single_image:138 | step2 门候选凹口点: 184
+2026-03-11 05:44:04 | INFO     | preprocess.find_all:process_single_image:141 | 3. 检测门窗...
+2026-03-11 05:44:05 | INFO     | preprocess.find_all:process_single_image:147 | 检测结果: 18 个门, 18 个窗
+2026-03-11 05:44:05 | INFO     | preprocess.find_all:process_single_image:151 | 门中心归属: 总门数=18, 已归属=18, 未归属=0
+2026-03-11 05:44:05 | INFO     | preprocess.find_all:process_single_image:158 | 4. 处理房间轮廓点（排除门区域 + 轮廓简化）...
+2026-03-11 05:44:05 | INFO     | preprocess.find_all:process_single_image:170 | 5. 计算房间最小外接矩形...
+2026-03-11 05:44:22 | INFO     | preprocess.find_all:process_single_image:174 | 6. 转换坐标为CAD坐标...
+2026-03-11 05:44:22 | INFO     | preprocess.find_all:process_single_image:177 | 已完成步骤1-6，跳过步骤7-8
+2026-03-11 05:44:22 | INFO     | preprocess.find_all:process_images_batch:252 | 批量处理完成，成功处理 1 个图像
+2026-03-11 05:44:22 | INFO     | preprocess.cad_service:process_uploaded_files:989 | 批量处理完成: 1/1 个图像成功
+2026-03-11 05:44:22 | INFO     | preprocess.cad_service:process_uploaded_files:1039 | CAD处理成功: 提取了 18 个房间的坐标
+2026-03-11 05:44:22 | INFO     | main:upload_and_process_cad:874 | CAD preprocessing finished: success=1/1, session_id=20260311_054346_23233887
+2026-03-11 05:44:22 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=36.0122s
+2026-03-11 05:44:28 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/process-all-rooms
+2026-03-11 05:44:28 | INFO     | preprocess.cad_service:process_all_rooms:1093 | 开始处理会话的步骤7和步骤8: session_id=20260311_054346_23233887, placement_mode=rule
+2026-03-11 05:44:28 | INFO     | preprocess.find_all:_prepare_output_dir:51 | 本次运行输出目录: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260311_054346_23233887/layouts/output_20260311_054258_092_20260311_054428
+2026-03-11 05:44:28 | INFO     | preprocess.find_all:_prepare_output_dir:52 | 已复制原始图像到: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260311_054346_23233887/layouts/output_20260311_054258_092_20260311_054428/original_output_20260311_054258_092.png
+2026-03-11 05:44:33 | INFO     | main:process_all_rooms:916 | CAD layout processing finished: session_id=20260311_054346_23233887, placement_mode=rule, success=1/1
+2026-03-11 05:44:33 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/process-all-rooms status=200 time=4.9755s
+2026-03-11 05:48:08 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-03-11 05:48:08 | INFO     | main:upload_and_process_cad:814 | upload request received: file_count=1
+2026-03-11 05:48:08 | INFO     | main:upload_and_process_cad:834 | read file: output_20260311_054656_123.png, size=144765 bytes
+2026-03-11 05:48:08 | INFO     | main:upload_and_process_cad:846 | using custom CAD parameters
+2026-03-11 05:48:08 | INFO     | preprocess.cad_service:process_uploaded_files:944 | 开始处理上传的文件，共 1 个文件
+2026-03-11 05:48:08 | DEBUG    | preprocess.cad_service:save_uploaded_files:909 | 保存上传文件: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260311_054808_ea500e85/uploads/output_20260311_054656_123.png
+2026-03-11 05:48:08 | DEBUG    | preprocess.cad_service:process_uploaded_files:971 | 使用CAD参数: {'Xmin': 15935.1830938479, 'Ymin': 19298.6626261403, 'Xmax': 46318.0066625015, 'Ymax': 73312.5711926356}
+2026-03-11 05:48:08 | INFO     | preprocess.cad_service:process_uploaded_files:974 | 开始批量处理上传的图像...
+2026-03-11 05:48:08 | INFO     | preprocess.find_all:process_images_batch:224 | 开始批量处理目录: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260311_054808_ea500e85/uploads
+2026-03-11 05:48:08 | INFO     | preprocess.find_all:process_images_batch:238 | 找到 1 个PNG文件
+2026-03-11 05:48:08 | INFO     | preprocess.find_all:process_images_batch:243 | 处理第 1/1 个图像
+2026-03-11 05:48:08 | INFO     | preprocess.find_all:process_single_image:116 | 开始处理图像: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260311_054808_ea500e85/uploads/output_20260311_054656_123.png
+2026-03-11 05:48:08 | INFO     | preprocess.find_all:_prepare_output_dir:51 | 本次运行输出目录: images/output_20260311_054808
+2026-03-11 05:48:08 | INFO     | preprocess.find_all:_prepare_output_dir:52 | 已复制原始图像到: images/output_20260311_054808/original_output_20260311_054656_123.png
+2026-03-11 05:48:08 | INFO     | preprocess.find_all:process_single_image:128 | 1. 提取房间名称和坐标...
+2026-03-11 05:48:22 | INFO     | preprocess.find_all:process_single_image:132 | 2. 检测房间内轮廓...
+2026-03-11 05:48:24 | INFO     | preprocess.find_all:process_single_image:138 | step2 门候选凹口点: 189
+2026-03-11 05:48:24 | INFO     | preprocess.find_all:process_single_image:141 | 3. 检测门窗...
+2026-03-11 05:48:25 | INFO     | preprocess.find_all:process_single_image:147 | 检测结果: 18 个门, 18 个窗
+2026-03-11 05:48:25 | INFO     | preprocess.find_all:process_single_image:151 | 门中心归属: 总门数=18, 已归属=18, 未归属=0
+2026-03-11 05:48:25 | INFO     | preprocess.find_all:process_single_image:158 | 4. 处理房间轮廓点（排除门区域 + 轮廓简化）...
+2026-03-11 05:48:25 | INFO     | preprocess.find_all:process_single_image:170 | 5. 计算房间最小外接矩形...
+2026-03-11 05:48:40 | INFO     | preprocess.find_all:process_single_image:174 | 6. 转换坐标为CAD坐标...
+2026-03-11 05:48:40 | INFO     | preprocess.find_all:process_single_image:177 | 已完成步骤1-6，跳过步骤7-8
+2026-03-11 05:48:40 | INFO     | preprocess.find_all:process_images_batch:252 | 批量处理完成，成功处理 1 个图像
+2026-03-11 05:48:40 | INFO     | preprocess.cad_service:process_uploaded_files:989 | 批量处理完成: 1/1 个图像成功
+2026-03-11 05:48:40 | INFO     | preprocess.cad_service:process_uploaded_files:1039 | CAD处理成功: 提取了 18 个房间的坐标
+2026-03-11 05:48:40 | INFO     | main:upload_and_process_cad:874 | CAD preprocessing finished: success=1/1, session_id=20260311_054808_ea500e85
+2026-03-11 05:48:40 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=32.1291s
+2026-03-11 05:51:36 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/chat/turn
+2026-03-11 06:26:47 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-11 06:27:46 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-03-11 06:27:46 | INFO     | main:upload_and_process_cad:814 | upload request received: file_count=1
+2026-03-11 06:27:46 | INFO     | main:upload_and_process_cad:834 | read file: output_20260311_062641_871.png, size=146048 bytes
+2026-03-11 06:27:46 | INFO     | main:upload_and_process_cad:846 | using custom CAD parameters
+2026-03-11 06:27:46 | INFO     | preprocess.cad_service:process_uploaded_files:944 | 开始处理上传的文件，共 1 个文件
+2026-03-11 06:27:46 | DEBUG    | preprocess.cad_service:save_uploaded_files:909 | 保存上传文件: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260311_062746_36542b80/uploads/output_20260311_062641_871.png
+2026-03-11 06:27:46 | DEBUG    | preprocess.cad_service:process_uploaded_files:971 | 使用CAD参数: {'Xmin': 16973.8645242206, 'Ymin': 21366.2533046836, 'Xmax': 45151.9735683773, 'Ymax': 71460.6693831846}
+2026-03-11 06:27:46 | INFO     | preprocess.cad_service:process_uploaded_files:974 | 开始批量处理上传的图像...
+2026-03-11 06:27:46 | INFO     | preprocess.find_all:process_images_batch:224 | 开始批量处理目录: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260311_062746_36542b80/uploads
+2026-03-11 06:27:46 | INFO     | preprocess.find_all:process_images_batch:238 | 找到 1 个PNG文件
+2026-03-11 06:27:46 | INFO     | preprocess.find_all:process_images_batch:243 | 处理第 1/1 个图像
+2026-03-11 06:27:46 | INFO     | preprocess.find_all:process_single_image:116 | 开始处理图像: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260311_062746_36542b80/uploads/output_20260311_062641_871.png
+2026-03-11 06:27:46 | INFO     | preprocess.find_all:_prepare_output_dir:51 | 本次运行输出目录: images/output_20260311_062746
+2026-03-11 06:27:46 | INFO     | preprocess.find_all:_prepare_output_dir:52 | 已复制原始图像到: images/output_20260311_062746/original_output_20260311_062641_871.png
+2026-03-11 06:27:46 | INFO     | preprocess.find_all:process_single_image:128 | 1. 提取房间名称和坐标...
+2026-03-11 06:28:02 | INFO     | preprocess.find_all:process_single_image:132 | 2. 检测房间内轮廓...
+2026-03-11 06:28:04 | INFO     | preprocess.find_all:process_single_image:138 | step2 门候选凹口点: 188
+2026-03-11 06:28:04 | INFO     | preprocess.find_all:process_single_image:141 | 3. 检测门窗...
+2026-03-11 06:28:05 | INFO     | preprocess.find_all:process_single_image:147 | 检测结果: 18 个门, 18 个窗
+2026-03-11 06:28:05 | INFO     | preprocess.find_all:process_single_image:151 | 门中心归属: 总门数=18, 已归属=18, 未归属=0
+2026-03-11 06:28:05 | INFO     | preprocess.find_all:process_single_image:158 | 4. 处理房间轮廓点（排除门区域 + 轮廓简化）...
+2026-03-11 06:28:06 | INFO     | preprocess.find_all:process_single_image:170 | 5. 计算房间最小外接矩形...
+2026-03-11 06:28:22 | INFO     | preprocess.find_all:process_single_image:174 | 6. 转换坐标为CAD坐标...
+2026-03-11 06:28:22 | INFO     | preprocess.find_all:process_single_image:177 | 已完成步骤1-6，跳过步骤7-8
+2026-03-11 06:28:22 | INFO     | preprocess.find_all:process_images_batch:252 | 批量处理完成，成功处理 1 个图像
+2026-03-11 06:28:22 | INFO     | preprocess.cad_service:process_uploaded_files:989 | 批量处理完成: 1/1 个图像成功
+2026-03-11 06:28:22 | INFO     | preprocess.cad_service:process_uploaded_files:1039 | CAD处理成功: 提取了 18 个房间的坐标
+2026-03-11 06:28:22 | INFO     | main:upload_and_process_cad:874 | CAD preprocessing finished: success=1/1, session_id=20260311_062746_36542b80
+2026-03-11 06:28:22 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=36.5532s
+2026-03-11 06:30:53 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/chat/turn
+2026-03-11 06:38:04 | ERROR    | main:chat_turn:967 | unexpected chat turn error: 'Xmin'
+2026-03-11 06:38:04 | ERROR    | main:chat_turn:968 | Traceback (most recent call last):
+  File "/home/chen/punchy/CAD_knowledge_service/main.py", line 947, in chat_turn
+    result = cad_service.process_chat_turn(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/preprocess/cad_service.py", line 1589, in process_chat_turn
+    agent_result = agent.run_for_room(
+                   ^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/agent/react_agent.py", line 221, in run_for_room
+    latest_wiring = self.tools.tool_generate_wiring(
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/agent/tools.py", line 640, in tool_generate_wiring
+    cad_path = _pixel_path_to_cad_path(
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/preprocess/wiring_layout.py", line 275, in _pixel_path_to_cad_path
+    Xmin=cad_params["Xmin"],
+         ~~~~~~~~~~^^^^^^^^
+KeyError: 'Xmin'
+
+2026-03-11 06:38:04 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/chat/turn status=500 time=430.6861s
+2026-03-11 06:45:05 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-11 06:45:06 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-11 06:45:06 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-11 06:46:03 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-11 06:49:52 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-03-11 06:49:52 | INFO     | main:upload_and_process_cad:814 | upload request received: file_count=1
+2026-03-11 06:49:52 | INFO     | main:upload_and_process_cad:834 | read file: output_20260311_064758_916.png, size=144427 bytes
+2026-03-11 06:49:52 | INFO     | main:upload_and_process_cad:846 | using custom CAD parameters
+2026-03-11 06:49:52 | INFO     | preprocess.cad_service:process_uploaded_files:944 | 开始处理上传的文件，共 1 个文件
+2026-03-11 06:49:52 | DEBUG    | preprocess.cad_service:save_uploaded_files:909 | 保存上传文件: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260311_064952_fe40f18a/uploads/output_20260311_064758_916.png
+2026-03-11 06:49:52 | DEBUG    | preprocess.cad_service:process_uploaded_files:971 | 使用CAD参数: {'Xmin': 15514.5990721471, 'Ymin': 19255.8210201625, 'Xmax': 46318.5703340019, 'Ymax': 74018.4365967932}
+2026-03-11 06:49:52 | INFO     | preprocess.cad_service:process_uploaded_files:974 | 开始批量处理上传的图像...
+2026-03-11 06:49:52 | INFO     | preprocess.find_all:process_images_batch:224 | 开始批量处理目录: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260311_064952_fe40f18a/uploads
+2026-03-11 06:49:52 | INFO     | preprocess.find_all:process_images_batch:238 | 找到 1 个PNG文件
+2026-03-11 06:49:52 | INFO     | preprocess.find_all:process_images_batch:243 | 处理第 1/1 个图像
+2026-03-11 06:49:52 | INFO     | preprocess.find_all:process_single_image:116 | 开始处理图像: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260311_064952_fe40f18a/uploads/output_20260311_064758_916.png
+2026-03-11 06:49:52 | INFO     | preprocess.find_all:_prepare_output_dir:51 | 本次运行输出目录: images/output_20260311_064952
+2026-03-11 06:49:52 | INFO     | preprocess.find_all:_prepare_output_dir:52 | 已复制原始图像到: images/output_20260311_064952/original_output_20260311_064758_916.png
+2026-03-11 06:49:52 | INFO     | preprocess.find_all:process_single_image:128 | 1. 提取房间名称和坐标...
+2026-03-11 06:50:08 | INFO     | preprocess.find_all:process_single_image:132 | 2. 检测房间内轮廓...
+2026-03-11 06:50:10 | INFO     | preprocess.find_all:process_single_image:138 | step2 门候选凹口点: 193
+2026-03-11 06:50:10 | INFO     | preprocess.find_all:process_single_image:141 | 3. 检测门窗...
+2026-03-11 06:50:11 | INFO     | preprocess.find_all:process_single_image:147 | 检测结果: 18 个门, 18 个窗
+2026-03-11 06:50:11 | INFO     | preprocess.find_all:process_single_image:151 | 门中心归属: 总门数=18, 已归属=18, 未归属=0
+2026-03-11 06:50:11 | INFO     | preprocess.find_all:process_single_image:158 | 4. 处理房间轮廓点（排除门区域 + 轮廓简化）...
+2026-03-11 06:50:12 | INFO     | preprocess.find_all:process_single_image:170 | 5. 计算房间最小外接矩形...
+2026-03-11 06:50:25 | INFO     | preprocess.find_all:process_single_image:174 | 6. 转换坐标为CAD坐标...
+2026-03-11 06:50:26 | INFO     | preprocess.find_all:process_single_image:177 | 已完成步骤1-6，跳过步骤7-8
+2026-03-11 06:50:26 | INFO     | preprocess.find_all:process_images_batch:252 | 批量处理完成，成功处理 1 个图像
+2026-03-11 06:50:26 | INFO     | preprocess.cad_service:process_uploaded_files:989 | 批量处理完成: 1/1 个图像成功
+2026-03-11 06:50:26 | INFO     | preprocess.cad_service:process_uploaded_files:1039 | CAD处理成功: 提取了 18 个房间的坐标
+2026-03-11 06:50:26 | INFO     | main:upload_and_process_cad:874 | CAD preprocessing finished: success=1/1, session_id=20260311_064952_fe40f18a
+2026-03-11 06:50:26 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=33.6220s
+2026-03-11 06:51:22 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/chat/turn/stream
+2026-03-11 06:51:22 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/chat/turn/stream status=200 time=0.0137s
+2026-03-11 06:51:26 | INFO     | main:worker:1011 | chat turn stream completed: session_id=20260311_064952_fe40f18a, conversation_id=20260311_065122_fbda32ac, intent_type=design_room, room_name=除尘室
+2026-03-11 06:59:18 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/chat/turn/stream
+2026-03-11 06:59:18 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/chat/turn/stream status=200 time=0.0261s
+2026-03-11 07:06:40 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-11 07:19:57 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-11 07:23:45 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-11 07:25:23 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-11 07:29:30 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-03-11 07:29:30 | INFO     | main:upload_and_process_cad:814 | upload request received: file_count=1
+2026-03-11 07:29:30 | INFO     | main:upload_and_process_cad:834 | read file: output_20260311_072752_933.png, size=145163 bytes
+2026-03-11 07:29:30 | INFO     | main:upload_and_process_cad:846 | using custom CAD parameters
+2026-03-11 07:29:30 | INFO     | preprocess.cad_service:process_uploaded_files:1046 | 开始处理上传的文件，共 1 个文件
+2026-03-11 07:29:30 | DEBUG    | preprocess.cad_service:save_uploaded_files:1011 | 保存上传文件: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260311_072930_8caa7450/uploads/output_20260311_072752_933.png
+2026-03-11 07:29:30 | DEBUG    | preprocess.cad_service:process_uploaded_files:1073 | 使用CAD参数: {'Xmin': 15815.6776455806, 'Ymin': 19846.9715759636, 'Xmax': 45717.1891217236, 'Ymax': 73005.2142002178}
+2026-03-11 07:29:30 | INFO     | preprocess.cad_service:process_uploaded_files:1076 | 开始批量处理上传的图像...
+2026-03-11 07:29:30 | INFO     | preprocess.find_all:process_images_batch:224 | 开始批量处理目录: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260311_072930_8caa7450/uploads
+2026-03-11 07:29:30 | INFO     | preprocess.find_all:process_images_batch:238 | 找到 1 个PNG文件
+2026-03-11 07:29:30 | INFO     | preprocess.find_all:process_images_batch:243 | 处理第 1/1 个图像
+2026-03-11 07:29:30 | INFO     | preprocess.find_all:process_single_image:116 | 开始处理图像: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260311_072930_8caa7450/uploads/output_20260311_072752_933.png
+2026-03-11 07:29:30 | INFO     | preprocess.find_all:_prepare_output_dir:51 | 本次运行输出目录: images/output_20260311_072930
+2026-03-11 07:29:30 | INFO     | preprocess.find_all:_prepare_output_dir:52 | 已复制原始图像到: images/output_20260311_072930/original_output_20260311_072752_933.png
+2026-03-11 07:29:30 | INFO     | preprocess.find_all:process_single_image:128 | 1. 提取房间名称和坐标...
+2026-03-11 07:29:47 | INFO     | preprocess.find_all:process_single_image:132 | 2. 检测房间内轮廓...
+2026-03-11 07:29:49 | INFO     | preprocess.find_all:process_single_image:138 | step2 门候选凹口点: 191
+2026-03-11 07:29:49 | INFO     | preprocess.find_all:process_single_image:141 | 3. 检测门窗...
+2026-03-11 07:29:50 | INFO     | preprocess.find_all:process_single_image:147 | 检测结果: 18 个门, 18 个窗
+2026-03-11 07:29:50 | INFO     | preprocess.find_all:process_single_image:151 | 门中心归属: 总门数=18, 已归属=18, 未归属=0
+2026-03-11 07:29:50 | INFO     | preprocess.find_all:process_single_image:158 | 4. 处理房间轮廓点（排除门区域 + 轮廓简化）...
+2026-03-11 07:29:51 | INFO     | preprocess.find_all:process_single_image:170 | 5. 计算房间最小外接矩形...
+2026-03-11 07:30:03 | INFO     | preprocess.find_all:process_single_image:174 | 6. 转换坐标为CAD坐标...
+2026-03-11 07:30:03 | INFO     | preprocess.find_all:process_single_image:177 | 已完成步骤1-6，跳过步骤7-8
+2026-03-11 07:30:03 | INFO     | preprocess.find_all:process_images_batch:252 | 批量处理完成，成功处理 1 个图像
+2026-03-11 07:30:03 | INFO     | preprocess.cad_service:process_uploaded_files:1091 | 批量处理完成: 1/1 个图像成功
+2026-03-11 07:30:03 | INFO     | preprocess.cad_service:process_uploaded_files:1141 | CAD处理成功: 提取了 18 个房间的坐标
+2026-03-11 07:30:03 | INFO     | main:upload_and_process_cad:874 | CAD preprocessing finished: success=1/1, session_id=20260311_072930_8caa7450
+2026-03-11 07:30:03 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=33.1650s
+2026-03-11 07:30:42 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/chat/turn/stream
+2026-03-11 07:30:42 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/chat/turn/stream status=200 time=0.0137s
+2026-03-11 07:30:53 | INFO     | main:worker:1011 | chat turn stream completed: session_id=20260311_072930_8caa7450, conversation_id=20260311_073042_7fff438d, intent_type=design_room, room_name=除尘室
+2026-03-11 07:32:32 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/chat/turn/stream
+2026-03-11 07:32:32 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/chat/turn/stream status=200 time=0.0045s
+2026-03-11 07:32:38 | INFO     | main:worker:1011 | chat turn stream completed: session_id=20260311_072930_8caa7450, conversation_id=20260311_073042_7fff438d, intent_type=design_room, room_name=存样室
+2026-03-11 07:33:20 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/chat/turn/stream
+2026-03-11 07:33:20 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/chat/turn/stream status=200 time=0.0029s
+2026-03-11 07:33:24 | INFO     | main:worker:1011 | chat turn stream completed: session_id=20260311_072930_8caa7450, conversation_id=20260311_073042_7fff438d, intent_type=design_room, room_name=办公室1
+2026-03-11 07:34:35 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/chat/turn/stream
+2026-03-11 07:34:35 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/chat/turn/stream status=200 time=0.0037s
+2026-03-11 07:34:39 | INFO     | main:worker:1011 | chat turn stream completed: session_id=20260311_072930_8caa7450, conversation_id=20260311_073042_7fff438d, intent_type=design_room, room_name=元素分析室
+2026-03-11 07:35:20 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/chat/turn/stream
+2026-03-11 07:35:20 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/chat/turn/stream status=200 time=0.0029s
+2026-03-11 07:35:31 | INFO     | main:worker:1011 | chat turn stream completed: session_id=20260311_072930_8caa7450, conversation_id=20260311_073042_7fff438d, intent_type=design_room, room_name=煤样存放室
+2026-03-11 07:37:32 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/ingest
+2026-03-11 07:37:33 | WARNING  | mineru.utils.pdf_page_id:get_end_page_id:8 | end_page_id is out of range, use images length
+2026-03-11 07:37:44 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:113 | load images cost: 11.29, speed: 13.729 images/s
+2026-03-11 07:37:44 | INFO     | mineru.backend.pipeline.pipeline_analyze:doc_analyze:129 | Batch 1/1: 155 pages/155 pages
+2026-03-11 07:37:45 | INFO     | mineru.backend.pipeline.pipeline_analyze:batch_image_analyze:189 | GPU Memory: 24 GB, Batch Ratio: 16. 
+2026-03-11 07:37:45 | INFO     | mineru.backend.pipeline.model_init:__init__:209 | DocAnalysis init, this may take some times......
+2026-03-11 07:37:54 | INFO     | mineru.backend.pipeline.model_init:__init__:271 | DocAnalysis init done!
+2026-03-11 07:37:54 | INFO     | mineru.backend.pipeline.pipeline_analyze:custom_model_init:65 | model init cost: 9.672826290130615
+2026-03-11 07:39:55 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:136 | infer finished, cost: 130.95, speed: 1.184 page/s
+2026-03-11 07:40:06 | INFO     | mineru.cli.common:_process_output:168 | local output dir is ./output/建筑照明设计_260311_073733/auto
+2026-03-11 07:40:07 | INFO     | mineru.cli.gradio_app:to_markdown:122 | Compression successful
+2026-03-11 07:40:45 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/ingest status=200 time=193.5480s
+2026-03-11 07:41:02 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/search
+2026-03-11 07:41:02 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/search status=200 time=0.0105s
+2026-03-11 07:41:43 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/chat/turn/stream
+2026-03-11 07:41:43 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/chat/turn/stream status=200 time=0.0085s
+2026-03-11 07:43:31 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/ingest
+2026-03-11 07:43:31 | WARNING  | mineru.utils.pdf_page_id:get_end_page_id:8 | end_page_id is out of range, use images length
+2026-03-11 07:43:35 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:113 | load images cost: 4.27, speed: 9.836 images/s
+2026-03-11 07:43:35 | INFO     | mineru.backend.pipeline.pipeline_analyze:doc_analyze:129 | Batch 1/1: 42 pages/42 pages
+2026-03-11 07:43:35 | INFO     | mineru.backend.pipeline.pipeline_analyze:batch_image_analyze:189 | GPU Memory: 24 GB, Batch Ratio: 16. 
+2026-03-11 07:43:53 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:136 | infer finished, cost: 17.7, speed: 2.373 page/s
+2026-03-11 07:43:57 | INFO     | mineru.cli.common:_process_output:168 | local output dir is ./output/2_260311_074331/auto
+2026-03-11 07:43:58 | INFO     | mineru.cli.gradio_app:to_markdown:122 | Compression successful
+2026-03-11 07:43:59 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/ingest status=200 time=28.3930s
+2026-03-11 07:44:05 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/search
+2026-03-11 07:44:05 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/search status=200 time=0.0022s
+2026-03-11 07:45:40 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-03-11 07:45:40 | INFO     | main:upload_and_process_cad:814 | upload request received: file_count=1
+2026-03-11 07:45:40 | INFO     | main:upload_and_process_cad:834 | read file: output_20260311_074448_816.png, size=146050 bytes
+2026-03-11 07:45:40 | INFO     | main:upload_and_process_cad:846 | using custom CAD parameters
+2026-03-11 07:45:40 | INFO     | preprocess.cad_service:process_uploaded_files:1046 | 开始处理上传的文件，共 1 个文件
+2026-03-11 07:45:40 | DEBUG    | preprocess.cad_service:save_uploaded_files:1011 | 保存上传文件: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260311_074540_5d1dca94/uploads/output_20260311_074448_816.png
+2026-03-11 07:45:40 | DEBUG    | preprocess.cad_service:process_uploaded_files:1073 | 使用CAD参数: {'Xmin': 17085.5430548835, 'Ymin': 21586.342878296, 'Xmax': 45436.3980689717, 'Ymax': 71987.8629033418}
+2026-03-11 07:45:40 | INFO     | preprocess.cad_service:process_uploaded_files:1076 | 开始批量处理上传的图像...
+2026-03-11 07:45:40 | INFO     | preprocess.find_all:process_images_batch:224 | 开始批量处理目录: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260311_074540_5d1dca94/uploads
+2026-03-11 07:45:40 | INFO     | preprocess.find_all:process_images_batch:238 | 找到 1 个PNG文件
+2026-03-11 07:45:40 | INFO     | preprocess.find_all:process_images_batch:243 | 处理第 1/1 个图像
+2026-03-11 07:45:40 | INFO     | preprocess.find_all:process_single_image:116 | 开始处理图像: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260311_074540_5d1dca94/uploads/output_20260311_074448_816.png
+2026-03-11 07:45:40 | INFO     | preprocess.find_all:_prepare_output_dir:51 | 本次运行输出目录: images/output_20260311_074540
+2026-03-11 07:45:40 | INFO     | preprocess.find_all:_prepare_output_dir:52 | 已复制原始图像到: images/output_20260311_074540/original_output_20260311_074448_816.png
+2026-03-11 07:45:40 | INFO     | preprocess.find_all:process_single_image:128 | 1. 提取房间名称和坐标...
+2026-03-11 07:45:55 | INFO     | preprocess.find_all:process_single_image:132 | 2. 检测房间内轮廓...
+2026-03-11 07:45:57 | INFO     | preprocess.find_all:process_single_image:138 | step2 门候选凹口点: 189
+2026-03-11 07:45:57 | INFO     | preprocess.find_all:process_single_image:141 | 3. 检测门窗...
+2026-03-11 07:45:58 | INFO     | preprocess.find_all:process_single_image:147 | 检测结果: 18 个门, 18 个窗
+2026-03-11 07:45:58 | INFO     | preprocess.find_all:process_single_image:151 | 门中心归属: 总门数=18, 已归属=18, 未归属=0
+2026-03-11 07:45:58 | INFO     | preprocess.find_all:process_single_image:158 | 4. 处理房间轮廓点（排除门区域 + 轮廓简化）...
+2026-03-11 07:45:59 | INFO     | preprocess.find_all:process_single_image:170 | 5. 计算房间最小外接矩形...
+2026-03-11 07:46:15 | INFO     | preprocess.find_all:process_single_image:174 | 6. 转换坐标为CAD坐标...
+2026-03-11 07:46:15 | INFO     | preprocess.find_all:process_single_image:177 | 已完成步骤1-6，跳过步骤7-8
+2026-03-11 07:46:15 | INFO     | preprocess.find_all:process_images_batch:252 | 批量处理完成，成功处理 1 个图像
+2026-03-11 07:46:15 | INFO     | preprocess.cad_service:process_uploaded_files:1091 | 批量处理完成: 1/1 个图像成功
+2026-03-11 07:46:15 | INFO     | preprocess.cad_service:process_uploaded_files:1141 | CAD处理成功: 提取了 18 个房间的坐标
+2026-03-11 07:46:15 | INFO     | main:upload_and_process_cad:874 | CAD preprocessing finished: success=1/1, session_id=20260311_074540_5d1dca94
+2026-03-11 07:46:15 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=34.9367s
+2026-03-11 07:46:36 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/process-all-rooms
+2026-03-11 07:46:36 | INFO     | preprocess.cad_service:process_all_rooms:1195 | 开始处理会话的步骤7和步骤8: session_id=20260311_074540_5d1dca94, placement_mode=rule
+2026-03-11 07:46:36 | INFO     | preprocess.find_all:_prepare_output_dir:51 | 本次运行输出目录: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260311_074540_5d1dca94/layouts/output_20260311_074448_816_20260311_074636
+2026-03-11 07:46:36 | INFO     | preprocess.find_all:_prepare_output_dir:52 | 已复制原始图像到: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260311_074540_5d1dca94/layouts/output_20260311_074448_816_20260311_074636/original_output_20260311_074448_816.png
+2026-03-11 07:46:41 | INFO     | main:process_all_rooms:916 | CAD layout processing finished: session_id=20260311_074540_5d1dca94, placement_mode=rule, success=1/1
+2026-03-11 07:46:41 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/process-all-rooms status=200 time=4.4470s
+2026-03-11 07:47:22 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/process-all-rooms
+2026-03-11 07:47:22 | INFO     | preprocess.cad_service:process_all_rooms:1195 | 开始处理会话的步骤7和步骤8: session_id=20260311_074540_5d1dca94, placement_mode=llm
+2026-03-11 07:47:22 | INFO     | preprocess.find_all:_prepare_output_dir:51 | 本次运行输出目录: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260311_074540_5d1dca94/layouts/output_20260311_074448_816_20260311_074722
+2026-03-11 07:47:22 | INFO     | preprocess.find_all:_prepare_output_dir:52 | 已复制原始图像到: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260311_074540_5d1dca94/layouts/output_20260311_074448_816_20260311_074722/original_output_20260311_074448_816.png
+2026-03-11 07:48:24 | INFO     | main:process_all_rooms:916 | CAD layout processing finished: session_id=20260311_074540_5d1dca94, placement_mode=llm, success=1/1
+2026-03-11 07:48:24 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/process-all-rooms status=200 time=61.4648s
+2026-03-11 07:49:49 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/chat/turn/stream
+2026-03-11 07:49:49 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/chat/turn/stream status=200 time=0.0037s
+2026-03-11 07:49:55 | INFO     | main:worker:1011 | chat turn stream completed: session_id=20260311_074540_5d1dca94, conversation_id=20260311_074949_cc274b0d, intent_type=design_room, room_name=除尘室
+2026-03-11 07:50:28 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/chat/turn/stream
+2026-03-11 07:50:28 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/chat/turn/stream status=200 time=0.0027s
+2026-03-11 07:50:32 | INFO     | main:worker:1011 | chat turn stream completed: session_id=20260311_074540_5d1dca94, conversation_id=20260311_074949_cc274b0d, intent_type=design_room, room_name=办公室1
+2026-03-11 07:51:12 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/chat/turn/stream
+2026-03-11 07:51:12 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/chat/turn/stream status=200 time=0.0027s
+2026-03-11 07:51:15 | INFO     | main:worker:1011 | chat turn stream completed: session_id=20260311_074540_5d1dca94, conversation_id=20260311_074949_cc274b0d, intent_type=design_room, room_name=热量室准备间

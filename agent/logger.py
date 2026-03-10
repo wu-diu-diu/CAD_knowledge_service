@@ -5,7 +5,7 @@ import os
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Callable, Dict, Optional, Tuple
 
 
 class AgentRunLogger:
@@ -19,14 +19,25 @@ class AgentRunLogger:
     RED = "\033[31m"
     GRAY = "\033[90m"
 
-    def __init__(self, log_dir: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        log_dir: Optional[str] = None,
+        event_sink: Optional[Callable[[Dict[str, Any]], None]] = None,
+    ) -> None:
         root_dir = Path(__file__).resolve().parents[1]
         final_log_dir = Path(log_dir) if log_dir else (root_dir / "logs")
         final_log_dir.mkdir(parents=True, exist_ok=True)
         self.max_line_len = max(120, int(os.getenv("CAD_AGENT_LOG_MAX_LEN", "320")))
+        self.event_sink = event_sink
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.log_path = str(final_log_dir / f"react_agent_{ts}.log")
         self._emit("SESSION", f"log file: {self.log_path}", self.GRAY)
+        self._publish(
+            "session",
+            {
+                "log_file": self.log_path,
+            },
+        )
 
     @staticmethod
     def _safe_json(data: Any) -> str:
@@ -53,11 +64,34 @@ class AgentRunLogger:
         with open(self.log_path, "a", encoding="utf-8") as f:
             f.write(plain + "\n\n")
 
+    def _publish(self, event_type: str, payload: Optional[Dict[str, Any]] = None) -> None:
+        if self.event_sink is None:
+            return
+        event = {
+            "type": event_type,
+            "timestamp": datetime.now().isoformat(),
+        }
+        if isinstance(payload, dict):
+            event.update(payload)
+        try:
+            self.event_sink(event)
+        except Exception:
+            # Streaming sink failures should not break the agent run.
+            return
+
     def room_start(self, room_name: str, area_m2: float, shape: Tuple[int, int]) -> None:
         self._emit(
             "ROOM",
             f"start room='{room_name}' area_m2={float(area_m2):.3f} matrix_shape={list(shape)}",
             self.CYAN + self.BOLD,
+        )
+        self._publish(
+            "room_start",
+            {
+                "room_name": room_name,
+                "area_m2": float(area_m2),
+                "matrix_shape": list(shape),
+            },
         )
 
     def room_end(self, room_name: str, finish_reason: str, tool_calls: int, score: Optional[int]) -> None:
@@ -66,9 +100,24 @@ class AgentRunLogger:
             f"end room='{room_name}' finish='{finish_reason}' tool_calls={tool_calls} score={score}",
             self.CYAN + self.BOLD,
         )
+        self._publish(
+            "room_end",
+            {
+                "room_name": room_name,
+                "finish_reason": finish_reason,
+                "tool_calls": int(tool_calls),
+                "score": score,
+            },
+        )
 
     def llm_response(self, content: str) -> None:
         self._emit("LLM", f"raw_response={self._one_line(content)}", self.YELLOW)
+        self._publish(
+            "llm_response",
+            {
+                "content": str(content),
+            },
+        )
 
     def action(self, action_obj: Dict[str, Any]) -> None:
         action = str(action_obj.get("action", ""))
@@ -78,14 +127,43 @@ class AgentRunLogger:
         if reason:
             msg += f" reason='{reason}'"
         self._emit("ACTION", msg, self.MAGENTA)
+        self._publish(
+            "action",
+            {
+                "action": action,
+                "args": action_obj.get("args", {}) if isinstance(action_obj, dict) else {},
+                "reason": str(action_obj.get("reason", "")) if isinstance(action_obj, dict) else "",
+                "raw": action_obj,
+            },
+        )
 
     def thought(self, text: str) -> None:
         self._emit("THOUGHT", self._one_line(text, max_len=180), self.YELLOW + self.BOLD)
+        self._publish(
+            "thought",
+            {
+                "content": str(text),
+            },
+        )
 
     def tool_io(self, tool_name: str, tool_input: Dict[str, Any], tool_result: str) -> None:
         in_line = self._one_line_json(tool_input, max_len=180)
         out_line = self._one_line(str(tool_result), max_len=220)
         self._emit("TOOL", f"{tool_name} input={in_line} result='{out_line}'", self.BLUE)
+        self._publish(
+            "tool",
+            {
+                "tool": str(tool_name),
+                "input": tool_input,
+                "result": str(tool_result),
+            },
+        )
 
     def error(self, message: str) -> None:
         self._emit("ERROR", message, self.RED)
+        self._publish(
+            "error",
+            {
+                "message": str(message),
+            },
+        )

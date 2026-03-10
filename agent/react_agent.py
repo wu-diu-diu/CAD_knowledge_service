@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from copy import deepcopy
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from openai import OpenAI
 
@@ -29,6 +29,7 @@ class ReActLightingAgent:
         temperature: float = 0.0,
         init_mode: str = "llm",
         log_dir: Optional[str] = None,
+        event_sink: Optional[Callable[[Dict[str, Any]], None]] = None,
     ) -> None:
         self.tools = tools or LightingTools()
         self.provider = provider.strip().lower()
@@ -37,7 +38,7 @@ class ReActLightingAgent:
         if self.init_mode not in ("rule", "llm"):
             self.init_mode = "rule"
         self.api_key, self.base_url, self.model = resolve_provider(self.provider, model_name)
-        self.run_logger = AgentRunLogger(log_dir=log_dir)
+        self.run_logger = AgentRunLogger(log_dir=log_dir, event_sink=event_sink)
         self.client: Optional[OpenAI] = None
         if self.api_key:
             self.client = OpenAI(api_key=self.api_key, base_url=self.base_url)
@@ -57,6 +58,9 @@ class ReActLightingAgent:
         max_steps: int = 6,
         user_goal: Optional[str] = None,
         reset_layout: bool = True,
+        plan_overrides: Optional[Dict[str, Any]] = None,
+        skip_initial_design: bool = False,
+        generate_wiring: bool = True,
     ) -> Dict[str, Any]:
         state.logger = self.run_logger
         self.run_logger.room_start(state.room_name, state.area_m2, state.matrix.shape)
@@ -71,8 +75,8 @@ class ReActLightingAgent:
             state.tool_result_history = []
             state.thought_history = []
 
-        if self.init_mode == "rule":
-            init_stage = self._run_replan_design(state, args={})
+        if self.init_mode == "rule" and not skip_initial_design:
+            init_stage = self._run_replan_design(state, args=plan_overrides or {})
             first_validation = init_stage["validation"]
         else:
             first_validation = self.tools.tool_validate_layout(state)
@@ -84,10 +88,26 @@ class ReActLightingAgent:
                 "coords_plan": None,
                 "validation": first_validation,
             }
-            state.record("init_mode", {"mode": "llm"}, {"status": "start_from_empty"})
+            state.record(
+                "init_mode",
+                {
+                    "mode": self.init_mode,
+                    "skip_initial_design": bool(skip_initial_design),
+                    "plan_overrides": plan_overrides or {},
+                },
+                {
+                    "status": "reuse_existing_layout" if skip_initial_design else "start_from_empty",
+                },
+            )
 
         latest_wiring: Optional[Dict[str, Any]] = None
         available_tools = self.list_tools()
+        if not generate_wiring:
+            available_tools = [
+                item
+                for item in available_tools
+                if str((item.get("function", {}) or {}).get("name", "")) != "tool_generate_wiring"
+            ]
         valid_actions = {"finish"} | {
             str(item.get("function", {}).get("name", ""))
             for item in available_tools
@@ -203,6 +223,15 @@ class ReActLightingAgent:
                 continue
 
             if action_name == "tool_generate_wiring":
+                if not generate_wiring:
+                    state.record(
+                        "skip_tool_generate_wiring",
+                        {"requested_by_agent": True},
+                        {"status": "skipped", "reason": "generate_wiring_disabled"},
+                        tool_result="当前运行禁用了 agent 侧布线，已跳过该工具调用。",
+                    )
+                    last_tool_output = state.tool_cache.get("last_tool_result")
+                    continue
                 args = action.get("args", {}) or {}
                 latest_wiring = self.tools.tool_generate_wiring(
                     state=state,
@@ -229,7 +258,7 @@ class ReActLightingAgent:
             break
 
         final_validation = self.tools.tool_validate_layout(state)
-        if latest_wiring is None:
+        if latest_wiring is None and generate_wiring:
             latest_wiring = self.tools.tool_generate_wiring(state=state)
         result = {
             "room_name": state.room_name,

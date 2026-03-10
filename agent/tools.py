@@ -72,6 +72,36 @@ def _lamp_to_dict(spec: LampSpec) -> Dict[str, Any]:
     }
 
 
+def _normalize_cad_params(cad_params: Optional[Dict[str, Any]]) -> Optional[Dict[str, float]]:
+    if not isinstance(cad_params, dict):
+        return None
+
+    candidate: Dict[str, Any] = cad_params
+    for nested_key in ("cad_params", "default_cad_params"):
+        nested = candidate.get(nested_key)
+        if isinstance(nested, dict):
+            candidate = nested
+            break
+
+    alias_map = {
+        "Xmin": ("Xmin", "xmin", "x_min", "xMin"),
+        "Ymin": ("Ymin", "ymin", "y_min", "yMin"),
+        "Xmax": ("Xmax", "xmax", "x_max", "xMax"),
+        "Ymax": ("Ymax", "ymax", "y_max", "yMax"),
+    }
+    resolved: Dict[str, float] = {}
+    for canonical_key, aliases in alias_map.items():
+        value = None
+        for alias in aliases:
+            if candidate.get(alias) is not None:
+                value = candidate.get(alias)
+                break
+        if value is None:
+            return None
+        resolved[canonical_key] = float(value)
+    return resolved
+
+
 class LightingTools:
     def __init__(
         self,
@@ -570,6 +600,7 @@ class LightingTools:
         image_height: Optional[int] = None,
     ) -> Dict[str, Any]:
         matrix = np.array(state.matrix, dtype=np.int32)
+        resolved_cad_params = _normalize_cad_params(cad_params)
         lamp_points: List[Tuple[int, int]] = []
         switch_points: List[Tuple[int, int]] = []
 
@@ -594,7 +625,7 @@ class LightingTools:
                     "turn_penalty": turn_penalty,
                     "bbox_pixel": bbox_pixel,
                     "cell_size_px": cell_size_px,
-                    "has_cad": bool(cad_params),
+                    "has_cad": bool(resolved_cad_params),
                     "image_width": image_width,
                     "image_height": image_height,
                 },
@@ -616,7 +647,7 @@ class LightingTools:
         directed = _orient_edges_from_switch(mst_edges, nodes, switch_idx=0)
 
         can_export_pixel = bool(bbox_pixel and len(bbox_pixel) == 4)
-        can_export_cad = bool(can_export_pixel and cad_params and image_width and image_height)
+        can_export_cad = bool(can_export_pixel and resolved_cad_params and image_width and image_height)
 
         routes: List[Dict[str, Any]] = []
         route_paths_grid: List[List[Tuple[int, int]]] = []
@@ -639,7 +670,7 @@ class LightingTools:
                 if can_export_cad:
                     cad_path = _pixel_path_to_cad_path(
                         pixel_path=pixel_path,
-                        cad_params=cad_params or {},
+                        cad_params=resolved_cad_params or {},
                         image_w=int(image_width),
                         image_h=int(image_height),
                     )
@@ -665,7 +696,7 @@ class LightingTools:
                 if can_export_cad:
                     cad_segment = _pixel_path_to_cad_path(
                         pixel_path=pixel_segment,
-                        cad_params=cad_params or {},
+                        cad_params=resolved_cad_params or {},
                         image_w=int(image_width),
                         image_h=int(image_height),
                     )
@@ -697,7 +728,7 @@ class LightingTools:
                 "turn_penalty": penalty,
                 "bbox_pixel": bbox_pixel,
                 "cell_size_px": cell_size_px,
-                "has_cad": bool(cad_params),
+                "has_cad": bool(resolved_cad_params),
                 "image_width": image_width,
                 "image_height": image_height,
             },

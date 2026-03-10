@@ -1,13 +1,15 @@
 import hashlib
 import json
 import os
+import queue
 import re
 import sys
+import threading
 import time
 import traceback
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import faiss
 import numpy as np
@@ -15,8 +17,8 @@ import torch
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from fastapi.responses import JSONResponse, StreamingResponse
+from pydantic import BaseModel, Field
 from sentence_transformers import SentenceTransformer
 
 from mineru.cli.gradio_app import to_markdown
@@ -40,7 +42,7 @@ if CAD_SERVICE_DIR.exists():
     if cad_service_path not in sys.path:
         sys.path.insert(0, cad_service_path)
 
-from preprocess.cad_service import CADParams, CADResponse, CADLayoutResponse, cad_service
+from preprocess.cad_service import CADParams, CADResponse, CADLayoutResponse, ChatTurnResponse, cad_service
 from preprocess.coordinate_converter import DEFAULT_CAD_PARAMS
 from preprocess.logger import get_logger as get_cad_logger
 
@@ -129,6 +131,40 @@ class KgLlmQueryRequest(BaseModel):
     synthesize_answer: bool = True
 
 
+class ChatTurnConstraints(BaseModel):
+    lamp_type: Optional[str] = None
+    lamp_count: Optional[int] = None
+    target_lux: Optional[float] = None
+    required_flux_per_lamp_lm: Optional[float] = None
+    lamp_model: Optional[str] = None
+    placement_mode: Optional[str] = None
+    run_wiring: bool = True
+    switch_count: Optional[int] = None
+    lamps: Optional[List[List[int]]] = None
+    switch: Optional[List[int]] = None
+
+
+class ChatTurnExecution(BaseModel):
+    resume_existing: bool = True
+    start_from: str = "auto"
+    overwrite_existing: bool = False
+
+
+class ChatTurnRequest(BaseModel):
+    session_id: str
+    conversation_id: Optional[str] = None
+    intent_type: str
+    room_name: Optional[str] = None
+    constraints: ChatTurnConstraints = Field(default_factory=ChatTurnConstraints)
+    execution: ChatTurnExecution = Field(default_factory=ChatTurnExecution)
+
+
+class ChatResetRoomRequest(BaseModel):
+    session_id: str
+    conversation_id: str
+    room_name: str
+
+
 def _cad_response_to_payload(obj) -> dict:
     if hasattr(obj, "model_dump"):
         return obj.model_dump()
@@ -137,6 +173,10 @@ def _cad_response_to_payload(obj) -> dict:
     if isinstance(obj, dict):
         return obj
     return {"value": str(obj)}
+
+
+def _format_sse(event_type: str, payload: Dict[str, Any]) -> str:
+    return f"event: {event_type}\ndata: {json.dumps(payload, ensure_ascii=False, default=str)}\n\n"
 
 
 @app.middleware("http")
@@ -739,6 +779,10 @@ async def root() -> dict:
             "kg_status": "/kg/status",
             "cad_process": "/upload-and-process",
             "cad_layout_process": "/process-all-rooms",
+            "chat_turn": "/chat/turn",
+            "chat_turn_stream": "/chat/turn/stream",
+            "chat_state": "/chat/state",
+            "chat_reset_room": "/chat/reset-room",
             "cad_health": "/health",
             "cad_default_params": "/default-cad-params",
         },
@@ -889,6 +933,199 @@ async def process_all_rooms(
             status_code=500,
             detail=f"internal error while processing all rooms: {exc}",
         )
+
+
+@app.post("/chat/turn", response_model=ChatTurnResponse)
+async def chat_turn(payload: ChatTurnRequest) -> ChatTurnResponse:
+    session_id = (payload.session_id or "").strip()
+    if not session_id:
+        raise HTTPException(status_code=400, detail="session_id is required")
+
+    room_name = (payload.room_name or "").strip() or None
+    conversation_id = (payload.conversation_id or "").strip() or None
+    try:
+        result = cad_service.process_chat_turn(
+            session_id=session_id,
+            conversation_id=conversation_id,
+            intent_type=(payload.intent_type or "").strip(),
+            room_name=room_name,
+            constraints=payload.constraints.model_dump(),
+            execution=payload.execution.model_dump(),
+        )
+        cad_logger.info(
+            f"chat turn completed: session_id={session_id}, conversation_id={result.get('conversation_id')}, "
+            f"intent_type={payload.intent_type}, room_name={result.get('room_name')}"
+        )
+        return result
+    except HTTPException:
+        raise
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        cad_logger.error(f"unexpected chat turn error: {exc}")
+        cad_logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"internal error while processing chat turn: {exc}")
+
+
+@app.post("/chat/turn/stream")
+async def chat_turn_stream(payload: ChatTurnRequest) -> StreamingResponse:
+    session_id = (payload.session_id or "").strip()
+    if not session_id:
+        raise HTTPException(status_code=400, detail="session_id is required")
+
+    intent_type = (payload.intent_type or "").strip()
+    if not intent_type:
+        raise HTTPException(status_code=400, detail="intent_type is required")
+
+    room_name = (payload.room_name or "").strip() or None
+    conversation_id = (payload.conversation_id or "").strip() or None
+    constraints = payload.constraints.model_dump()
+    execution = payload.execution.model_dump()
+    event_queue: "queue.Queue[Optional[Dict[str, Any]]]" = queue.Queue()
+
+    def push_event(event: Dict[str, Any]) -> None:
+        event_queue.put(dict(event or {}))
+
+    def worker() -> None:
+        try:
+            push_event(
+                {
+                    "type": "stream_open",
+                    "session_id": session_id,
+                    "conversation_id": conversation_id,
+                    "room_name": room_name,
+                    "intent_type": intent_type,
+                }
+            )
+            result = cad_service.process_chat_turn(
+                session_id=session_id,
+                conversation_id=conversation_id,
+                intent_type=intent_type,
+                room_name=room_name,
+                constraints=constraints,
+                execution=execution,
+                event_sink=push_event,
+            )
+            cad_logger.info(
+                f"chat turn stream completed: session_id={session_id}, conversation_id={result.get('conversation_id')}, "
+                f"intent_type={intent_type}, room_name={result.get('room_name')}"
+            )
+            push_event(
+                {
+                    "type": "result",
+                    "result": result,
+                }
+            )
+        except FileNotFoundError as exc:
+            push_event(
+                {
+                    "type": "error",
+                    "error_type": "not_found",
+                    "message": str(exc),
+                    "status_code": 404,
+                }
+            )
+        except ValueError as exc:
+            push_event(
+                {
+                    "type": "error",
+                    "error_type": "bad_request",
+                    "message": str(exc),
+                    "status_code": 400,
+                }
+            )
+        except Exception as exc:
+            cad_logger.error(f"unexpected chat turn stream error: {exc}")
+            cad_logger.error(traceback.format_exc())
+            push_event(
+                {
+                    "type": "error",
+                    "error_type": "internal",
+                    "message": f"internal error while processing chat turn: {exc}",
+                    "status_code": 500,
+                }
+            )
+        finally:
+            event_queue.put(None)
+
+    def event_generator():
+        while True:
+            event = event_queue.get()
+            if event is None:
+                yield _format_sse("done", {"type": "done"})
+                break
+            event_type = str(event.get("type") or "message")
+            yield _format_sse(event_type, event)
+
+    worker_thread = threading.Thread(target=worker, name="chat-turn-stream", daemon=True)
+    worker_thread.start()
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@app.get("/chat/state")
+async def get_chat_state(
+    session_id: str,
+    conversation_id: Optional[str] = None,
+    room_name: Optional[str] = None,
+) -> Dict[str, Any]:
+    resolved_session_id = (session_id or "").strip()
+    if not resolved_session_id:
+        raise HTTPException(status_code=400, detail="session_id is required")
+
+    resolved_conversation_id = (conversation_id or "").strip() or None
+    resolved_room_name = (room_name or "").strip() or None
+    try:
+        return cad_service.get_chat_state(
+            resolved_session_id,
+            conversation_id=resolved_conversation_id,
+            room_name=resolved_room_name,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        cad_logger.error(f"unexpected chat state error: {exc}")
+        cad_logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"internal error while reading chat state: {exc}")
+
+
+@app.post("/chat/reset-room")
+async def chat_reset_room(payload: ChatResetRoomRequest) -> Dict[str, Any]:
+    session_id = (payload.session_id or "").strip()
+    conversation_id = (payload.conversation_id or "").strip()
+    room_name = (payload.room_name or "").strip()
+    if not session_id:
+        raise HTTPException(status_code=400, detail="session_id is required")
+    if not conversation_id:
+        raise HTTPException(status_code=400, detail="conversation_id is required")
+    if not room_name:
+        raise HTTPException(status_code=400, detail="room_name is required")
+
+    try:
+        result = cad_service.reset_chat_room(session_id, conversation_id, room_name)
+        cad_logger.info(
+            f"chat room reset: session_id={session_id}, conversation_id={conversation_id}, room_name={room_name}, removed={result.get('removed')}"
+        )
+        return result
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        cad_logger.error(f"unexpected chat reset error: {exc}")
+        cad_logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"internal error while resetting chat room: {exc}")
 
 
 def main() -> None:
