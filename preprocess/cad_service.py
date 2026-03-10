@@ -2,18 +2,22 @@
 CAD分析服务主逻辑模块
 处理外部请求，调用核心分析功能，返回房间CAD坐标
 """
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
 from pydantic import BaseModel, Field, field_validator
+import json
 import os
 import tempfile
 import shutil
+import uuid
 from pathlib import Path
-from .find_all import process_images_batch, process_single_image
+from datetime import datetime
+from .find_all import process_images_batch, process_single_image, process_layout_from_intermediate
 from .coordinate_converter import DEFAULT_CAD_PARAMS
 from .logger import get_logger
 
 # 获取logger实例
 logger = get_logger("cad_service")
+SESSION_ROOT = Path(__file__).resolve().parents[1] / "cad_sessions"
 
 
 class CADParams(BaseModel):
@@ -92,9 +96,28 @@ class CADResponse(BaseModel):
     """CAD分析响应数据模型"""
     success: bool = Field(..., description="处理是否成功")
     message: str = Field(..., description="处理结果消息")
+    session_id: Optional[str] = Field(default=None, description="服务端会话ID，用于后续执行步骤7和步骤8")
     total_images: int = Field(..., description="处理的图片总数")
     processed_images: int = Field(..., description="成功处理的图片数")
     results: Dict[str, List[RoomCADCoordinate]] = Field(..., description="每个图片的房间CAD坐标结果")
+    lighting_results: Dict[str, List[RoomLightingPlan]] = Field(
+        default_factory=dict,
+        description="每个图片的房间灯具布置结果",
+    )
+    wiring_results: Dict[str, List[RoomWiringPlan]] = Field(
+        default_factory=dict,
+        description="每个图片的房间布线结果",
+    )
+    errors: Dict[str, str] = Field(default_factory=dict, description="处理错误信息")
+
+
+class CADLayoutResponse(BaseModel):
+    """步骤7和步骤8处理响应数据模型"""
+    success: bool = Field(..., description="处理是否成功")
+    message: str = Field(..., description="处理结果消息")
+    session_id: str = Field(..., description="服务端会话ID")
+    total_images: int = Field(..., description="处理的图片总数")
+    processed_images: int = Field(..., description="成功处理的图片数")
     lighting_results: Dict[str, List[RoomLightingPlan]] = Field(
         default_factory=dict,
         description="每个图片的房间灯具布置结果",
@@ -111,6 +134,7 @@ class CADAnalysisService:
     
     def __init__(self):
         self.default_cad_params = DEFAULT_CAD_PARAMS
+        SESSION_ROOT.mkdir(parents=True, exist_ok=True)
     
     def validate_request(self, request: CADRequest) -> tuple[bool, str]:
         """
@@ -157,22 +181,69 @@ class CADAnalysisService:
         
         return True, ""
     
-    def save_uploaded_files(self, files: List[bytes], filenames: List[str]) -> tuple[str, List[str]]:
+    def _create_session_workspace(self) -> tuple[str, Path]:
+        session_id = datetime.now().strftime("%Y%m%d_%H%M%S_") + uuid.uuid4().hex[:8]
+        session_dir = SESSION_ROOT / session_id
+        uploads_dir = session_dir / "uploads"
+        uploads_dir.mkdir(parents=True, exist_ok=False)
+        return session_id, session_dir
+
+    def _session_manifest_path(self, session_id: str) -> Path:
+        return SESSION_ROOT / session_id / "manifest.json"
+
+    def _json_safe(self, value: Any) -> Any:
+        if isinstance(value, dict):
+            return {str(k): self._json_safe(v) for k, v in value.items()}
+        if isinstance(value, (list, tuple)):
+            return [self._json_safe(v) for v in value]
+        if isinstance(value, Path):
+            return str(value)
+        if hasattr(value, "tolist"):
+            try:
+                return value.tolist()
+            except Exception:
+                pass
+        if isinstance(value, (int, float, str, bool)) or value is None:
+            return value
+        return str(value)
+
+    def _write_session_manifest(self, session_id: str, payload: Dict[str, Any]) -> None:
+        manifest_path = self._session_manifest_path(session_id)
+        manifest_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(manifest_path, "w", encoding="utf-8") as f:
+            json.dump(self._json_safe(payload), f, ensure_ascii=False, indent=2)
+
+    def _read_session_manifest(self, session_id: str) -> Dict[str, Any]:
+        manifest_path = self._session_manifest_path(session_id)
+        if not manifest_path.exists():
+            raise FileNotFoundError(f"会话不存在: {session_id}")
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            raise ValueError(f"会话清单格式错误: {manifest_path}")
+        return data
+
+    def save_uploaded_files(self, files: List[bytes], filenames: List[str], target_dir: Optional[Path] = None) -> tuple[str, List[str]]:
         """
         保存上传的文件到临时目录
         :param files: 文件内容列表
         :param filenames: 文件名列表
         :return: (临时目录路径, 保存的文件路径列表)
         """
-        # 创建临时目录
-        temp_dir = tempfile.mkdtemp(prefix="cad_upload_")
+        if target_dir is None:
+            temp_dir = tempfile.mkdtemp(prefix="cad_upload_")
+            write_dir = Path(temp_dir)
+        else:
+            target_dir.mkdir(parents=True, exist_ok=True)
+            temp_dir = str(target_dir)
+            write_dir = target_dir
         saved_files = []
         
         try:
             for file_content, filename in zip(files, filenames):
                 # 确保文件名安全
                 safe_filename = Path(filename).name
-                file_path = os.path.join(temp_dir, safe_filename)
+                file_path = str(write_dir / safe_filename)
                 
                 # 写入文件
                 with open(file_path, 'wb') as f:
@@ -200,8 +271,13 @@ class CADAnalysisService:
         except Exception as e:
             logger.warning(f"清理临时目录失败 {temp_dir}: {str(e)}")
     
-    def process_uploaded_files(self, files: List[bytes], filenames: List[str], 
-                             cad_params: Optional[CADParams] = None) -> CADResponse:
+    def process_uploaded_files(
+        self,
+        files: List[bytes],
+        filenames: List[str],
+        cad_params: Optional[CADParams] = None,
+        run_layout: bool = False,
+    ) -> CADResponse:
         """
         处理上传的文件
         :param files: 文件内容列表
@@ -227,9 +303,12 @@ class CADAnalysisService:
             )
         
         temp_dir = None
+        session_id = None
+        session_dir: Optional[Path] = None
         try:
-            # 保存上传的文件到临时目录
-            temp_dir, saved_files = self.save_uploaded_files(files, filenames)
+            session_id, session_dir = self._create_session_workspace()
+            uploads_dir = session_dir / "uploads"
+            temp_dir, saved_files = self.save_uploaded_files(files, filenames, target_dir=uploads_dir)
             
             # 转换CAD参数
             cad_params_dict = self.convert_cad_params(cad_params)
@@ -241,7 +320,8 @@ class CADAnalysisService:
             processing_results = process_images_batch(
                 image_directory=temp_dir,
                 cad_params=cad_params_dict,
-                save_to_file=True  # 服务模式下保存文件
+                save_to_file=True,  # 服务模式下保存文件
+                run_layout=run_layout,
             )
             
             # 统计处理结果
@@ -261,15 +341,43 @@ class CADAnalysisService:
             wiring_results = self.extract_wiring_results(processing_results)
             
             # 构建响应
+            session_images: Dict[str, Any] = {}
+            for image_name, result in processing_results.items():
+                image_path = str(uploads_dir / image_name)
+                image_payload: Dict[str, Any] = {"image_path": image_path}
+                if isinstance(result, dict) and "error" not in result:
+                    image_payload["intermediate"] = {
+                        "cad_rooms": result.get("cad_rooms", {}),
+                        "room_rectangles": result.get("room_rectangles", {}),
+                        "door_assignments": result.get("door_assignments", []),
+                    }
+                    if run_layout:
+                        image_payload["lighting_rooms"] = result.get("lighting_rooms", {})
+                        image_payload["wiring_rooms"] = result.get("wiring_rooms", {})
+                else:
+                    image_payload["error"] = result.get("error") if isinstance(result, dict) else str(result)
+                session_images[image_name] = image_payload
+
+            self._write_session_manifest(
+                session_id,
+                {
+                    "session_id": session_id,
+                    "created_at": datetime.now().isoformat(),
+                    "cad_params": cad_params_dict,
+                    "images": session_images,
+                },
+            )
+
             if processed_images > 0:
                 response = CADResponse(
                     success=True,
                     message=f"成功处理 {processed_images}/{total_images} 个图像",
+                    session_id=session_id,
                     total_images=total_images,
                     processed_images=processed_images,
                     results=room_coordinates,
-                    lighting_results=lighting_results,
-                    wiring_results=wiring_results,
+                    lighting_results=lighting_results if run_layout else {},
+                    wiring_results=wiring_results if run_layout else {},
                     errors=error_results
                 )
                 logger.info(f"CAD处理成功: 提取了 {sum(len(rooms) for rooms in room_coordinates.values())} 个房间的坐标")
@@ -277,6 +385,7 @@ class CADAnalysisService:
                 response = CADResponse(
                     success=False,
                     message="所有图像处理均失败",
+                    session_id=session_id,
                     total_images=total_images,
                     processed_images=0,
                     results={},
@@ -295,6 +404,7 @@ class CADAnalysisService:
             return CADResponse(
                 success=False,
                 message=f"处理过程中发生错误: {str(e)}",
+                session_id=session_id,
                 total_images=0,
                 processed_images=0,
                 results={},
@@ -304,9 +414,128 @@ class CADAnalysisService:
             )
         
         finally:
-            # 清理临时目录
-            if temp_dir:
+            if temp_dir and run_layout and session_dir is None:
                 self.cleanup_temp_directory(temp_dir)
+
+    def process_all_rooms(self, session_id: str, placement_mode: Optional[str] = None) -> CADLayoutResponse:
+        """
+        基于 upload-and-process 生成的中间结果，执行步骤7和步骤8。
+        """
+        resolved_mode = (placement_mode or "").strip().lower()
+        if resolved_mode and resolved_mode not in {"llm", "rule"}:
+            return CADLayoutResponse(
+                success=False,
+                message=f"无效的 placement_mode: {placement_mode}",
+                session_id=session_id,
+                total_images=0,
+                processed_images=0,
+                lighting_results={},
+                wiring_results={},
+                errors={"placement_mode": f"invalid placement_mode: {placement_mode}"},
+            )
+
+        logger.info(
+            f"开始处理会话的步骤7和步骤8: session_id={session_id}, "
+            f"placement_mode={resolved_mode or 'env/default'}"
+        )
+
+        try:
+            manifest = self._read_session_manifest(session_id)
+        except Exception as exc:
+            logger.warning(f"读取会话失败: {exc}")
+            return CADLayoutResponse(
+                success=False,
+                message=f"读取会话失败: {exc}",
+                session_id=session_id,
+                total_images=0,
+                processed_images=0,
+                lighting_results={},
+                wiring_results={},
+                errors={"session": str(exc)},
+            )
+
+        cad_params_dict = manifest.get("cad_params") or self.default_cad_params
+        images = manifest.get("images") or {}
+        if not isinstance(images, dict) or not images:
+            return CADLayoutResponse(
+                success=False,
+                message="会话中没有可处理的图像",
+                session_id=session_id,
+                total_images=0,
+                processed_images=0,
+                lighting_results={},
+                wiring_results={},
+                errors={"session": "会话中没有可处理的图像"},
+            )
+
+        processing_results: Dict[str, Any] = {}
+        errors: Dict[str, str] = {}
+        total_images = len(images)
+        processed_images = 0
+        session_dir = SESSION_ROOT / session_id
+        layouts_root = session_dir / "layouts"
+        layouts_root.mkdir(parents=True, exist_ok=True)
+
+        for image_name, image_payload in images.items():
+            try:
+                if not isinstance(image_payload, dict):
+                    raise ValueError("图像会话数据格式错误")
+                if image_payload.get("error"):
+                    raise ValueError(str(image_payload.get("error")))
+
+                image_path = str(image_payload.get("image_path") or "")
+                intermediate = image_payload.get("intermediate") or {}
+                room_rectangles = intermediate.get("room_rectangles") or {}
+                door_assignments = intermediate.get("door_assignments") or []
+                if not image_path or not room_rectangles:
+                    raise ValueError("缺少步骤1-6的中间结果")
+
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                per_image_output_dir = layouts_root / f"{Path(image_name).stem}_{timestamp}"
+                layout_result = process_layout_from_intermediate(
+                    image_path=image_path,
+                    room_rectangles=room_rectangles,
+                    door_assignments=door_assignments,
+                    cad_params=cad_params_dict,
+                    placement_mode=resolved_mode or None,
+                    save_to_file=True,
+                    output_dir=str(per_image_output_dir),
+                )
+
+                image_payload["lighting_rooms"] = layout_result.get("lighting_rooms", {})
+                image_payload["wiring_rooms"] = layout_result.get("wiring_rooms", {})
+                processing_results[image_name] = {
+                    "lighting_rooms": image_payload["lighting_rooms"],
+                    "wiring_rooms": image_payload["wiring_rooms"],
+                }
+                processed_images += 1
+            except Exception as exc:
+                logger.error(f"会话 {session_id} 的图像 {image_name} 执行步骤7/8失败: {exc}")
+                errors[image_name] = str(exc)
+                processing_results[image_name] = {"error": str(exc)}
+
+        manifest["images"] = images
+        self._write_session_manifest(session_id, manifest)
+
+        lighting_results = self.extract_lighting_results(processing_results)
+        wiring_results = self.extract_wiring_results(processing_results)
+
+        success = processed_images > 0
+        message = (
+            f"成功处理 {processed_images}/{total_images} 个图像的步骤7和步骤8"
+            if success
+            else "所有图像的步骤7和步骤8处理均失败"
+        )
+        return CADLayoutResponse(
+            success=success,
+            message=message,
+            session_id=session_id,
+            total_images=total_images,
+            processed_images=processed_images,
+            lighting_results=lighting_results,
+            wiring_results=wiring_results,
+            errors=errors,
+        )
     
     def convert_cad_params(self, cad_params: Optional[CADParams]) -> dict:
         """

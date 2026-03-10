@@ -2,6 +2,11 @@
 CAD图纸房间分析主程序 - 重构版本
 整合了OCR文本识别、轮廓检测、门窗识别和转折点处理的完整流程
 """
+import os
+import shutil
+from datetime import datetime
+from typing import Any, Dict, Optional
+
 from .logger import get_logger
 from .ocr_extractor import extract_text_boxes
 from .contour_detector import find_all_inner_contours
@@ -12,14 +17,95 @@ from .coordinate_converter import process_rooms_to_cad, DEFAULT_CAD_PARAMS
 from .lighting_layout import process_room_lighting_layout
 from .wiring_layout import process_room_wiring_layout
 from .adaptive_shape_analyzer import process_adaptive_room_shapes, create_comparison_visualization
-import os
-import shutil
-from datetime import datetime
 
 logger = get_logger("find_all")
 
 
-def process_single_image(image_path, cad_params=None, save_to_file=True):
+def _prepare_output_dir(
+    image_path: str,
+    output_dir: Optional[str] = None,
+    reuse_existing: bool = False,
+) -> str:
+    """
+    为当前运行创建独立输出目录，并复制原始输入图像。
+    """
+    if output_dir is None:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_dir = os.path.join("images", f"output_{timestamp}")
+        if os.path.exists(output_dir):
+            suffix = 1
+            while os.path.exists(f"{output_dir}_{suffix}"):
+                suffix += 1
+            output_dir = f"{output_dir}_{suffix}"
+
+    if os.path.exists(output_dir):
+        if not reuse_existing:
+            raise FileExistsError(f"输出目录已存在: {output_dir}")
+    else:
+        os.makedirs(output_dir, exist_ok=False)
+
+    input_filename = os.path.basename(image_path)
+    copied_input_path = os.path.join(output_dir, f"original_{input_filename}")
+    if not os.path.exists(copied_input_path):
+        shutil.copy2(image_path, copied_input_path)
+    logger.info(f"本次运行输出目录: {output_dir}")
+    logger.info(f"已复制原始图像到: {copied_input_path}")
+    return output_dir
+
+
+def process_layout_from_intermediate(
+    *,
+    image_path: str,
+    room_rectangles: Dict[str, Any],
+    door_assignments: Optional[list] = None,
+    cad_params: Optional[dict] = None,
+    placement_mode: Optional[str] = None,
+    save_to_file: bool = True,
+    output_dir: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    基于步骤1-6的中间结果，单独执行步骤7和步骤8。
+    """
+    effective_cad_params = cad_params if cad_params is not None else DEFAULT_CAD_PARAMS
+    previous_output_dir = os.environ.get("CAD_STEP_OUTPUT_DIR")
+
+    if save_to_file:
+        output_dir = _prepare_output_dir(image_path, output_dir=output_dir, reuse_existing=True)
+        os.environ["CAD_STEP_OUTPUT_DIR"] = output_dir
+
+    try:
+        lighting_mode = (placement_mode or os.getenv("CAD_LIGHTING_PLACEMENT_MODE", "llm")).strip().lower()
+        if lighting_mode not in {"llm", "rule"}:
+            lighting_mode = "llm"
+        lighting_payload = process_room_lighting_layout(
+            room_rectangles=room_rectangles,
+            image_path=image_path,
+            cad_params=effective_cad_params,
+            door_assignments=door_assignments or [],
+            placement_mode=lighting_mode,
+            save_to_file=save_to_file,
+        )
+
+        wiring_payload = process_room_wiring_layout(
+            lighting_payload=lighting_payload,
+            image_path=image_path,
+            cad_params=effective_cad_params,
+            save_to_file=save_to_file,
+        )
+
+        return {
+            "lighting_rooms": lighting_payload.get("rooms", {}),
+            "wiring_rooms": wiring_payload.get("rooms", {}),
+            "output_dir": output_dir,
+        }
+    finally:
+        if previous_output_dir is None:
+            os.environ.pop("CAD_STEP_OUTPUT_DIR", None)
+        else:
+            os.environ["CAD_STEP_OUTPUT_DIR"] = previous_output_dir
+
+
+def process_single_image(image_path, cad_params=None, save_to_file=True, run_layout=True):
     """
     处理单个图像的完整流程
     :param image_path: 图像文件路径
@@ -29,26 +115,12 @@ def process_single_image(image_path, cad_params=None, save_to_file=True):
     """
     logger.info(f"开始处理图像: {image_path}")
 
-    # 为当前运行创建独立输出目录: images/output_YYYYMMDD_HHMMSS
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_dir = os.path.join("images", f"output_{timestamp}")
-    if os.path.exists(output_dir):
-        suffix = 1
-        while os.path.exists(f"{output_dir}_{suffix}"):
-            suffix += 1
-        output_dir = f"{output_dir}_{suffix}"
-    os.makedirs(output_dir, exist_ok=False)
-
-    # 复制原始输入图像，方便与处理结果对照
-    input_filename = os.path.basename(image_path)
-    copied_input_path = os.path.join(output_dir, f"original_{input_filename}")
-    shutil.copy2(image_path, copied_input_path)
-    logger.info(f"本次运行输出目录: {output_dir}")
-    logger.info(f"已复制原始图像到: {copied_input_path}")
+    output_dir = _prepare_output_dir(image_path) if save_to_file else None
 
     # 通过环境变量统一各步骤输出目录
     previous_output_dir = os.environ.get("CAD_STEP_OUTPUT_DIR")
-    os.environ["CAD_STEP_OUTPUT_DIR"] = output_dir
+    if output_dir is not None:
+        os.environ["CAD_STEP_OUTPUT_DIR"] = output_dir
 
     try:
 
@@ -101,38 +173,38 @@ def process_single_image(image_path, cad_params=None, save_to_file=True):
         # 步骤6：转换坐标为CAD坐标
         logger.info("6. 转换坐标为CAD坐标...")
         cad_rooms = process_rooms_to_cad(room_rectangles, image_path, cad_params, save_to_file)
-        #TODO: 在房间与门配对的时候，是否将属于某个房间的所有门都配对了。从结果看，本来有四个门的候选房间中包含热量准备室，但热量准备室离散化后只配对了一个门
-        # 步骤7: 房间网格离散化 + 灯具布置
-        logger.info("7. 房间网格离散化并生成灯具布置...")
-        effective_cad_params = cad_params if cad_params is not None else DEFAULT_CAD_PARAMS
-        lighting_mode = os.getenv("CAD_LIGHTING_PLACEMENT_MODE", "llm").strip().lower()
-        lighting_payload = process_room_lighting_layout(
-            room_rectangles=room_rectangles,
-            image_path=image_path,
-            cad_params=effective_cad_params,
-            door_assignments=doors_and_windows.get("door_assignments", []),
-            placement_mode=lighting_mode,
-            save_to_file=save_to_file,
-        )
+        if not run_layout:
+            logger.info("已完成步骤1-6，跳过步骤7-8")
+            return {
+                "cad_rooms": cad_rooms,
+                "room_rectangles": room_rectangles,
+                "door_assignments": doors_and_windows.get("door_assignments", []),
+                "output_dir": output_dir,
+            }
 
-        # 步骤8: 开关到灯具布线（MST + A*）
-        logger.info("8. 生成房间布线（MST + A*）...")
-        wiring_payload = process_room_wiring_layout(
-            lighting_payload=lighting_payload,
+        #TODO: 在房间与门配对的时候，是否将属于某个房间的所有门都配对了。从结果看，本来有四个门的候选房间中包含热量准备室，但热量准备室离散化后只配对了一个门
+        logger.info("7-8. 基于步骤1-6结果执行灯具布置和布线...")
+        layout_result = process_layout_from_intermediate(
             image_path=image_path,
-            cad_params=effective_cad_params,
+            room_rectangles=room_rectangles,
+            door_assignments=doors_and_windows.get("door_assignments", []),
+            cad_params=cad_params,
+            placement_mode=None,
             save_to_file=save_to_file,
+            output_dir=output_dir,
         )
 
         logger.info(f"图像处理完成: {os.path.basename(image_path)}")
         logger.info(f"成功处理 {len(processed_rooms)} 个房间的轮廓数据")
         logger.info(f"计算了 {len(room_rectangles)} 个房间的最小外接矩形")
-        logger.info(f"处理结果目录: {output_dir}")
+        if output_dir is not None:
+            logger.info(f"处理结果目录: {output_dir}")
 
         return {
             "cad_rooms": cad_rooms,
-            "lighting_rooms": lighting_payload.get("rooms", {}),
-            "wiring_rooms": wiring_payload.get("rooms", {}),
+            "lighting_rooms": layout_result.get("lighting_rooms", {}),
+            "wiring_rooms": layout_result.get("wiring_rooms", {}),
+            "output_dir": output_dir,
         }
     finally:
         if previous_output_dir is None:
@@ -141,7 +213,7 @@ def process_single_image(image_path, cad_params=None, save_to_file=True):
             os.environ["CAD_STEP_OUTPUT_DIR"] = previous_output_dir
 
 
-def process_images_batch(image_directory, cad_params=None, save_to_file=True):
+def process_images_batch(image_directory, cad_params=None, save_to_file=True, run_layout=True):
     """
     批量处理指定目录下的所有PNG图像
     :param image_directory: 图像目录路径
@@ -170,7 +242,7 @@ def process_images_batch(image_directory, cad_params=None, save_to_file=True):
     for i, image_path in enumerate(png_files, 1):
         logger.info(f"处理第 {i}/{len(png_files)} 个图像")
         try:
-            result = process_single_image(image_path, cad_params, save_to_file)
+            result = process_single_image(image_path, cad_params, save_to_file, run_layout=run_layout)
             image_name = os.path.basename(image_path)
             results[image_name] = result
         except Exception as e:

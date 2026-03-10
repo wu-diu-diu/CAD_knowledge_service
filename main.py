@@ -40,7 +40,7 @@ if CAD_SERVICE_DIR.exists():
     if cad_service_path not in sys.path:
         sys.path.insert(0, cad_service_path)
 
-from preprocess.cad_service import CADParams, CADResponse, cad_service
+from preprocess.cad_service import CADParams, CADResponse, CADLayoutResponse, cad_service
 from preprocess.coordinate_converter import DEFAULT_CAD_PARAMS
 from preprocess.logger import get_logger as get_cad_logger
 
@@ -738,6 +738,7 @@ async def root() -> dict:
             "kg_llm_query": "/kg/llm-query",
             "kg_status": "/kg/status",
             "cad_process": "/upload-and-process",
+            "cad_layout_process": "/process-all-rooms",
             "cad_health": "/health",
             "cad_default_params": "/default-cad-params",
         },
@@ -820,9 +821,15 @@ async def upload_and_process_cad(
             cad_logger.info("using default CAD parameters")
 
         # 真正处理图片的地方
-        result = cad_service.process_uploaded_files(file_contents, filenames, cad_params_obj)
+        result = cad_service.process_uploaded_files(
+            file_contents,
+            filenames,
+            cad_params_obj,
+            run_layout=False,
+        )
         cad_logger.info(
-            f"CAD processing finished: success={result.processed_images}/{result.total_images}"
+            f"CAD preprocessing finished: success={result.processed_images}/{result.total_images}, "
+            f"session_id={result.session_id}"
         )
 
         if not result.success:
@@ -841,6 +848,46 @@ async def upload_and_process_cad(
         raise HTTPException(
             status_code=500,
             detail=f"internal error while processing uploaded files: {exc}",
+        )
+
+
+@app.post("/process-all-rooms", response_model=CADLayoutResponse)
+async def process_all_rooms(
+    session_id: str = Form(..., description="session ID returned by /upload-and-process"),
+    placement_mode: Optional[str] = Form(
+        default=None,
+        description="lighting placement mode: rule or llm; omit to use server default",
+    ),
+):
+    session_id = (session_id or "").strip()
+    if not session_id:
+        raise HTTPException(status_code=400, detail="session_id is required")
+    if placement_mode is not None:
+        placement_mode = placement_mode.strip().lower()
+        if placement_mode not in {"rule", "llm"}:
+            raise HTTPException(status_code=400, detail="placement_mode must be 'rule' or 'llm'")
+
+    try:
+        result = cad_service.process_all_rooms(session_id, placement_mode=placement_mode)
+        cad_logger.info(
+            f"CAD layout processing finished: session_id={session_id}, "
+            f"placement_mode={placement_mode or 'env/default'}, "
+            f"success={result.processed_images}/{result.total_images}"
+        )
+        if not result.success:
+            if result.total_images == 0:
+                raise HTTPException(status_code=400, detail=result.message)
+            payload = _cad_response_to_payload(result)
+            return JSONResponse(status_code=207, content=payload)
+        return result
+    except HTTPException:
+        raise
+    except Exception as exc:
+        cad_logger.error(f"unexpected CAD layout processing error: {exc}")
+        cad_logger.error(traceback.format_exc())
+        raise HTTPException(
+            status_code=500,
+            detail=f"internal error while processing all rooms: {exc}",
         )
 
 
