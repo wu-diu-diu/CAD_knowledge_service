@@ -739,6 +739,15 @@ def _estimate_lamp_count_from_area(
     return max(1, min(24, estimated))
 
 
+def _round_up_to_even_lamp_count(count: int) -> int:
+    """
+    规则矩形房间布灯时，奇数灯具数上调为偶数，避免退化成单行/单列阵列。
+    例如: 5->6, 7->8。
+    """
+    count = max(1, int(count))
+    return count if count % 2 == 0 else count + 1
+
+
 def _polygon_area(points: List[List[float]]) -> float:
     if not points or len(points) < 3:
         return 0.0
@@ -1358,6 +1367,7 @@ def _save_grid_visualization_overlay(
     grid_dump: Dict[str, Dict[str, Any]],
     output_dir: str,
     alpha: float = 0.35,
+    vis_subdir: str = "step7_room_grid_visualization",
 ) -> Optional[str]:
     """
     将步骤7离散网格可视化按房间拆分保存：
@@ -1371,7 +1381,7 @@ def _save_grid_visualization_overlay(
         return None
 
     alpha = max(0.05, min(0.95, float(alpha)))
-    vis_dir = os.path.join(output_dir, "step7_room_grid_visualization")
+    vis_dir = os.path.join(output_dir, vis_subdir)
     os.makedirs(vis_dir, exist_ok=True)
 
     # 所有房间都按单房间输出，便于逐个查看
@@ -1447,6 +1457,7 @@ def process_room_lighting_layout(
 
     lighting_rooms: Dict[str, Dict[str, Any]] = {}
     lighting_rooms_internal: Dict[str, Dict[str, Any]] = {}
+    grid_dump_pre_layout: Dict[str, Dict[str, Any]] = {}
     grid_dump: Dict[str, Dict[str, Any]] = {}
 
     for room_name, room_shapes in room_rectangles.items():
@@ -1486,6 +1497,26 @@ def process_room_lighting_layout(
             if door_edge_cells:
                 door_grid_position = door_edge_cells[0]
 
+        grid_dump_pre_layout[room_name] = {
+            "room_name": room_name,
+            "grid_rows": int(grid.shape[0]),
+            "grid_cols": int(grid.shape[1]),
+            "cell_size_px": cell_size_px,
+            "bbox_pixel": [min_x, min_y, min_x + room_w - 1, min_y + room_h - 1],
+            "room_area_px": room_area_px,
+            "room_area_mm2": room_area_mm2,
+            "room_area_m2": room_area_m2,
+            "estimated_lamp_count": int(estimated_lamp_count),
+            "is_regular": bool(is_regular),
+            "assigned_door": assigned_door,
+            "door_grid_position": door_grid_position,
+            "door_side": door_side,
+            "door_edge_cells": door_edge_cells,
+            "lamp_grid_positions": [],
+            "switch_grid_positions": [],
+            "matrix": grid.tolist(),
+        }
+
         llm_selection = None
         if placement_mode == "llm":
             llm_selection = _select_cells_with_llm(
@@ -1511,15 +1542,21 @@ def process_room_lighting_layout(
             selected_lamp_cells = _complete_lamp_cells(selected_lamp_cells, grid, planned_lamp_count)
             lamp_lm_info = llm_selection.get("lamp_lm")
         else:
+            rule_lamp_selection = _tool_select_lamp_by_room(
+                room_name=room_name,
+                default_lamp_type=default_lamp_type,
+            )
+            rule_selected_lamp = rule_lamp_selection.get("selected_lamp", {}) if isinstance(rule_lamp_selection, dict) else {}
             placement_method = "rule"
-            selected_lamp_type = default_lamp_type
+            selected_lamp_type = str(rule_selected_lamp.get("灯具类型", default_lamp_type)).strip() or default_lamp_type
             planned_lamp_count = max(1, int(estimated_lamp_count))
             if is_regular:
+                planned_lamp_count = _round_up_to_even_lamp_count(planned_lamp_count)
                 selected_lamp_cells = _select_lamp_cells_regular_grid(grid, planned_lamp_count)
             else:
                 selected_lamp_cells = _select_lamp_cells_rule_based(grid, planned_lamp_count)
             selected_lamp_cells = _complete_lamp_cells(selected_lamp_cells, grid, planned_lamp_count)
-            lamp_lm_info = None
+            lamp_lm_info = rule_selected_lamp.get("光通量_lm")
 
         # 开关统一使用规则定位：门旁边、靠房间中心方向
         switch_cell = _select_switch_near_door(
@@ -1716,6 +1753,13 @@ def process_room_lighting_layout(
             )
 
         vis_alpha = float(os.getenv("CAD_GRID_VIS_ALPHA", "0.35"))
+        pre_vis_path = _save_grid_visualization_overlay(
+            image_path=image_path,
+            grid_dump=grid_dump_pre_layout,
+            output_dir=output_dir,
+            alpha=vis_alpha,
+            vis_subdir="step7_room_grid_discretization_visualization",
+        )
         vis_path = _save_grid_visualization_overlay(
             image_path=image_path,
             grid_dump=grid_dump,
@@ -1725,6 +1769,8 @@ def process_room_lighting_layout(
 
         print(f"步骤7网格矩阵已保存: {grid_file}")
         print(f"步骤7灯具布置已保存: {plan_file}")
+        if pre_vis_path:
+            print(f"步骤7房间离散化可视化已保存: {pre_vis_path}")
         if vis_path:
             print(f"步骤7网格可视化已保存: {vis_path}")
 

@@ -16,3 +16,5 @@ transfer_output
 agent_output
 logs/
 test_files
+summary_docs
+kg_store/

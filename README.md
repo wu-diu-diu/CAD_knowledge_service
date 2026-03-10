@@ -1,5 +1,5 @@
 #### 启动命令（单GPU）
-- neo4j连接：`docker run -d --name neo4j -p 7474:7474 -p 7687:7687 -e NEO4J_AUTH=neo4j/password neo4j:latest`，可以在浏览器（服务器本地）访问`http://localhost:7474`或者`http://服务器ip:7474`来访问网页版neo4j
+- neo4j连接：`docker run -d --name neo4j -p 7474:7474 -p 7687:7687 -e NEO4J_AUTH=neo4j/password neo4j:latest`，可以在浏览器（服务器本地）访问`http://服务器ip:7474`来访问网页版neo4j
 - 其中7687端口是用来python代码端访问
 - 可以运行`docker ps -a`查看已停止运行的容器，然后重行运行docker start
 - ` uv run uvicorn main:app --host 127.0.0.1 --port 8008`
@@ -59,28 +59,28 @@ Test the ingest API (external)
 1) Ingest the mounted `/data/docs` directory:
 
 ```bash
-curl -X POST http://<server-ip>:8008/ingest
+curl -X POST http://127.0.0.1:8008/ingest
 ```
 
 2) Upload a file directly:
 
 ```bash
-curl -X POST http://<server-ip>:8008/ingest \
+curl -X POST http://127.0.0.1:8008/ingest \
   -F "files=@/path/to/your.pdf"
 ```
 
 3) Check status:
 
 ```bash
-curl http://<server-ip>:8008/status
+curl http://127.0.0.1:8008/status
 ```
 
 Windows test (PowerShell 7+)
 -------------------------
 ```powershell
-Invoke-RestMethod -Method Post -Uri http://<server-ip>:8008/ingest
-Invoke-RestMethod -Method Post -Uri http://<server-ip>:8008/ingest -Form @{ files = Get-Item "C:\path\file.pdf" }
-Invoke-RestMethod -Uri http://<server-ip>:8008/status
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8008/ingest
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8008/ingest -Form @{ files = Get-Item "C:\path\file.pdf" }
+Invoke-RestMethod -Uri http://127.0.0.1:8008/status
 ```
 
 Notes

@@ -854,7 +854,7 @@ REACT_TOOLS: List[Dict[str, Any]] = [
                         "description": "房间名称；不传时使用当前房间名称。",
                     }
                 },
-                "required": [],
+                "required": ["room_name"],
             },
         },
     },

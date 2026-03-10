@@ -101,7 +101,7 @@ def process_single_image(image_path, cad_params=None, save_to_file=True):
         # 步骤6：转换坐标为CAD坐标
         logger.info("6. 转换坐标为CAD坐标...")
         cad_rooms = process_rooms_to_cad(room_rectangles, image_path, cad_params, save_to_file)
-
+        #TODO: 在房间与门配对的时候，是否将属于某个房间的所有门都配对了。从结果看，本来有四个门的候选房间中包含热量准备室，但热量准备室离散化后只配对了一个门
         # 步骤7: 房间网格离散化 + 灯具布置
         logger.info("7. 房间网格离散化并生成灯具布置...")
         effective_cad_params = cad_params if cad_params is not None else DEFAULT_CAD_PARAMS
