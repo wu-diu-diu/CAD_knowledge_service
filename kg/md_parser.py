@@ -9,7 +9,7 @@ from .models import MdBlock
 PAGE_RE = re.compile(r"^\[PAGE:(\d+)\]\s*$")  ## 匹配[PAGE:5]这种格式的文本
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.*\S)\s*$")
 TABLE_CAPTION_RE = re.compile(r"^\s*(表\s*\d[\d.\-]*\s+.*|Table\s+\d[\d.\-]*\s+.*)\s*$", re.I)
-CLAUSE_NO_RE = re.compile(r"^\s*(\d+(?:\.\d+)+)\s*")
+CLAUSE_NO_RE = re.compile(r"^\s*(\d+(?:\.\d+)*)\s*")
 
 
 def _split_pipe_row(line: str) -> List[str]:
@@ -40,12 +40,12 @@ def parse_markdown_table(table_text: str) -> Dict[str, Any]:
         return {"headers": [], "rows": []}
 
     rows: List[List[str]] = [_split_pipe_row(ln) for ln in pipe_lines]
-    rows = [row for row in rows if row]
+    rows = [row for row in rows if row]  
     if not rows:
         return {"headers": [], "rows": []}
 
-    headers = rows[0]
-    body: List[List[str]] = []
+    headers = rows[0] ## 表格的表头，取第一行
+    body: List[List[str]] = []  ## 表格的内容行，跳过第一行（表头）和分隔行（如果存在）
     for row in rows[1:]:
         if _is_delimiter_row(row):
             continue
@@ -166,7 +166,7 @@ def parse_markdown_blocks(md_text: str) -> List[MdBlock]:
                 table_lines.append(lines[j])
                 j += 1
             table_text = "\n".join(table_lines)
-            parsed = parse_markdown_table(table_text)
+            parsed = parse_markdown_table(table_text)  ## {"headers": [...], "rows": [[...], [...], ...]}，解析表格文本为结构化数据
             caption = None  ## 表格标题，尝试从前一个块（如果存在且是段落）中提取符合表格标题格式的文本
             if blocks and blocks[-1].block_type == "paragraph":
                 candidate = blocks[-1].text.strip()

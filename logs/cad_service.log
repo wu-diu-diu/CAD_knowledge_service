@@ -2742,3 +2742,626 @@ KeyError: 'Xmin'
 2026-03-11 07:51:12 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/chat/turn/stream
 2026-03-11 07:51:12 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/chat/turn/stream status=200 time=0.0027s
 2026-03-11 07:51:15 | INFO     | main:worker:1011 | chat turn stream completed: session_id=20260311_074540_5d1dca94, conversation_id=20260311_074949_cc274b0d, intent_type=design_room, room_name=热量室准备间
+2026-03-13 15:43:47 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-13 15:47:36 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-03-13 15:47:36 | INFO     | main:upload_and_process_cad:814 | upload request received: file_count=1
+2026-03-13 15:47:36 | INFO     | main:upload_and_process_cad:834 | read file: output_20260311_074448_816.png, size=146050 bytes
+2026-03-13 15:47:36 | INFO     | main:upload_and_process_cad:846 | using custom CAD parameters
+2026-03-13 15:47:36 | INFO     | preprocess.cad_service:process_uploaded_files:1046 | 开始处理上传的文件，共 1 个文件
+2026-03-13 15:47:36 | DEBUG    | preprocess.cad_service:save_uploaded_files:1011 | 保存上传文件: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260313_154736_67ff4752/uploads/output_20260311_074448_816.png
+2026-03-13 15:47:36 | DEBUG    | preprocess.cad_service:process_uploaded_files:1073 | 使用CAD参数: {'Xmin': 30710.4776872309, 'Ymin': 39714.3693306255, 'Xmax': 45210.8924672182, 'Ymax': 65492.8844950474}
+2026-03-13 15:47:36 | INFO     | preprocess.cad_service:process_uploaded_files:1076 | 开始批量处理上传的图像...
+2026-03-13 15:47:36 | INFO     | preprocess.find_all:process_images_batch:224 | 开始批量处理目录: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260313_154736_67ff4752/uploads
+2026-03-13 15:47:36 | INFO     | preprocess.find_all:process_images_batch:238 | 找到 1 个PNG文件
+2026-03-13 15:47:36 | INFO     | preprocess.find_all:process_images_batch:243 | 处理第 1/1 个图像
+2026-03-13 15:47:36 | INFO     | preprocess.find_all:process_single_image:116 | 开始处理图像: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260313_154736_67ff4752/uploads/output_20260311_074448_816.png
+2026-03-13 15:47:36 | INFO     | preprocess.find_all:_prepare_output_dir:51 | 本次运行输出目录: images/output_20260313_154736
+2026-03-13 15:47:36 | INFO     | preprocess.find_all:_prepare_output_dir:52 | 已复制原始图像到: images/output_20260313_154736/original_output_20260311_074448_816.png
+2026-03-13 15:47:36 | INFO     | preprocess.find_all:process_single_image:128 | 1. 提取房间名称和坐标...
+2026-03-13 15:47:53 | INFO     | preprocess.find_all:process_single_image:132 | 2. 检测房间内轮廓...
+2026-03-13 15:47:55 | INFO     | preprocess.find_all:process_single_image:138 | step2 门候选凹口点: 189
+2026-03-13 15:47:55 | INFO     | preprocess.find_all:process_single_image:141 | 3. 检测门窗...
+2026-03-13 15:47:56 | INFO     | preprocess.find_all:process_single_image:147 | 检测结果: 18 个门, 18 个窗
+2026-03-13 15:47:56 | INFO     | preprocess.find_all:process_single_image:151 | 门中心归属: 总门数=18, 已归属=18, 未归属=0
+2026-03-13 15:47:56 | INFO     | preprocess.find_all:process_single_image:158 | 4. 处理房间轮廓点（排除门区域 + 轮廓简化）...
+2026-03-13 15:47:57 | INFO     | preprocess.find_all:process_single_image:170 | 5. 计算房间最小外接矩形...
+2026-03-13 15:48:12 | INFO     | preprocess.find_all:process_single_image:174 | 6. 转换坐标为CAD坐标...
+2026-03-13 15:48:13 | INFO     | preprocess.find_all:process_single_image:177 | 已完成步骤1-6，跳过步骤7-8
+2026-03-13 15:48:13 | INFO     | preprocess.find_all:process_images_batch:252 | 批量处理完成，成功处理 1 个图像
+2026-03-13 15:48:13 | INFO     | preprocess.cad_service:process_uploaded_files:1091 | 批量处理完成: 1/1 个图像成功
+2026-03-13 15:48:13 | INFO     | preprocess.cad_service:process_uploaded_files:1141 | CAD处理成功: 提取了 18 个房间的坐标
+2026-03-13 15:48:13 | INFO     | main:upload_and_process_cad:874 | CAD preprocessing finished: success=1/1, session_id=20260313_154736_67ff4752
+2026-03-13 15:48:13 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=36.8809s
+2026-03-13 15:48:40 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-03-13 15:48:40 | INFO     | main:upload_and_process_cad:814 | upload request received: file_count=1
+2026-03-13 15:48:40 | INFO     | main:upload_and_process_cad:834 | read file: output_20260313_154725_421.png, size=131766 bytes
+2026-03-13 15:48:40 | INFO     | main:upload_and_process_cad:846 | using custom CAD parameters
+2026-03-13 15:48:40 | INFO     | preprocess.cad_service:process_uploaded_files:1046 | 开始处理上传的文件，共 1 个文件
+2026-03-13 15:48:40 | DEBUG    | preprocess.cad_service:save_uploaded_files:1011 | 保存上传文件: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260313_154840_fb26c968/uploads/output_20260313_154725_421.png
+2026-03-13 15:48:40 | DEBUG    | preprocess.cad_service:process_uploaded_files:1073 | 使用CAD参数: {'Xmin': 30710.4776872309, 'Ymin': 39714.3693306255, 'Xmax': 45210.8924672182, 'Ymax': 65492.8844950474}
+2026-03-13 15:48:40 | INFO     | preprocess.cad_service:process_uploaded_files:1076 | 开始批量处理上传的图像...
+2026-03-13 15:48:40 | INFO     | preprocess.find_all:process_images_batch:224 | 开始批量处理目录: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260313_154840_fb26c968/uploads
+2026-03-13 15:48:40 | INFO     | preprocess.find_all:process_images_batch:238 | 找到 1 个PNG文件
+2026-03-13 15:48:40 | INFO     | preprocess.find_all:process_images_batch:243 | 处理第 1/1 个图像
+2026-03-13 15:48:40 | INFO     | preprocess.find_all:process_single_image:116 | 开始处理图像: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260313_154840_fb26c968/uploads/output_20260313_154725_421.png
+2026-03-13 15:48:40 | INFO     | preprocess.find_all:_prepare_output_dir:51 | 本次运行输出目录: images/output_20260313_154840
+2026-03-13 15:48:40 | INFO     | preprocess.find_all:_prepare_output_dir:52 | 已复制原始图像到: images/output_20260313_154840/original_output_20260313_154725_421.png
+2026-03-13 15:48:40 | INFO     | preprocess.find_all:process_single_image:128 | 1. 提取房间名称和坐标...
+2026-03-13 15:48:51 | INFO     | preprocess.find_all:process_single_image:132 | 2. 检测房间内轮廓...
+2026-03-13 15:48:53 | INFO     | preprocess.find_all:process_single_image:138 | step2 门候选凹口点: 12
+2026-03-13 15:48:53 | INFO     | preprocess.find_all:process_single_image:141 | 3. 检测门窗...
+2026-03-13 15:48:54 | INFO     | preprocess.find_all:process_single_image:147 | 检测结果: 6 个门, 6 个窗
+2026-03-13 15:48:54 | INFO     | preprocess.find_all:process_single_image:151 | 门中心归属: 总门数=6, 已归属=6, 未归属=0
+2026-03-13 15:48:54 | INFO     | preprocess.find_all:process_single_image:158 | 4. 处理房间轮廓点（排除门区域 + 轮廓简化）...
+2026-03-13 15:48:54 | INFO     | preprocess.find_all:process_single_image:170 | 5. 计算房间最小外接矩形...
+2026-03-13 15:48:55 | INFO     | preprocess.find_all:process_single_image:174 | 6. 转换坐标为CAD坐标...
+2026-03-13 15:48:55 | INFO     | preprocess.find_all:process_single_image:177 | 已完成步骤1-6，跳过步骤7-8
+2026-03-13 15:48:55 | INFO     | preprocess.find_all:process_images_batch:252 | 批量处理完成，成功处理 1 个图像
+2026-03-13 15:48:55 | INFO     | preprocess.cad_service:process_uploaded_files:1091 | 批量处理完成: 1/1 个图像成功
+2026-03-13 15:48:55 | INFO     | preprocess.cad_service:process_uploaded_files:1141 | CAD处理成功: 提取了 2 个房间的坐标
+2026-03-13 15:48:55 | INFO     | main:upload_and_process_cad:874 | CAD preprocessing finished: success=1/1, session_id=20260313_154840_fb26c968
+2026-03-13 15:48:55 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=15.2886s
+2026-03-13 15:49:00 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/upload-and-process
+2026-03-13 15:49:00 | INFO     | main:upload_and_process_cad:814 | upload request received: file_count=1
+2026-03-13 15:49:00 | INFO     | main:upload_and_process_cad:834 | read file: output_20260313_154725_421.png, size=131766 bytes
+2026-03-13 15:49:00 | INFO     | main:upload_and_process_cad:846 | using custom CAD parameters
+2026-03-13 15:49:00 | INFO     | preprocess.cad_service:process_uploaded_files:1046 | 开始处理上传的文件，共 1 个文件
+2026-03-13 15:49:00 | DEBUG    | preprocess.cad_service:save_uploaded_files:1011 | 保存上传文件: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260313_154900_ed99261e/uploads/output_20260313_154725_421.png
+2026-03-13 15:49:00 | DEBUG    | preprocess.cad_service:process_uploaded_files:1073 | 使用CAD参数: {'Xmin': 30710.4776872309, 'Ymin': 39714.3693306255, 'Xmax': 45210.8924672182, 'Ymax': 65492.8844950474}
+2026-03-13 15:49:00 | INFO     | preprocess.cad_service:process_uploaded_files:1076 | 开始批量处理上传的图像...
+2026-03-13 15:49:00 | INFO     | preprocess.find_all:process_images_batch:224 | 开始批量处理目录: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260313_154900_ed99261e/uploads
+2026-03-13 15:49:00 | INFO     | preprocess.find_all:process_images_batch:238 | 找到 1 个PNG文件
+2026-03-13 15:49:00 | INFO     | preprocess.find_all:process_images_batch:243 | 处理第 1/1 个图像
+2026-03-13 15:49:00 | INFO     | preprocess.find_all:process_single_image:116 | 开始处理图像: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260313_154900_ed99261e/uploads/output_20260313_154725_421.png
+2026-03-13 15:49:00 | INFO     | preprocess.find_all:_prepare_output_dir:51 | 本次运行输出目录: images/output_20260313_154900
+2026-03-13 15:49:00 | INFO     | preprocess.find_all:_prepare_output_dir:52 | 已复制原始图像到: images/output_20260313_154900/original_output_20260313_154725_421.png
+2026-03-13 15:49:00 | INFO     | preprocess.find_all:process_single_image:128 | 1. 提取房间名称和坐标...
+2026-03-13 15:49:12 | INFO     | preprocess.find_all:process_single_image:132 | 2. 检测房间内轮廓...
+2026-03-13 15:49:13 | INFO     | preprocess.find_all:process_single_image:138 | step2 门候选凹口点: 12
+2026-03-13 15:49:13 | INFO     | preprocess.find_all:process_single_image:141 | 3. 检测门窗...
+2026-03-13 15:49:14 | INFO     | preprocess.find_all:process_single_image:147 | 检测结果: 6 个门, 6 个窗
+2026-03-13 15:49:14 | INFO     | preprocess.find_all:process_single_image:151 | 门中心归属: 总门数=6, 已归属=6, 未归属=0
+2026-03-13 15:49:14 | INFO     | preprocess.find_all:process_single_image:158 | 4. 处理房间轮廓点（排除门区域 + 轮廓简化）...
+2026-03-13 15:49:14 | INFO     | preprocess.find_all:process_single_image:170 | 5. 计算房间最小外接矩形...
+2026-03-13 15:49:15 | INFO     | preprocess.find_all:process_single_image:174 | 6. 转换坐标为CAD坐标...
+2026-03-13 15:49:15 | INFO     | preprocess.find_all:process_single_image:177 | 已完成步骤1-6，跳过步骤7-8
+2026-03-13 15:49:15 | INFO     | preprocess.find_all:process_images_batch:252 | 批量处理完成，成功处理 1 个图像
+2026-03-13 15:49:15 | INFO     | preprocess.cad_service:process_uploaded_files:1091 | 批量处理完成: 1/1 个图像成功
+2026-03-13 15:49:15 | INFO     | preprocess.cad_service:process_uploaded_files:1141 | CAD处理成功: 提取了 2 个房间的坐标
+2026-03-13 15:49:15 | INFO     | main:upload_and_process_cad:874 | CAD preprocessing finished: success=1/1, session_id=20260313_154900_ed99261e
+2026-03-13 15:49:15 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/upload-and-process status=200 time=14.8680s
+2026-03-13 15:52:53 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/process-all-rooms
+2026-03-13 15:52:53 | INFO     | preprocess.cad_service:process_all_rooms:1195 | 开始处理会话的步骤7和步骤8: session_id=20260313_154900_ed99261e, placement_mode=rule
+2026-03-13 15:52:53 | INFO     | preprocess.find_all:_prepare_output_dir:51 | 本次运行输出目录: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260313_154900_ed99261e/layouts/output_20260313_154725_421_20260313_155253
+2026-03-13 15:52:53 | INFO     | preprocess.find_all:_prepare_output_dir:52 | 已复制原始图像到: /home/chen/punchy/CAD_knowledge_service/cad_sessions/20260313_154900_ed99261e/layouts/output_20260313_154725_421_20260313_155253/original_output_20260313_154725_421.png
+2026-03-13 15:52:55 | INFO     | main:process_all_rooms:916 | CAD layout processing finished: session_id=20260313_154900_ed99261e, placement_mode=rule, success=1/1
+2026-03-13 15:52:55 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/process-all-rooms status=200 time=2.2030s
+2026-03-15 16:34:33 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-15 16:35:08 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/ingest
+2026-03-15 16:35:08 | WARNING  | mineru.utils.pdf_page_id:get_end_page_id:8 | end_page_id is out of range, use images length
+2026-03-15 16:35:19 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:113 | load images cost: 10.92, speed: 14.194 images/s
+2026-03-15 16:35:19 | INFO     | mineru.backend.pipeline.pipeline_analyze:doc_analyze:129 | Batch 1/1: 155 pages/155 pages
+2026-03-15 16:35:19 | INFO     | mineru.backend.pipeline.pipeline_analyze:batch_image_analyze:189 | GPU Memory: 24 GB, Batch Ratio: 16. 
+2026-03-15 16:35:19 | INFO     | mineru.backend.pipeline.model_init:__init__:209 | DocAnalysis init, this may take some times......
+2026-03-15 16:35:41 | INFO     | mineru.backend.pipeline.model_init:__init__:271 | DocAnalysis init done!
+2026-03-15 16:35:41 | INFO     | mineru.backend.pipeline.pipeline_analyze:custom_model_init:65 | model init cost: 21.623996257781982
+2026-03-15 16:37:39 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:136 | infer finished, cost: 140.47, speed: 1.103 page/s
+2026-03-15 16:37:52 | INFO     | mineru.cli.common:_process_output:168 | local output dir is ./output/建筑照明设计标准_260315_163508/auto
+2026-03-15 16:37:53 | INFO     | mineru.cli.gradio_app:to_markdown:122 | Compression successful
+2026-03-15 16:38:38 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/ingest status=200 time=210.0995s
+2026-03-15 16:39:55 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/ingest
+2026-03-15 16:39:55 | WARNING  | mineru.utils.pdf_page_id:get_end_page_id:8 | end_page_id is out of range, use images length
+2026-03-15 16:40:06 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:113 | load images cost: 11.1, speed: 13.964 images/s
+2026-03-15 16:40:06 | INFO     | mineru.backend.pipeline.pipeline_analyze:doc_analyze:129 | Batch 1/1: 155 pages/155 pages
+2026-03-15 16:40:06 | INFO     | mineru.backend.pipeline.pipeline_analyze:batch_image_analyze:189 | GPU Memory: 24 GB, Batch Ratio: 16. 
+2026-03-15 16:41:49 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:136 | infer finished, cost: 102.91, speed: 1.506 page/s
+2026-03-15 16:41:58 | INFO     | mineru.cli.common:_process_output:168 | local output dir is ./output/建筑照明设计标准_260315_163955/auto
+2026-03-15 16:41:59 | INFO     | mineru.cli.gradio_app:to_markdown:122 | Compression successful
+2026-03-15 16:42:36 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/ingest status=200 time=161.5814s
+2026-03-15 16:45:28 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/ingest
+2026-03-15 16:45:28 | WARNING  | mineru.utils.pdf_page_id:get_end_page_id:8 | end_page_id is out of range, use images length
+2026-03-15 16:45:39 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:113 | load images cost: 11.4, speed: 13.596 images/s
+2026-03-15 16:45:39 | INFO     | mineru.backend.pipeline.pipeline_analyze:doc_analyze:129 | Batch 1/1: 155 pages/155 pages
+2026-03-15 16:45:39 | INFO     | mineru.backend.pipeline.pipeline_analyze:batch_image_analyze:189 | GPU Memory: 24 GB, Batch Ratio: 16. 
+2026-03-15 16:47:26 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:136 | infer finished, cost: 106.7, speed: 1.453 page/s
+2026-03-15 16:47:35 | INFO     | mineru.cli.common:_process_output:168 | local output dir is ./output/建筑照明设计标准_260315_164528/auto
+2026-03-15 16:47:36 | INFO     | mineru.cli.gradio_app:to_markdown:122 | Compression successful
+2026-03-15 16:48:25 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/ingest status=200 time=177.2327s
+2026-03-15 17:02:18 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/kg/cypher
+2026-03-15 17:02:18 | ERROR    | main:global_exception_handler:198 | unhandled exception: POST http://127.0.0.1:8008/kg/cypher - {neo4j_code: Neo.ClientError.Statement.SyntaxError} {message: Invalid input 'e': expected an expression, 'ORDER BY', 'CALL', 'CREATE', 'LOAD CSV', 'DELETE', 'DETACH', 'FINISH', 'FOREACH', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REMOVE', 'RETURN', 'SET', 'SKIP', 'UNION', 'UNWIND', 'USE', 'WITH' or <EOF> (line 2, column 20 (offset: 49))
+"WHERE e.name =  OR e.canonical_name ="
+                    ^} {gql_status: 42001} {gql_status_description: error: syntax error or access rule violation - invalid syntax}
+2026-03-15 17:02:18 | ERROR    | main:global_exception_handler:199 | neo4j.exceptions.GqlError: {gql_status: 42I06} {gql_status_description: error: syntax error or access rule violation - invalid input. Invalid input 'e', expected: an expression, 'ORDER BY', 'CALL', 'CREATE', 'LOAD CSV', 'DELETE', 'DETACH', 'FINISH', 'FOREACH', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REMOVE', 'RETURN', 'SET', 'SKIP', 'UNION', 'UNWIND', 'USE', 'WITH' or <EOF>.} {message: 42I06: Invalid input 'e', expected: an expression, 'ORDER BY', 'CALL', 'CREATE', 'LOAD CSV', 'DELETE', 'DETACH', 'FINISH', 'FOREACH', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REMOVE', 'RETURN', 'SET', 'SKIP', 'UNION', 'UNWIND', 'USE', 'WITH' or <EOF>.} {diagnostic_record: {'_classification': 'CLIENT_ERROR', '_position': {'column': 20, 'offset': 49, 'line': 2}, 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}} {raw_classification: CLIENT_ERROR}
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 191, in __call__
+    with recv_stream, send_stream, collapse_excgroups():
+  File "/usr/lib/python3.12/contextlib.py", line 158, in __exit__
+    self.gen.throw(value)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/_utils.py", line 85, in collapse_excgroups
+    raise exc
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/main.py", line 186, in add_process_time_header
+    response = await call_next(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 168, in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 144, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 85, in __call__
+    await self.app(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 115, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 101, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 355, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 243, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/main.py", line 699, in kg_cypher
+    return run_cypher_query(
+           ^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/kg/store_neo4j.py", line 192, in run_cypher_query
+    records = session.execute_read(lambda tx: list(tx.run(query, params)))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/work/session.py", line 659, in execute_read
+    return self._run_transaction(
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/work/session.py", line 543, in _run_transaction
+    result = transaction_function(tx, *args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/kg/store_neo4j.py", line 192, in <lambda>
+    records = session.execute_read(lambda tx: list(tx.run(query, params)))
+                                                   ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/work/transaction.py", line 201, in run
+    result._tx_ready_run(query, parameters)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/work/result.py", line 178, in _tx_ready_run
+    self._run(query, parameters, None, None, None, None, None, None)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/work/result.py", line 237, in _run
+    self._attach()
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/work/result.py", line 439, in _attach
+    self._connection.fetch_message()
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/io/_common.py", line 193, in inner
+    func(*args, **kwargs)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/io/_bolt.py", line 867, in fetch_message
+    res = self._process_message(tag, fields)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/io/_bolt6.py", line 548, in _process_message
+    response.on_failure(summary_metadata or {})
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/io/_common.py", line 263, in on_failure
+    raise self._hydrate_error(metadata)
+neo4j.exceptions.CypherSyntaxError: {neo4j_code: Neo.ClientError.Statement.SyntaxError} {message: Invalid input 'e': expected an expression, 'ORDER BY', 'CALL', 'CREATE', 'LOAD CSV', 'DELETE', 'DETACH', 'FINISH', 'FOREACH', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REMOVE', 'RETURN', 'SET', 'SKIP', 'UNION', 'UNWIND', 'USE', 'WITH' or <EOF> (line 2, column 20 (offset: 49))
+"WHERE e.name =  OR e.canonical_name ="
+                    ^} {gql_status: 42001} {gql_status_description: error: syntax error or access rule violation - invalid syntax}
+
+2026-03-15 17:03:06 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/kg/cypher
+2026-03-15 17:03:07 | ERROR    | main:global_exception_handler:198 | unhandled exception: POST http://127.0.0.1:8008/kg/cypher - {neo4j_code: Neo.ClientError.Statement.SyntaxError} {message: Invalid input 'e': expected an expression, 'ORDER BY', 'CALL', 'CREATE', 'LOAD CSV', 'DELETE', 'DETACH', 'FINISH', 'FOREACH', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REMOVE', 'RETURN', 'SET', 'SKIP', 'UNION', 'UNWIND', 'USE', 'WITH' or <EOF> (line 2, column 20 (offset: 49))
+"WHERE e.name =  OR e.canonical_name ="
+                    ^} {gql_status: 42001} {gql_status_description: error: syntax error or access rule violation - invalid syntax}
+2026-03-15 17:03:07 | ERROR    | main:global_exception_handler:199 | neo4j.exceptions.GqlError: {gql_status: 42I06} {gql_status_description: error: syntax error or access rule violation - invalid input. Invalid input 'e', expected: an expression, 'ORDER BY', 'CALL', 'CREATE', 'LOAD CSV', 'DELETE', 'DETACH', 'FINISH', 'FOREACH', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REMOVE', 'RETURN', 'SET', 'SKIP', 'UNION', 'UNWIND', 'USE', 'WITH' or <EOF>.} {message: 42I06: Invalid input 'e', expected: an expression, 'ORDER BY', 'CALL', 'CREATE', 'LOAD CSV', 'DELETE', 'DETACH', 'FINISH', 'FOREACH', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REMOVE', 'RETURN', 'SET', 'SKIP', 'UNION', 'UNWIND', 'USE', 'WITH' or <EOF>.} {diagnostic_record: {'_classification': 'CLIENT_ERROR', '_position': {'column': 20, 'offset': 49, 'line': 2}, 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}} {raw_classification: CLIENT_ERROR}
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 191, in __call__
+    with recv_stream, send_stream, collapse_excgroups():
+  File "/usr/lib/python3.12/contextlib.py", line 158, in __exit__
+    self.gen.throw(value)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/_utils.py", line 85, in collapse_excgroups
+    raise exc
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/main.py", line 186, in add_process_time_header
+    response = await call_next(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 168, in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 144, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 85, in __call__
+    await self.app(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 115, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 101, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 355, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 243, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/main.py", line 699, in kg_cypher
+    return run_cypher_query(
+           ^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/kg/store_neo4j.py", line 192, in run_cypher_query
+    records = session.execute_read(lambda tx: list(tx.run(query, params)))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/work/session.py", line 659, in execute_read
+    return self._run_transaction(
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/work/session.py", line 543, in _run_transaction
+    result = transaction_function(tx, *args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/kg/store_neo4j.py", line 192, in <lambda>
+    records = session.execute_read(lambda tx: list(tx.run(query, params)))
+                                                   ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/work/transaction.py", line 201, in run
+    result._tx_ready_run(query, parameters)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/work/result.py", line 178, in _tx_ready_run
+    self._run(query, parameters, None, None, None, None, None, None)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/work/result.py", line 237, in _run
+    self._attach()
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/work/result.py", line 439, in _attach
+    self._connection.fetch_message()
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/io/_common.py", line 193, in inner
+    func(*args, **kwargs)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/io/_bolt.py", line 867, in fetch_message
+    res = self._process_message(tag, fields)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/io/_bolt6.py", line 548, in _process_message
+    response.on_failure(summary_metadata or {})
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/io/_common.py", line 263, in on_failure
+    raise self._hydrate_error(metadata)
+neo4j.exceptions.CypherSyntaxError: {neo4j_code: Neo.ClientError.Statement.SyntaxError} {message: Invalid input 'e': expected an expression, 'ORDER BY', 'CALL', 'CREATE', 'LOAD CSV', 'DELETE', 'DETACH', 'FINISH', 'FOREACH', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REMOVE', 'RETURN', 'SET', 'SKIP', 'UNION', 'UNWIND', 'USE', 'WITH' or <EOF> (line 2, column 20 (offset: 49))
+"WHERE e.name =  OR e.canonical_name ="
+                    ^} {gql_status: 42001} {gql_status_description: error: syntax error or access rule violation - invalid syntax}
+
+2026-03-15 17:06:47 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/kg/cypher
+2026-03-15 17:06:47 | ERROR    | main:global_exception_handler:198 | unhandled exception: POST http://127.0.0.1:8008/kg/cypher - {neo4j_code: Neo.ClientError.Statement.SyntaxError} {message: Invalid input 'e': expected an expression, 'ORDER BY', 'CALL', 'CREATE', 'LOAD CSV', 'DELETE', 'DETACH', 'FINISH', 'FOREACH', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REMOVE', 'RETURN', 'SET', 'SKIP', 'UNION', 'UNWIND', 'USE', 'WITH' or <EOF> (line 2, column 20 (offset: 49))
+"WHERE e.name =  OR e.canonical_name ="
+                    ^} {gql_status: 42001} {gql_status_description: error: syntax error or access rule violation - invalid syntax}
+2026-03-15 17:06:47 | ERROR    | main:global_exception_handler:199 | neo4j.exceptions.GqlError: {gql_status: 42I06} {gql_status_description: error: syntax error or access rule violation - invalid input. Invalid input 'e', expected: an expression, 'ORDER BY', 'CALL', 'CREATE', 'LOAD CSV', 'DELETE', 'DETACH', 'FINISH', 'FOREACH', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REMOVE', 'RETURN', 'SET', 'SKIP', 'UNION', 'UNWIND', 'USE', 'WITH' or <EOF>.} {message: 42I06: Invalid input 'e', expected: an expression, 'ORDER BY', 'CALL', 'CREATE', 'LOAD CSV', 'DELETE', 'DETACH', 'FINISH', 'FOREACH', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REMOVE', 'RETURN', 'SET', 'SKIP', 'UNION', 'UNWIND', 'USE', 'WITH' or <EOF>.} {diagnostic_record: {'_classification': 'CLIENT_ERROR', '_position': {'column': 20, 'offset': 49, 'line': 2}, 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}} {raw_classification: CLIENT_ERROR}
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 191, in __call__
+    with recv_stream, send_stream, collapse_excgroups():
+  File "/usr/lib/python3.12/contextlib.py", line 158, in __exit__
+    self.gen.throw(value)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/_utils.py", line 85, in collapse_excgroups
+    raise exc
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/main.py", line 186, in add_process_time_header
+    response = await call_next(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 168, in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 144, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 85, in __call__
+    await self.app(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 115, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 101, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 355, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 243, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/main.py", line 699, in kg_cypher
+    return run_cypher_query(
+           ^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/kg/store_neo4j.py", line 192, in run_cypher_query
+    records = session.execute_read(lambda tx: list(tx.run(query, params)))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/work/session.py", line 659, in execute_read
+    return self._run_transaction(
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/work/session.py", line 543, in _run_transaction
+    result = transaction_function(tx, *args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/kg/store_neo4j.py", line 192, in <lambda>
+    records = session.execute_read(lambda tx: list(tx.run(query, params)))
+                                                   ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/work/transaction.py", line 201, in run
+    result._tx_ready_run(query, parameters)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/work/result.py", line 178, in _tx_ready_run
+    self._run(query, parameters, None, None, None, None, None, None)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/work/result.py", line 237, in _run
+    self._attach()
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/work/result.py", line 439, in _attach
+    self._connection.fetch_message()
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/io/_common.py", line 193, in inner
+    func(*args, **kwargs)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/io/_bolt.py", line 867, in fetch_message
+    res = self._process_message(tag, fields)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/io/_bolt6.py", line 548, in _process_message
+    response.on_failure(summary_metadata or {})
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/io/_common.py", line 263, in on_failure
+    raise self._hydrate_error(metadata)
+neo4j.exceptions.CypherSyntaxError: {neo4j_code: Neo.ClientError.Statement.SyntaxError} {message: Invalid input 'e': expected an expression, 'ORDER BY', 'CALL', 'CREATE', 'LOAD CSV', 'DELETE', 'DETACH', 'FINISH', 'FOREACH', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REMOVE', 'RETURN', 'SET', 'SKIP', 'UNION', 'UNWIND', 'USE', 'WITH' or <EOF> (line 2, column 20 (offset: 49))
+"WHERE e.name =  OR e.canonical_name ="
+                    ^} {gql_status: 42001} {gql_status_description: error: syntax error or access rule violation - invalid syntax}
+
+2026-03-15 17:07:08 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/kg/cypher
+2026-03-15 17:07:08 | ERROR    | main:global_exception_handler:198 | unhandled exception: POST http://127.0.0.1:8008/kg/cypher - {neo4j_code: Neo.ClientError.Statement.SyntaxError} {message: Invalid input 'e': expected an expression, 'ORDER BY', 'CALL', 'CREATE', 'LOAD CSV', 'DELETE', 'DETACH', 'FINISH', 'FOREACH', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REMOVE', 'RETURN', 'SET', 'SKIP', 'UNION', 'UNWIND', 'USE', 'WITH' or <EOF> (line 2, column 20 (offset: 49))
+"WHERE e.name =  OR e.canonical_name ="
+                    ^} {gql_status: 42001} {gql_status_description: error: syntax error or access rule violation - invalid syntax}
+2026-03-15 17:07:08 | ERROR    | main:global_exception_handler:199 | neo4j.exceptions.GqlError: {gql_status: 42I06} {gql_status_description: error: syntax error or access rule violation - invalid input. Invalid input 'e', expected: an expression, 'ORDER BY', 'CALL', 'CREATE', 'LOAD CSV', 'DELETE', 'DETACH', 'FINISH', 'FOREACH', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REMOVE', 'RETURN', 'SET', 'SKIP', 'UNION', 'UNWIND', 'USE', 'WITH' or <EOF>.} {message: 42I06: Invalid input 'e', expected: an expression, 'ORDER BY', 'CALL', 'CREATE', 'LOAD CSV', 'DELETE', 'DETACH', 'FINISH', 'FOREACH', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REMOVE', 'RETURN', 'SET', 'SKIP', 'UNION', 'UNWIND', 'USE', 'WITH' or <EOF>.} {diagnostic_record: {'_classification': 'CLIENT_ERROR', '_position': {'column': 20, 'offset': 49, 'line': 2}, 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}} {raw_classification: CLIENT_ERROR}
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 191, in __call__
+    with recv_stream, send_stream, collapse_excgroups():
+  File "/usr/lib/python3.12/contextlib.py", line 158, in __exit__
+    self.gen.throw(value)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/_utils.py", line 85, in collapse_excgroups
+    raise exc
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/main.py", line 186, in add_process_time_header
+    response = await call_next(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 168, in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 144, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 85, in __call__
+    await self.app(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 115, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 101, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 355, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 243, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/main.py", line 699, in kg_cypher
+    return run_cypher_query(
+           ^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/kg/store_neo4j.py", line 192, in run_cypher_query
+    records = session.execute_read(lambda tx: list(tx.run(query, params)))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/work/session.py", line 659, in execute_read
+    return self._run_transaction(
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/work/session.py", line 543, in _run_transaction
+    result = transaction_function(tx, *args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/kg/store_neo4j.py", line 192, in <lambda>
+    records = session.execute_read(lambda tx: list(tx.run(query, params)))
+                                                   ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/work/transaction.py", line 201, in run
+    result._tx_ready_run(query, parameters)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/work/result.py", line 178, in _tx_ready_run
+    self._run(query, parameters, None, None, None, None, None, None)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/work/result.py", line 237, in _run
+    self._attach()
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/work/result.py", line 439, in _attach
+    self._connection.fetch_message()
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/io/_common.py", line 193, in inner
+    func(*args, **kwargs)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/io/_bolt.py", line 867, in fetch_message
+    res = self._process_message(tag, fields)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/io/_bolt6.py", line 548, in _process_message
+    response.on_failure(summary_metadata or {})
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/io/_common.py", line 263, in on_failure
+    raise self._hydrate_error(metadata)
+neo4j.exceptions.CypherSyntaxError: {neo4j_code: Neo.ClientError.Statement.SyntaxError} {message: Invalid input 'e': expected an expression, 'ORDER BY', 'CALL', 'CREATE', 'LOAD CSV', 'DELETE', 'DETACH', 'FINISH', 'FOREACH', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REMOVE', 'RETURN', 'SET', 'SKIP', 'UNION', 'UNWIND', 'USE', 'WITH' or <EOF> (line 2, column 20 (offset: 49))
+"WHERE e.name =  OR e.canonical_name ="
+                    ^} {gql_status: 42001} {gql_status_description: error: syntax error or access rule violation - invalid syntax}
+
+2026-03-15 17:07:12 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/kg/cypher
+2026-03-15 17:07:12 | ERROR    | main:global_exception_handler:198 | unhandled exception: POST http://127.0.0.1:8008/kg/cypher - {neo4j_code: Neo.ClientError.Statement.SyntaxError} {message: Invalid input 'e': expected an expression, 'ORDER BY', 'CALL', 'CREATE', 'LOAD CSV', 'DELETE', 'DETACH', 'FINISH', 'FOREACH', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REMOVE', 'RETURN', 'SET', 'SKIP', 'UNION', 'UNWIND', 'USE', 'WITH' or <EOF> (line 2, column 20 (offset: 49))
+"WHERE e.name =  OR e.canonical_name ="
+                    ^} {gql_status: 42001} {gql_status_description: error: syntax error or access rule violation - invalid syntax}
+2026-03-15 17:07:12 | ERROR    | main:global_exception_handler:199 | neo4j.exceptions.GqlError: {gql_status: 42I06} {gql_status_description: error: syntax error or access rule violation - invalid input. Invalid input 'e', expected: an expression, 'ORDER BY', 'CALL', 'CREATE', 'LOAD CSV', 'DELETE', 'DETACH', 'FINISH', 'FOREACH', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REMOVE', 'RETURN', 'SET', 'SKIP', 'UNION', 'UNWIND', 'USE', 'WITH' or <EOF>.} {message: 42I06: Invalid input 'e', expected: an expression, 'ORDER BY', 'CALL', 'CREATE', 'LOAD CSV', 'DELETE', 'DETACH', 'FINISH', 'FOREACH', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REMOVE', 'RETURN', 'SET', 'SKIP', 'UNION', 'UNWIND', 'USE', 'WITH' or <EOF>.} {diagnostic_record: {'_classification': 'CLIENT_ERROR', '_position': {'column': 20, 'offset': 49, 'line': 2}, 'OPERATION': '', 'OPERATION_CODE': '0', 'CURRENT_SCHEMA': '/'}} {raw_classification: CLIENT_ERROR}
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 191, in __call__
+    with recv_stream, send_stream, collapse_excgroups():
+  File "/usr/lib/python3.12/contextlib.py", line 158, in __exit__
+    self.gen.throw(value)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/_utils.py", line 85, in collapse_excgroups
+    raise exc
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 193, in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/main.py", line 186, in add_process_time_header
+    response = await call_next(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 168, in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/base.py", line 144, in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/cors.py", line 85, in __call__
+    await self.app(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 115, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 101, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 355, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/fastapi/routing.py", line 243, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/main.py", line 699, in kg_cypher
+    return run_cypher_query(
+           ^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/kg/store_neo4j.py", line 192, in run_cypher_query
+    records = session.execute_read(lambda tx: list(tx.run(query, params)))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/work/session.py", line 659, in execute_read
+    return self._run_transaction(
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/work/session.py", line 543, in _run_transaction
+    result = transaction_function(tx, *args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/kg/store_neo4j.py", line 192, in <lambda>
+    records = session.execute_read(lambda tx: list(tx.run(query, params)))
+                                                   ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/work/transaction.py", line 201, in run
+    result._tx_ready_run(query, parameters)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/work/result.py", line 178, in _tx_ready_run
+    self._run(query, parameters, None, None, None, None, None, None)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/work/result.py", line 237, in _run
+    self._attach()
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/work/result.py", line 439, in _attach
+    self._connection.fetch_message()
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/io/_common.py", line 193, in inner
+    func(*args, **kwargs)
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/io/_bolt.py", line 867, in fetch_message
+    res = self._process_message(tag, fields)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/io/_bolt6.py", line 548, in _process_message
+    response.on_failure(summary_metadata or {})
+  File "/home/chen/punchy/CAD_knowledge_service/.venv/lib/python3.12/site-packages/neo4j/_sync/io/_common.py", line 263, in on_failure
+    raise self._hydrate_error(metadata)
+neo4j.exceptions.CypherSyntaxError: {neo4j_code: Neo.ClientError.Statement.SyntaxError} {message: Invalid input 'e': expected an expression, 'ORDER BY', 'CALL', 'CREATE', 'LOAD CSV', 'DELETE', 'DETACH', 'FINISH', 'FOREACH', 'INSERT', 'LIMIT', 'MATCH', 'MERGE', 'NODETACH', 'OFFSET', 'OPTIONAL', 'REMOVE', 'RETURN', 'SET', 'SKIP', 'UNION', 'UNWIND', 'USE', 'WITH' or <EOF> (line 2, column 20 (offset: 49))
+"WHERE e.name =  OR e.canonical_name ="
+                    ^} {gql_status: 42001} {gql_status_description: error: syntax error or access rule violation - invalid syntax}
+
+2026-03-15 17:08:21 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/kg/cypher
+2026-03-15 17:08:21 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/kg/cypher status=200 time=0.2948s
+2026-03-15 17:12:41 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/kg/llm-query
+2026-03-15 17:12:55 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/kg/llm-query status=200 time=14.5154s
+2026-03-15 17:16:48 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-15 17:17:15 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/kg/llm-query
+2026-03-15 17:17:20 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/kg/llm-query status=200 time=5.0516s
+2026-03-15 17:19:41 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-15 17:19:51 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/kg/llm-query
+2026-03-15 17:19:55 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/kg/llm-query status=200 time=4.3320s
+2026-03-15 17:20:19 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/kg/llm-query
+2026-03-15 17:20:22 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/kg/llm-query status=200 time=3.5380s
+2026-03-15 17:22:57 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/kg/llm-query
+2026-03-15 17:23:02 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/kg/llm-query status=200 time=4.9015s
+2026-03-15 17:23:24 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/kg/llm-query
+2026-03-15 17:23:28 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/kg/llm-query status=200 time=3.9593s
+2026-03-15 17:31:17 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-15 17:31:49 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/kg/llm-query
+2026-03-15 17:31:51 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/kg/llm-query status=200 time=1.8706s
+2026-03-15 17:32:17 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/kg/llm-query
+2026-03-15 17:32:19 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/kg/llm-query status=200 time=2.6589s
+2026-03-15 17:32:39 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/kg/llm-query
+2026-03-15 17:32:41 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/kg/llm-query status=200 time=2.1043s
+2026-03-15 17:47:12 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-15 17:47:41 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/kg/llm-query
+2026-03-15 17:47:44 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/kg/llm-query status=200 time=2.6586s
+2026-03-15 17:48:26 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/kg/llm-query
+2026-03-15 17:48:29 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/kg/llm-query status=200 time=3.1034s

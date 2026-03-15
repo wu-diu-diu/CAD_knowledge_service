@@ -78,9 +78,96 @@ curl http://127.0.0.1:8008/status
 Windows test (PowerShell 7+)
 -------------------------
 ```powershell
-Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8008/ingest
-Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8008/ingest -Form @{ files = Get-Item "C:\path\file.pdf" }
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8008/ingest   ## 默认
+```
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://127.0.0.1:8008/ingest" `
+  -Form @{
+    mode  = "kg"
+    files = Get-Item "C:\your\file.md"
+  } ## 上传客户端的文件
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://127.0.0.1:8008/ingest" `
+  -Form @{
+    mode  = "kg"
+    files = @(
+      Get-Item "C:\your\a.md"
+      Get-Item "C:\your\b.md"
+    )
+  }  ## 上传多个文件
+    
+```
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://127.0.0.1:8008/ingest" `
+  -Body @{
+    path = "/home/chen/punchy/CAD_knowledge_service/docs"
+    mode = "kg"
+  }
+```
+```powershell
 Invoke-RestMethod -Uri http://127.0.0.1:8008/status
+```
+
+Test kg/cypher接口
+------------------------------
+- 定义查询：
+```powershell
+$cypher = @'
+MATCH (e:KGNode:DomainEntity)
+WHERE e.name = $entity OR e.canonical_name = $entity
+MATCH (r:KGNode:Requirement)-[:APPLIES_TO]->(e)
+MATCH (r)-[:CONSTRAINS_METRIC]->(m:KGNode:Metric)
+MATCH (r)-[:HAS_VALUE_SPEC]->(v:KGNode:ValueSpec)
+OPTIONAL MATCH (r)-[:UNDER_CONDITION]->(c:KGNode:Condition)
+WHERE m.name CONTAINS "照度标准值"
+    OR m.canonical_name = "照度标准值"
+    OR m.name = "照度"
+RETURN
+  e.name AS entity,
+  c.text AS condition,
+  m.name AS metric,
+  v.raw_text AS raw_value,
+  v.value AS value,
+  v.unit AS unit,
+  r.table_caption AS table_caption,
+  r.page_no AS page_no
+ORDER BY c.text, r.page_no
+LIMIT $limit
+'@
+
+$body = @{
+    cypher = $cypher
+    params = @{
+        entity = "起居室"
+    }
+    top_k = 20
+} | ConvertTo-Json -Depth 10
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://127.0.0.1:8008/kg/cypher" `
+  -ContentType "application/json; charset=utf-8" `
+  -Body $body
+```
+
+```powershell
+$body = @{
+    question = "起居室的照度标准是多少？"
+    top_k = 20
+    synthesize_answer = $true
+} | ConvertTo-Json -Depth 10
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://127.0.0.1:8008/kg/llm-query" `
+  -ContentType "application/json; charset=utf-8" `
+  -Body $body | ConvertTo-Json -Depth 20
 ```
 
 Notes

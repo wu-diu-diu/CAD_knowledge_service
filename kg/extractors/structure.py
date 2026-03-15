@@ -189,8 +189,13 @@ def extract_structure_graph(blocks: List[MdBlock], source_id: str, source_path: 
             g.add_node(
                 figure_id,
                 "Figure",
+                name=caption,
                 figure_no=figure_no,
                 caption=caption,
+                purpose=payload.get("purpose"),
+                role_in_paper=payload.get("role_in_paper"),
+                key_insights=payload.get("key_insights"),
+                visual_elements_summary=payload.get("visual_elements_summary"),
                 page_no=block.page_no,
                 source_id=source_id,
             )
@@ -201,22 +206,6 @@ def extract_structure_graph(blocks: List[MdBlock], source_id: str, source_path: 
             g.add_edge("HAS_EVIDENCE", figure_id, evidence_id)
             if current_page_id:
                 g.add_edge("LOCATED_ON_PAGE", figure_id, current_page_id)
-
-            insight_id = f"figure_insight:{source_id}:{block.index}"
-            g.add_node(
-                insight_id,
-                "FigureInsight",
-                purpose=payload.get("purpose"),
-                role_in_paper=payload.get("role_in_paper"),
-                visual_elements_summary=payload.get("visual_elements_summary"),
-                page_no=block.page_no,
-            )
-            g.add_edge("HAS_INSIGHT", figure_id, insight_id)
-
-            for idx, insight in enumerate(payload.get("key_insights", []) or [], start=1):
-                key_id = f"key_insight:{source_id}:{block.index}:{idx}"
-                g.add_node(key_id, "KeyInsight", text=str(insight), rank=idx, page_no=block.page_no)
-                g.add_edge("HAS_KEY_INSIGHT", insight_id, key_id)
 
     g.add_node(
         doc_id,
