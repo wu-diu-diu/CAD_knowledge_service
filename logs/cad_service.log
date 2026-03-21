@@ -3365,3 +3365,43 @@ neo4j.exceptions.CypherSyntaxError: {neo4j_code: Neo.ClientError.Statement.Synta
 2026-03-15 17:47:44 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/kg/llm-query status=200 time=2.6586s
 2026-03-15 17:48:26 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/kg/llm-query
 2026-03-15 17:48:29 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/kg/llm-query status=200 time=3.1034s
+2026-03-15 22:10:32 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/ingest
+2026-03-15 22:10:32 | WARNING  | mineru.utils.pdf_page_id:get_end_page_id:8 | end_page_id is out of range, use images length
+2026-03-15 22:10:43 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:113 | load images cost: 10.66, speed: 14.54 images/s
+2026-03-15 22:10:43 | INFO     | mineru.backend.pipeline.pipeline_analyze:doc_analyze:129 | Batch 1/1: 155 pages/155 pages
+2026-03-15 22:10:43 | INFO     | mineru.backend.pipeline.pipeline_analyze:batch_image_analyze:189 | GPU Memory: 24 GB, Batch Ratio: 16. 
+2026-03-15 22:10:43 | INFO     | mineru.backend.pipeline.model_init:__init__:209 | DocAnalysis init, this may take some times......
+2026-03-15 22:11:31 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-15 22:12:59 | INFO     | main:add_process_time_header:185 | request started: POST http://127.0.0.1:8008/ingest
+2026-03-15 22:12:59 | WARNING  | mineru.utils.pdf_page_id:get_end_page_id:8 | end_page_id is out of range, use images length
+2026-03-15 22:13:10 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:113 | load images cost: 10.54, speed: 14.706 images/s
+2026-03-15 22:13:10 | INFO     | mineru.backend.pipeline.pipeline_analyze:doc_analyze:129 | Batch 1/1: 155 pages/155 pages
+2026-03-15 22:13:10 | INFO     | mineru.backend.pipeline.pipeline_analyze:batch_image_analyze:189 | GPU Memory: 24 GB, Batch Ratio: 16. 
+2026-03-15 22:13:10 | INFO     | mineru.backend.pipeline.model_init:__init__:209 | DocAnalysis init, this may take some times......
+2026-03-15 22:13:32 | INFO     | mineru.backend.pipeline.model_init:__init__:271 | DocAnalysis init done!
+2026-03-15 22:13:32 | INFO     | mineru.backend.pipeline.pipeline_analyze:custom_model_init:65 | model init cost: 21.27984619140625
+2026-03-15 22:15:33 | DEBUG    | mineru.backend.pipeline.pipeline_analyze:doc_analyze:136 | infer finished, cost: 143.45, speed: 1.081 page/s
+2026-03-15 22:15:45 | INFO     | mineru.cli.common:_process_output:168 | local output dir is ./output/建筑照明设计标准_260315_221259/auto
+2026-03-15 22:15:46 | INFO     | mineru.cli.gradio_app:to_markdown:122 | Compression successful
+2026-03-15 22:16:30 | INFO     | main:add_process_time_header:189 | request completed: POST http://127.0.0.1:8008/ingest status=200 time=211.4390s
+2026-03-21 16:58:34 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-21 17:00:48 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-21 17:50:23 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-21 17:50:36 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-21 17:55:20 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-21 20:48:46 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-21 20:50:20 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-21 21:42:22 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-21 22:03:16 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-21 22:05:53 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-21 22:56:47 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-21 23:07:58 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-21 23:15:39 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-21 23:27:00 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-21 23:31:19 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-21 23:41:48 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-21 23:53:59 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-22 00:08:00 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-22 00:08:21 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-22 00:11:26 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs
+2026-03-22 00:25:28 | INFO     | preprocess.logger:setup_logging:66 | 日志系统已初始化，日志级别: INFO，日志目录: /home/chen/punchy/CAD_knowledge_service/logs

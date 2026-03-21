@@ -239,6 +239,17 @@ class LightingTools:
         uf: float = 0.6,
         mf: float = 0.8,
     ) -> Dict[str, Any]:
+        """
+        照度计算公式：
+        E = (N * F * UF * MF) / A
+        其中：
+        E = 照度 (lux)
+        N = 灯具数量
+        F = 每盏灯具的光通量 (lumen)
+        UF = 利用系数 (0~1，考虑灯具设计和安装对光的利用效率)
+        MF = 维护系数 (0~1，考虑灯具和环境的清洁程度对光输出的影响)
+        A = 房间面积 (平方米)
+        """
         cached_req = state.tool_cache.get("room_requirement", {}) or {}
         cached_count = state.tool_cache.get("component_count_plan", {}) or {}
         resolved_target_lux = int(target_lux if target_lux is not None else cached_req.get("target_lux", 300))

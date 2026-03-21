@@ -28,7 +28,7 @@ from kg.models import EdgeRecord, GraphBuilder, MdBlock, NodeRecord
 from kg.normalize import add_entity_normalization
 
 
-DEFAULT_MD_PATH = Path("/home/chen/punchy/CAD_knowledge_service/test_files/test_clause.md")
+DEFAULT_MD_PATH = Path("/home/chen/punchy/CAD_knowledge_service/test_files/test_table.md")
 SOURCE_ID = "test1_processed_demo"
 SOURCE_TYPE = "local_file"
 

@@ -77,9 +77,11 @@ curl http://127.0.0.1:8008/status
 
 Windows test (PowerShell 7+)
 -------------------------
+访问ingest接口，使用默认模式
 ```powershell
 Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8008/ingest   ## 默认
 ```
+访问inget接口，自行上传文件
 ```powershell
 Invoke-RestMethod `
   -Method Post `
@@ -101,6 +103,7 @@ Invoke-RestMethod `
   }  ## 上传多个文件
     
 ```
+访问ingest接口，使用测试的文件
 ```powershell
 Invoke-RestMethod `
   -Method Post `
@@ -110,13 +113,14 @@ Invoke-RestMethod `
     mode = "kg"
   }
 ```
+访问status接口，查看后端服务的状态
 ```powershell
 Invoke-RestMethod -Uri http://127.0.0.1:8008/status
 ```
 
 Test kg/cypher接口
 ------------------------------
-- 定义查询：
+- 定义查询： 访问cypher接口，使用cypher直接查询
 ```powershell
 $cypher = @'
 MATCH (e:KGNode:DomainEntity)
@@ -155,7 +159,7 @@ Invoke-RestMethod `
   -ContentType "application/json; charset=utf-8" `
   -Body $body
 ```
-
+访问llm-query接口，使用自然语言查询
 ```powershell
 $body = @{
     question = "起居室的照度标准是多少？"

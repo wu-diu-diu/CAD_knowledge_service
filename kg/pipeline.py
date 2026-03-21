@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from collections import Counter
 from pathlib import Path
 from typing import Dict
 
@@ -12,6 +13,34 @@ from .models import GraphBuilder, GraphDocument
 from .normalize import add_entity_normalization
 from .store_neo4j import neo4j_enabled, upsert_graph_document_neo4j
 from .store_json import append_manifest_record, graph_exists, save_blocks_snapshot, save_graph_document
+
+
+def print_graph_type_summary(graph_doc: GraphDocument) -> Dict[str, Dict[str, int]]:
+    """
+    统计当前图文档中各类节点和各类边的数量，并打印到终端。
+
+    输入：
+    - graph_doc: 已经完成构建、但尚未落库的图文档对象。
+
+    输出：
+    - 一个包含 `node_types` 和 `edge_types` 的字典，便于后续复用或调试。
+    """
+    node_counts = Counter(node.label for node in graph_doc.nodes)
+    edge_counts = Counter(edge.edge_type for edge in graph_doc.edges)
+
+    print(f"[KG] Graph type summary for: {graph_doc.source_path}")
+    print(f"[KG] Total nodes: {len(graph_doc.nodes)}")
+    for label, count in sorted(node_counts.items()):
+        print(f"[KG]   Node[{label}]: {count}")
+
+    print(f"[KG] Total edges: {len(graph_doc.edges)}")
+    for edge_type, count in sorted(edge_counts.items()):
+        print(f"[KG]   Edge[{edge_type}]: {count}")
+
+    return {
+        "node_types": dict(sorted(node_counts.items())),
+        "edge_types": dict(sorted(edge_counts.items())),
+    }
 
 
 def build_graph_document(md_text: str, source_id: str, source_path: str, source_type: str) -> tuple[GraphDocument, list]:
@@ -60,6 +89,7 @@ def ingest_markdown_to_kg(
         source_path=source_path,
         source_type=source_type,
     )
+    print_graph_type_summary(graph_doc)
     graph_path = save_graph_document(store_dir, graph_doc)
     if neo4j_enabled():
         upsert_graph_document_neo4j(graph_doc)

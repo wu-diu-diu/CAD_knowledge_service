@@ -20,3 +20,5 @@ summary_docs
 kg_store/
 cad_sessions/
 chat_output/
+RL/output/
+RL/test_room/
