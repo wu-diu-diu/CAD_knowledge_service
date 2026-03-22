@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import random
+import shutil
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
@@ -10,12 +11,13 @@ from typing import Any
 import matplotlib
 import numpy as np
 import torch
+import yaml
 from torch import nn
 
 from env import EnvironmentConfig, SingleRoomLightingEnv
 from model import LightingActorCritic
 from reward import RewardConfig
-
+from visualize import plot_episode_step_breakdown
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -25,20 +27,28 @@ import matplotlib.pyplot as plt
 class PPOConfig:
     """Training hyper-parameters for the single-room PPO smoke test."""
 
-    episodes: int = 1500  ## 120表示训练120轮，每轮代表一次完整的布局过程直到done=True
-    gamma: float = 0.99  ## 折扣因子，接近1表示更重视长期奖励
-    learning_rate: float = 3e-4  ## PPO的学习率
-    ppo_epochs: int = 6  ## 运行所有episodes后，使用收集到的轨迹数据进行多少轮的PPO更新，每轮都会从轨迹数据中拿出一个不同的batch，去计算loss
-    clip_eps: float = 0.2 ## PPO的剪切范围，限制新旧策略的变化幅度 新旧策略的比值被限制在[1-clip_eps, 1+clip_eps]，即新策略不能比旧策略更好或更差超过20%
-    value_coef: float = 0.5  ## critic损失的权重 总损失等于 policy_loss + value_coef * value_loss - entropy_coef * entropy_bonus
-    entropy_coef: float = 0.01  ## 鼓励策略多样性的熵奖励权重
-    grad_clip_norm: float = 1.0  ## 梯度裁剪的最大范数
+    episodes: int = 1500
+    gamma: float = 0.99
+    learning_rate: float = 3e-4
+    ppo_epochs: int = 6  ## 这个数表示，得到一批轨迹之后，要重复拿来更新策略多少轮
+    clip_eps: float = 0.2
+    value_coef: float = 0.5
+    entropy_coef: float = 0.01
+    grad_clip_norm: float = 1.0
     seed: int = 42
     device: str = "cpu"
 
-    visualize_every_episodes: int = 50  ## 每隔多少轮导出一次房间状态图片
-    visualize_step_interval: int = 4  ## 在可视化的轮次中，每隔多少步骤导出一次房间状态图片
-    log_every_episodes: int = 10  ## 每隔多少轮打印一次训练日志
+    visualize_every_episodes: int = 50
+    log_every_episodes: int = 10
+    reward_curve_moving_window: int = 20
+
+
+@dataclass
+class RoomConfig:
+    """Room-selection settings loaded from config.yaml."""
+
+    json_path: str = "RL/test_room/test_room.json"
+    room_name: str = "办公室1"
 
 
 def set_seed(seed: int) -> None:
@@ -46,6 +56,15 @@ def set_seed(seed: int) -> None:
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
+
+
+def load_yaml_config(config_path: Path) -> dict[str, Any]:
+    """Load the RL training config from YAML."""
+    with config_path.open("r", encoding="utf-8") as f:
+        payload = yaml.safe_load(f) or {}
+    if not isinstance(payload, dict):
+        raise ValueError(f"Expected top-level mapping in {config_path}")
+    return payload
 
 
 def discounted_returns(rewards: list[float], gamma: float) -> torch.Tensor:
@@ -72,7 +91,7 @@ def export_episode_snapshot(
     *,
     suffix: str = "",
 ) -> None:
-    """Save one room-state snapshot to RL/output."""
+    """Save one room-state snapshot into the current run output directory."""
     name = f"episode_{episode_idx:04d}_step_{step_idx:03d}{suffix}.png"
     env.export_snapshot(output_dir / name)
 
@@ -124,6 +143,33 @@ def plot_reward_curve(
     return output_path
 
 
+def plot_score_trends(history: list[dict[str, Any]], output_path: Path) -> Path:
+    """Plot episode-level mean raw-score trends over the whole training run."""
+    if not history:
+        raise ValueError("History is empty. Cannot plot score trends.")
+
+    episodes = [int(item["episode"]) for item in history]
+    uniformity = np.asarray([float(item["mean_uniformity_score"]) for item in history], dtype=np.float32)
+    illum_centroid = np.asarray([float(item["mean_illum_centroid_score"]) for item in history], dtype=np.float32)
+    alignment = np.asarray([float(item["mean_alignment_score"]) for item in history], dtype=np.float32)
+    wiring = np.asarray([float(item["mean_wiring_score"]) for item in history], dtype=np.float32)
+
+    plt.figure(figsize=(11, 5.5))
+    plt.plot(episodes, uniformity, label="mean_uniformity_score", linewidth=2.0)
+    plt.plot(episodes, illum_centroid, label="mean_illum_centroid_score", linewidth=2.0)
+    plt.plot(episodes, alignment, label="mean_alignment_score", linewidth=2.0)
+    plt.plot(episodes, wiring, label="mean_wiring_score", linewidth=2.0)
+    plt.xlabel("Episode")
+    plt.ylabel("Mean Raw Score")
+    plt.title("Episode-Level Mean Score Trends")
+    plt.grid(True, linestyle="--", linewidth=0.5, alpha=0.5)
+    plt.legend(loc="best")
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=180)
+    plt.close()
+    return output_path
+
+
 def train_single_room(
     env: SingleRoomLightingEnv,
     model: LightingActorCritic,
@@ -133,11 +179,9 @@ def train_single_room(
     """
     Run PPO on a single room and periodically dump room-state visualizations.
 
-    The goal here is not benchmark-grade convergence, but a first end-to-end
-    smoke test showing:
-        - the environment can be rolled out
-        - PPO updates run without shape issues
-        - room states evolve and are exported to RL/output
+    Visualized episodes save:
+        - every step snapshot
+        - one score breakdown figure for the whole episode
     """
     device = torch.device(cfg.device)
     model.to(device)
@@ -149,15 +193,21 @@ def train_single_room(
 
     for episode_idx in range(1, cfg.episodes + 1):
         obs = env.reset()
+        ## 布尔变量，当episode的idx和cfg中设置的visualize_every_episodes的间隔条件满足时为True，表示这个episode需要进行可视化处理。在这个训练循环中，每当visualize_episode为True时，代码会在每一步结束后调用export_episode_snapshot函数
         visualize_episode = should_visualize_episode(episode_idx, cfg)
-        if visualize_episode:
-            export_episode_snapshot(env, output_dir, episode_idx, 0)
+        episode_step_records: list[dict[str, float | int | bool]] = []
+        # if visualize_episode:
+        #     export_episode_snapshot(env, output_dir, episode_idx, 0)
 
         obs_buffer: list[np.ndarray] = []
         actions: list[int] = []
         rewards: list[float] = []
         old_log_probs: list[float] = []
         old_values: list[float] = []
+        uniformity_scores_episode: list[float] = []
+        illum_centroid_scores_episode: list[float] = []
+        alignment_scores_episode: list[float] = []
+        wiring_scores_episode: list[float] = []
 
         done = False
         while not done:
@@ -169,19 +219,41 @@ def train_single_room(
             obs_buffer.append(obs)
             actions.append(action)
             rewards.append(float(reward))
-            old_log_probs.append(float(rollout["log_prob"].item()))  ## 记录当前动作的对数概率，这个值在PPO更新时会用来计算新旧策略的比值，从而决定是否剪切
+            old_log_probs.append(float(rollout["log_prob"].item()))
             old_values.append(float(rollout["value"].squeeze().item()))
 
             obs = next_obs
 
-            if visualize_episode and (env.current_step % cfg.visualize_step_interval == 0):
+            breakdown = info["reward_breakdown"]
+            diagnostics = breakdown.diagnostics
+            uniformity_scores_episode.append(float(breakdown.uniformity))
+            illum_centroid_scores_episode.append(float(breakdown.illum_centroid))
+            alignment_scores_episode.append(float(breakdown.rules - breakdown.invalid_action))
+            wiring_scores_episode.append(float(breakdown.wiring))
+
+            if visualize_episode and env.current_step % env.config.target_lamp_count == 0:  ## 每隔visualize_episode的间隔隔episode才会可视化，而且只可视化该episode的最后一步绘制完的结果
+                episode_step_records.append(
+                    {
+                        "step": env.current_step,
+                        "uniformity_score": float(diagnostics.get("uniformity_score", 0.0)),  ## 计算出来的照度均匀的奖励分数
+                        "illum_centroid_score": float(diagnostics.get("illum_centroid_score", 0.0)),
+                        "alignment_score": float(diagnostics.get("alignment_score", 0.0)),
+                        "wiring_score": float(diagnostics.get("wiring_score", 0.0)),
+                        "invalid_penalty": float(diagnostics.get("invalid_penalty", 0.0)),
+                        "uniformity_term": float(breakdown.uniformity),  ## 乘以权重之后的照度均匀奖励的分数
+                        "illum_centroid_term": float(breakdown.illum_centroid),
+                        "alignment_term": float(breakdown.rules - breakdown.invalid_action),
+                        "wiring_term": float(breakdown.wiring),
+                        "step_total": float(reward),
+                    }
+                )
                 export_episode_snapshot(env, output_dir, episode_idx, env.current_step)
 
         returns = discounted_returns(rewards, cfg.gamma).to(device)
         old_values_tensor = torch.tensor(old_values, dtype=torch.float32, device=device)
         advantages = returns - old_values_tensor
         if advantages.numel() > 1:
-            advantages = (advantages - advantages.mean()) / (advantages.std(unbiased=False) + 1e-8)  ## 对优势函数进行归一化处理，使其具有零均值和单位方差，这有助于稳定训练过程，避免过大或过小的优势值导致梯度更新不稳定。
+            advantages = (advantages - advantages.mean()) / (advantages.std(unbiased=False) + 1e-8)
 
         batch_obs = torch.from_numpy(np.stack(obs_buffer)).to(device=device, dtype=torch.float32)
         batch_actions = torch.tensor(actions, dtype=torch.long, device=device)
@@ -190,8 +262,20 @@ def train_single_room(
         last_policy_loss = 0.0
         last_value_loss = 0.0
         last_entropy = 0.0
-        for _ in range(cfg.ppo_epochs):
-            evaluated = model.evaluate_actions(batch_obs, batch_actions)  ## evaluate_actions方法会计算当前策略在给定状态和动作上的对数概率、熵和状态值，这些信息将用于计算PPO的损失函数，包括策略损失、值函数损失和熵奖励。
+        ## 实际模型更新的地方，在每个episode结束后进行多轮PPO优化，每轮都使用当前episode的完整轨迹数据来计算损失并更新模型参数。每轮优化中，首先通过模型评估当前批次的观察和动作，得到新的log_prob、entropy和value，然后计算PPO的剪切目标函数(policy_loss)以及值函数的均方误差(value_loss)，再加上熵奖励(entropy_bonus)来构成总损失(loss)。最后进行反向传播和梯度裁剪，并更新模型参数。这个过程会重复cfg.ppo_epochs次，以充分利用当前episode的数据来优化模型。
+        for _ in range(cfg.ppo_epochs): 
+            # 使用更新后的模型输入旧轨迹中的状态，得到当前策略的 logits，并构造策略分布。
+            # 然后用旧轨迹中实际执行过的动作 a_t 计算 log_prob，得到这些旧动作在当前策略下的概率。
+            # 其目的是和旧策略下这些动作的概率做比较，计算 ratio = π_new(a_t|s_t) / π_old(a_t|s_t)。
+
+            # 如果 ratio > 1，说明当前策略相比旧策略更倾向于选择这个旧动作；
+            # 如果该动作的优势 A_t > 0，说明这个动作是有利的，因此训练会倾向于进一步提高它的概率；
+            # 如果 A_t < 0，则训练会倾向于降低它的概率。
+
+            # PPO 实际优化的是剪切后的 surrogate objective，
+            # 并通过最小化 policy_loss = -mean(min(surrogate1, surrogate2))
+            # 来实现“增加有优势动作的概率、减少劣势动作的概率，同时限制策略更新幅度”。
+            evaluated = model.evaluate_actions(batch_obs, batch_actions)
             log_probs = evaluated["log_prob"]
             entropy = evaluated["entropy"]
             values = evaluated["value"].squeeze(-1)
@@ -202,7 +286,6 @@ def train_single_room(
             policy_loss = -torch.min(surrogate1, surrogate2).mean()
             value_loss = nn.functional.mse_loss(values, returns)
             entropy_bonus = entropy.mean()
-            ## loss由三部分组成：策略损失、值函数损失和熵奖励。策略损失是PPO的核心，使用了剪切的优势函数来限制新旧策略的变化幅度；值函数损失是均方误差，衡量当前状态值估计与实际回报之间的差距；熵奖励鼓励策略保持多样性，避免过早收敛到次优解。通过调整value_coef和entropy_coef，可以平衡这三部分在总损失中的贡献，从而影响训练的稳定性和最终性能。
             loss = policy_loss + cfg.value_coef * value_loss - cfg.entropy_coef * entropy_bonus
 
             optimizer.zero_grad()
@@ -214,21 +297,35 @@ def train_single_room(
             last_value_loss = float(value_loss.item())
             last_entropy = float(entropy_bonus.item())
 
-        episode_reward = float(sum(rewards))  ## 一个episode的总奖励是所有步骤奖励的累积和，这个值可以用来评估当前策略在这个房间上的表现，通常希望随着训练的进行，episode_reward能够逐渐增加，表明智能体学会了更有效的布置策略。
-        final_breakdown = env.last_breakdown  ## 
-        lamp_count = int(final_breakdown.diagnostics["lamp_count"]) if final_breakdown else 0
+        episode_reward = float(sum(rewards))
+        final_breakdown = env.last_breakdown
         mst_cost = float(final_breakdown.diagnostics["mst_cost"]) if final_breakdown else 0.0
+        uniformity_score = float(final_breakdown.diagnostics.get("uniformity_score", 0.0)) if final_breakdown else 0.0
+        illum_centroid_score = (
+            float(final_breakdown.diagnostics.get("illum_centroid_score", 0.0)) if final_breakdown else 0.0
+        )
         alignment_score = float(final_breakdown.diagnostics.get("alignment_score", 0.0)) if final_breakdown else 0.0
-        centering_score = float(final_breakdown.diagnostics.get("centering_score", 0.0)) if final_breakdown else 0.0
+        wiring_score = float(final_breakdown.diagnostics.get("wiring_score", 0.0)) if final_breakdown else 0.0
+        mean_uniformity_score = float(np.mean(uniformity_scores_episode)) if uniformity_scores_episode else 0.0
+        mean_illum_centroid_score = (
+            float(np.mean(illum_centroid_scores_episode)) if illum_centroid_scores_episode else 0.0
+        )
+        mean_alignment_score = float(np.mean(alignment_scores_episode)) if alignment_scores_episode else 0.0
+        mean_wiring_score = float(np.mean(wiring_scores_episode)) if wiring_scores_episode else 0.0
 
         history.append(
             {
                 "episode": episode_idx,
                 "episode_reward": episode_reward,
-                "lamp_count": lamp_count,
                 "mst_cost": mst_cost,
+                "uniformity_score": uniformity_score,
+                "illum_centroid_score": illum_centroid_score,
                 "alignment_score": alignment_score,
-                "centering_score": centering_score,
+                "wiring_score": wiring_score,
+                "mean_uniformity_score": mean_uniformity_score,
+                "mean_illum_centroid_score": mean_illum_centroid_score,
+                "mean_alignment_score": mean_alignment_score,
+                "mean_wiring_score": mean_wiring_score,
                 "policy_loss": last_policy_loss,
                 "value_loss": last_value_loss,
                 "entropy": last_entropy,
@@ -246,17 +343,22 @@ def train_single_room(
                 },
                 best_model_path,
             )
-        ## 每隔cfg.log_every_episodes轮，或者在第一轮和最后一轮时，打印一次训练日志，包括当前轮数、当前轮奖励、最近几轮的平均奖励、灯具数量、对齐分数和MST成本等信息，这些信息可以帮助我们监控训练过程，了解智能体的学习进展和策略改进情况。
+
         if episode_idx % cfg.log_every_episodes == 0 or episode_idx == 1 or episode_idx == cfg.episodes:
             recent = history[-cfg.log_every_episodes :]
-            moving_reward = sum(item["episode_reward"] for item in recent) / len(recent)  ## 计算最近几轮的平均奖励，这个值可以更平滑地反映训练趋势，避免单轮奖励的波动过大导致误导。
+            moving_reward = sum(item["episode_reward"] for item in recent) / len(recent)
             print(
                 f"[train] episode={episode_idx:04d} "
                 f"reward={episode_reward:8.3f} "
                 f"moving_reward={moving_reward:8.3f} "
-                f"lamps={lamp_count:02d} align={alignment_score:5.2f} center={centering_score:5.2f} "
-                f"mst_cost={mst_cost:7.2f}"
+                f"uniform={uniformity_score:5.2f} "
+                f"center={illum_centroid_score:5.2f} align={alignment_score:5.2f} "
+                f"wire={wiring_score:5.2f}"
             )
+
+        # if visualize_episode and episode_step_records:
+        #     breakdown_path = output_dir / f"episode_{episode_idx:04d}_score_breakdown.png"
+        #     plot_episode_step_breakdown(episode_step_records, breakdown_path, episode_idx=episode_idx)
 
     summary = {
         "ppo_config": asdict(cfg),
@@ -278,7 +380,7 @@ def evaluate_greedy_policy(
 ) -> dict[str, Any]:
     """Run one greedy rollout with the trained model and export every room state."""
     obs = env.reset()
-    export_episode_snapshot(env, output_dir, env.episode_index, 0, suffix="_greedy")  ## 
+    export_episode_snapshot(env, output_dir, env.episode_index, 0, suffix="_greedy")
 
     device = next(model.parameters()).device
     done = False
@@ -298,31 +400,38 @@ def evaluate_greedy_policy(
         "greedy_reward": float(sum(rewards)),
         "lamp_count": int(final_breakdown.diagnostics["lamp_count"]) if final_breakdown else 0,
         "mst_cost": float(final_breakdown.diagnostics["mst_cost"]) if final_breakdown else 0.0,
+        "uniformity_score": float(final_breakdown.diagnostics.get("uniformity_score", 0.0)) if final_breakdown else 0.0,
+        "illum_centroid_score": (
+            float(final_breakdown.diagnostics.get("illum_centroid_score", 0.0)) if final_breakdown else 0.0
+        ),
         "alignment_score": float(final_breakdown.diagnostics.get("alignment_score", 0.0)) if final_breakdown else 0.0,
-        "centering_score": float(final_breakdown.diagnostics.get("centering_score", 0.0)) if final_breakdown else 0.0,
+        "wiring_score": float(final_breakdown.diagnostics.get("wiring_score", 0.0)) if final_breakdown else 0.0,
     }
 
 
 def main() -> None:
     repo_root = Path(__file__).resolve().parents[1]
+    config_path = repo_root / "RL" / "config.yaml"
+    config_payload = load_yaml_config(config_path)
+
     output_root_dir = repo_root / "RL" / "output"
     output_dir = create_timestamped_output_dir(output_root_dir)
+    shutil.copy2(config_path, output_dir / "config.yaml")
 
-    ppo_cfg = PPOConfig()
+    ppo_cfg = PPOConfig(**config_payload.get("training", {}))
     set_seed(ppo_cfg.seed)
 
-    reward_cfg = RewardConfig()
+    reward_cfg = RewardConfig(**config_payload.get("reward", {}))
+    room_cfg = RoomConfig(**config_payload.get("room", {}))
     env_cfg = EnvironmentConfig(
-        padded_size=32,
-        max_steps=16,
-        target_lamp_count=4,
-        turn_penalty=0.2,
+        **config_payload.get("environment", {}),
         reward_config=reward_cfg,
     )
+    reward_cfg.target_lamp_count = env_cfg.target_lamp_count
 
     env = SingleRoomLightingEnv.from_json(
-        repo_root / "RL" / "test_room" / "test_room.json",
-        room_name="办公室1",
+        repo_root / room_cfg.json_path,
+        room_name=room_cfg.room_name,
         config=env_cfg,
     )
     model = LightingActorCritic(target_lamp_count=env_cfg.target_lamp_count)
@@ -330,10 +439,15 @@ def main() -> None:
     summary = train_single_room(env, model, ppo_cfg, output_dir)
     summary["greedy_evaluation"] = evaluate_greedy_policy(env, model, output_dir)
     summary["output_dir"] = str(output_dir)
+    summary["config_path"] = str(config_path)
 
     reward_curve_path = output_dir / "reward_curve.png"
-    plot_reward_curve(summary["history"], reward_curve_path, moving_window=ppo_cfg.log_every_episodes)
+    plot_reward_curve(summary["history"], reward_curve_path, moving_window=ppo_cfg.reward_curve_moving_window)
     summary["reward_curve_path"] = str(reward_curve_path)
+
+    score_trend_path = output_dir / "score_trends.png"
+    plot_score_trends(summary["history"], score_trend_path)
+    summary["score_trend_path"] = str(score_trend_path)
 
     summary_path = output_dir / "ppo_single_room_training_summary.json"
     with summary_path.open("w", encoding="utf-8") as f:
@@ -341,6 +455,7 @@ def main() -> None:
 
     print(f"[train] run output dir: {output_dir}")
     print(f"[train] reward curve saved to {reward_curve_path}")
+    print(f"[train] score trends saved to {score_trend_path}")
     print(f"[train] summary saved to {summary_path}")
     print(f"[train] best_reward={summary['best_reward']:.3f}")
     print(f"[train] greedy_eval={summary['greedy_evaluation']}")

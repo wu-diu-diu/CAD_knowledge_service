@@ -7,7 +7,7 @@ from typing import Any
 import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
-
+import matplotlib.pyplot as plt
 
 # OpenCV uses BGR instead of RGB.
 CELL_COLORS: dict[int, tuple[int, int, int]] = {
@@ -208,6 +208,57 @@ def _load_font(font_size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
                 continue
     return ImageFont.load_default()
 
+def plot_episode_step_breakdown(
+    step_records: list[dict[str, float | int | bool]],
+    output_path: Path,
+    *,
+    episode_idx: int,
+) -> Path:
+    """Plot per-step raw scores, penalties, weighted terms and total reward."""
+    if not step_records:
+        raise ValueError("Step records are empty. Cannot plot episode breakdown.")
+
+    steps = [int(item["step"]) for item in step_records]
+
+    uniformity_scores = [float(item["uniformity_score"]) for item in step_records]
+    illum_centroid_scores = [float(item["illum_centroid_score"]) for item in step_records]
+    alignment_scores = [float(item["alignment_score"]) for item in step_records]
+    wiring_scores = [float(item["wiring_score"]) for item in step_records]
+    invalid_penalties = [float(item["invalid_penalty"]) for item in step_records]
+
+    uniformity_term = [float(item["uniformity_term"]) for item in step_records]
+    illum_centroid_term = [float(item["illum_centroid_term"]) for item in step_records]
+    alignment_term = [float(item["alignment_term"]) for item in step_records]
+    wiring_term = [float(item["wiring_term"]) for item in step_records]
+    total_reward = [float(item["step_total"]) for item in step_records]
+
+    fig, axes = plt.subplots(2, 1, figsize=(11, 8), sharex=True)
+
+    axes[0].plot(steps, uniformity_scores, label="uniformity_score", linewidth=2.0)
+    axes[0].plot(steps, illum_centroid_scores, label="illum_centroid_score", linewidth=2.0)
+    axes[0].plot(steps, alignment_scores, label="alignment_score", linewidth=2.0)
+    axes[0].plot(steps, wiring_scores, label="wiring_score", linewidth=2.0)
+    axes[0].plot(steps, invalid_penalties, label="invalid_penalty", linewidth=2.0, linestyle="--")
+    axes[0].set_ylabel("Raw score / penalty")
+    axes[0].set_title(f"Episode {episode_idx:04d} Step Scores")
+    axes[0].grid(True, linestyle="--", linewidth=0.5, alpha=0.5)
+    axes[0].legend(loc="best", ncol=2)
+
+    axes[1].plot(steps, uniformity_term, label="uniformity_term", linewidth=2.0)
+    axes[1].plot(steps, illum_centroid_term, label="illum_centroid_term", linewidth=2.0)
+    axes[1].plot(steps, alignment_term, label="alignment_term", linewidth=2.0)
+    axes[1].plot(steps, wiring_term, label="wiring_term", linewidth=2.0)
+    axes[1].plot(steps, invalid_penalties, label="invalid_penalty", linewidth=2.0, linestyle="--")
+    axes[1].plot(steps, total_reward, label="step_total", linewidth=2.2, color="black")
+    axes[1].set_xlabel("Step")
+    axes[1].set_ylabel("Weighted contribution")
+    axes[1].grid(True, linestyle="--", linewidth=0.5, alpha=0.5)
+    axes[1].legend(loc="best", ncol=2)
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=180)
+    plt.close(fig)
+    return output_path
 
 def main() -> None:
     repo_root = Path(__file__).resolve().parents[1]

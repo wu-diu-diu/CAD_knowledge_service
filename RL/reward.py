@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from math import inf
 from typing import Callable, Iterable, Mapping
 
@@ -15,35 +15,21 @@ PairCostProvider = PairCostCallable | PairCostMapping | None
 
 
 @dataclass
-class RewardWeights:
-    """Top-level weights for the layered reward components."""
-
-    uniformity: float = 1.0
-    rules: float = 1.0
-    wiring: float = 1.0
-    terminal: float = 1.0
-
-
-@dataclass
 class RewardConfig:
     """
     Reward hyper-parameters derived from `布局布线优化.md`.
 
     The main formula is:
-        R = 均匀性奖励 + 规范奖励 + 布线奖励 + 终局奖励
+        R = 照度均匀性奖励 + 照度场重心奖励 + 对齐奖励 + 布线奖励
     """
 
-    uniformity_scale: float = 1.0  ## 均匀性奖励的缩放因子，控制其在总奖励中的影响力
-    alignment_reward_scale: float = 1.5  ## 对齐奖励的缩放因子，鼓励灯具布局更加均匀
-    wiring_cost_scale: float = 0.01  ## 布线奖励的缩放因子，将MST成本转换为奖励值
+    uniformity_coef: float = 2.0  ## 照度分布均匀性分数的最终系数
+    illum_centroid_coef: float = 1.5  ## 照度场重心分数的最终系数
+    alignment_coef: float = 1.5  ## 行列对齐分数的最终系数
+    wiring_coef: float = 1.0  ## 布线分数的最终系数
     invalid_action_penalty: float = 10.0  ## 非法动作的惩罚，例如试图在墙上放灯
-
-    terminal_wiring_scale: float = 0.05  ## 终局布线奖励的缩放因子，通常比step中的更高以强调最终布局质量
-    terminal_success_bonus: float = 5.0  ## 满足所有约束的终局奖励，鼓励智能体找到完全合法且高质量的布局
-    terminal_centering_scale: float = 5.0  ## 终局时鼓励灯具布局中心靠近房间中心的奖励系数
+    light_height_cells: float = 1.0  ## 灯具到计算平面的等效高度，用于反平方衰减模型
     target_lamp_count: int | None = None
-
-    weights: RewardWeights = field(default_factory=RewardWeights)
 
 
 @dataclass
@@ -138,11 +124,11 @@ class RoomState:
 
 
 @dataclass
-class RewardBreakdown:
+class RewardBreakdown:  ## 是一个数据类，用于详细描述每一步或者终局评估的时候的奖励构成
     """Detailed reward report for one step or terminal evaluation."""
 
     total: float
-    illumination: float
+    illum_centroid: float
     uniformity: float
     rules: float
     wiring: float
@@ -158,10 +144,12 @@ class RewardCalculator:
 
     This class implements the reward design described in
     `summary_docs/布局布线优化.md`:
-        - uniformity reward
-        - rule/constraint reward
-        - wiring reward from MST cost
-        - optional terminal reward
+        - illuminance uniformity score in [0, 1]
+        - illuminance-centroid score in [0, 1]
+        - alignment score in [0, 1]
+        - wiring score in [0, 1]
+
+    Terminal evaluation now only contributes diagnostics and success flags.
     """
 
     def __init__(self, config: RewardConfig) -> None:
@@ -175,31 +163,42 @@ class RewardCalculator:
         pair_cost_provider: PairCostProvider = None,
     ) -> RewardBreakdown:
         """Compute the weighted step reward for the current room state."""
-        uniformity_reward = self.uniformity_reward(state)
-        rule_reward, rule_diagnostics = self.rule_reward(state)
-        wiring_reward, mst_cost = self.wiring_reward(state, pair_cost_provider=pair_cost_provider)
+        illuminance_map = self.illuminance_map(state)  ## map存储房间每个格子的照度值
+        uniformity_score = self.uniformity_score(state, illuminance_map=illuminance_map)  ## 最低照度与平均照度的比值，衡量照度分布的均匀程度，越接近1越好
+        illum_centroid_score, lamp_center_distance = self.illum_centroid_score(  ## 照度重心和房间几何中心的距离，经过归一化后得到分数，越接近1越好
+            state,
+            illuminance_map=illuminance_map,
+        )
+        alignment_score = self.alignment_score(state.lamp_positions)  ## 对齐分数，衡量灯具是否在同一行或同一列，越接近1越好
+        wiring_score, mst_cost = self.wiring_score(state, pair_cost_provider=pair_cost_provider)  ## 布线分数，基于最小生成树的成本与参考成本的比值，越接近1越好
         invalid_penalty = -self.config.invalid_action_penalty if invalid_action else 0.0
-        rules_total = rule_reward + invalid_penalty
 
         total = (
-            self.config.weights.uniformity * uniformity_reward
-            + self.config.weights.rules * rules_total
-            + self.config.weights.wiring * wiring_reward
+            self.config.uniformity_coef * uniformity_score
+            + self.config.illum_centroid_coef * illum_centroid_score
+            + self.config.alignment_coef * alignment_score
+            + self.config.wiring_coef * wiring_score
+            + invalid_penalty
         )
 
         diagnostics: dict[str, float | int | bool | list[GridPoint]] = {
             "lamp_count": len(state.lamp_positions),
             "mst_cost": mst_cost,
             "invalid_action": invalid_action,
+            "uniformity_score": uniformity_score,
+            "illum_centroid_score": illum_centroid_score,
+            "lamp_center_distance": lamp_center_distance,
+            "alignment_score": alignment_score,
+            "wiring_score": wiring_score,
+            "invalid_penalty": invalid_penalty,
         }
-        diagnostics.update(rule_diagnostics)
 
         return RewardBreakdown(
             total=total,
-            illumination=0.0,
-            uniformity=uniformity_reward,
-            rules=rules_total,
-            wiring=wiring_reward,
+            illum_centroid=self.config.illum_centroid_coef * illum_centroid_score,
+            uniformity=self.config.uniformity_coef * uniformity_score,
+            rules=self.config.alignment_coef * alignment_score + invalid_penalty,
+            wiring=self.config.wiring_coef * wiring_score,
             cost=0.0,
             invalid_action=invalid_penalty,
             terminal=0.0,
@@ -213,41 +212,119 @@ class RewardCalculator:
         pair_cost_provider: PairCostProvider = None,
     ) -> RewardBreakdown:
         """
-        Compute an end-of-episode reward.
+        Compute terminal diagnostics without adding extra reward terms.
 
-        The doc describes terminal reward as running `MST + A*` once more.
-        Here that is represented as:
-            - a final wiring reward term based on the MST cost
-            - a centering reward encouraging the lamp-layout centroid to stay
-              near the room centroid
-            - an optional success bonus when constraints are met
+        The reward is now fully composed of:
+            - illuminance uniformity
+            - illuminance-field centroid
+            - alignment
+            - wiring cost
         """
-        step = self.calculate_step_reward(state, pair_cost_provider=pair_cost_provider) ## 先计算一次step reward，主要是为了获得当前状态的MST成本和诊断信息，这些信息对于计算终局奖励是必要的。
+        step = self.calculate_step_reward(state, pair_cost_provider=pair_cost_provider)
         success = (  ## 判断当前状态是否满足成功条件，即灯具数量是否达到了目标数量（如果有设定的话）。如果没有设定目标数量，那么只要有灯具就算成功。这是为了决定是否给予终局成功奖励。
             int(step.diagnostics.get("lamp_count", 0)) == int(self.config.target_lamp_count)
             if self.config.target_lamp_count is not None
             else int(step.diagnostics.get("lamp_count", 0)) > 0
         )
-        centering_score, lamp_center_distance = self.layout_centering_score(state)
-        terminal_reward = (  ## 计算终局奖励，主要包括两个部分：一个是基于MST成本的布线奖励，另一个是满足成功条件时的额外奖励。MST成本越高，布线奖励越低（因为它是负值），而满足成功条件则会增加一个固定的奖励值。
-            -self.config.terminal_wiring_scale * float(step.diagnostics["mst_cost"])
-            + self.config.terminal_centering_scale * centering_score
-            + (self.config.terminal_success_bonus if success else 0.0)
-        )
-        total = step.total + self.config.weights.terminal * terminal_reward
-        step.total = total
-        step.terminal = terminal_reward
+        step.terminal = 0.0
+        step.total = 0.0
         step.diagnostics["terminal_success"] = success
-        step.diagnostics["centering_score"] = centering_score
-        step.diagnostics["lamp_center_distance"] = lamp_center_distance
         return step
 
-    def uniformity_reward(self, state: RoomState) -> float:
+    def illuminance_map(self, state: RoomState) -> np.ndarray:
         """
-        Use nearest-neighbor distance variance as a uniformity reward.
+        Estimate the illuminance field over the whole room grid.
 
-        Smaller variance means lamps are spaced more evenly, so the reward is the
-        negative normalized variance.
+        A simple inverse-square decay model is used:
+        简化的点光源衰减模型，粗略估计房间中每个格子的照度值，假设每个灯具都是一个点光源，照度随着距离的平方衰减
+            E_ij = 1 / (dx^2 + dy^2 + h^2)
+
+        where h is the equivalent light height in grid units.
+        """
+        lamps = state.lamp_positions
+        illuminance = np.zeros(state.shape, dtype=np.float32) ## 照度分布网格，大小和房间相同，初始值为0
+        if not lamps:
+            return illuminance
+
+        rows, cols = np.indices(state.shape, dtype=np.float32)
+        h_sq = float(self.config.light_height_cells) ** 2
+        for lamp_r, lamp_c in lamps:
+            dist_sq = (rows - float(lamp_r)) ** 2 + (cols - float(lamp_c)) ** 2 + h_sq  ## 计算每个网格点到灯具的距离平方加上灯具高度的平方，避免除以零
+            illuminance += 1.0 / np.maximum(dist_sq, 1e-6)
+
+        illuminance *= state.room_mask.astype(np.float32)  ## 只保留房间内部的照度值，墙外的照度为0
+        return illuminance
+
+    def uniformity_score(
+        self,
+        state: RoomState,
+        *,
+        illuminance_map: np.ndarray | None = None,
+    ) -> float:
+        """
+        Use normalized illuminance variance as the uniformity score.
+
+        Let room-cell illuminance values be E. We first compute:
+            normalized_variance = Var(E) / mean(E)^2
+
+        Then convert it to a bounded score:
+            score = 1 / (1 + normalized_variance)
+
+        Smaller variance means more uniform lighting, so the final score is
+        larger when the variance is smaller. The score lies in (0, 1].
+        """
+        if illuminance_map is None:
+            illuminance_map = self.illuminance_map(state)
+
+        room_values = illuminance_map[state.room_mask]  ## 提取房间内部的照度值，得到一个一维数组
+        if room_values.size == 0:
+            return 0.0
+
+        avg_illum = float(np.mean(room_values))  ## 计算房间内部的平均照度，作为归一化方差分母的一部分。如果平均照度非常小，则直接返回0分，避免除以零或者得到不稳定结果。
+        if avg_illum <= 1e-6:
+            return 0.0
+
+        variance = float(np.var(room_values))  ## 房间内所有格子的照度方差，越小表示越均匀
+        normalized_variance = variance / max(avg_illum * avg_illum, 1e-6)  ## 用平均照度平方归一化，消除亮度绝对尺度影响
+        score = 1.0 / (1.0 + normalized_variance)  ## 方差越小，score越接近1；方差越大，score越接近0
+        return float(np.clip(score, 0.0, 1.0))
+
+    def illum_centroid_score(
+        self,
+        state: RoomState,
+        *,
+        illuminance_map: np.ndarray | None = None,
+    ) -> tuple[float, float]:
+        """
+        Score the illuminance-field centroid for staying near the room centroid.
+
+        Returns:
+            score: normalized centroid-closeness score in [0, 1]
+            distance: Euclidean distance between illuminance centroid and room centroid
+        """
+        if illuminance_map is None:
+            illuminance_map = self.illuminance_map(state)
+
+        room_cells = np.argwhere(state.room_mask)  ## 获取房间内部所有有效网格的坐标，得到一个二维数组，每行是一个网格的行列坐标
+        if room_cells.size == 0:
+            return 0.0, inf
+
+        room_center = room_cells.mean(axis=0)  ## 计算房间内部网格坐标的平均值，得到房间的几何中心坐标，作为理想的照度重心位置。这个位置通常位于房间的中间，如果房间形状规则的话。
+        room_weights = illuminance_map[state.room_mask]  ## 提取房间内部网格的照度值，得到一个一维数组，作为每个网格点的权重。照度越高的网格点对重心位置的影响越大。
+        total_illum = float(np.sum(room_weights))
+        if total_illum <= 1e-6:
+            return 0.0, inf
+
+        illum_centroid = np.sum(room_cells * room_weights[:, None], axis=0) / total_illum  ## 计算照度重心的坐标，方法是对每个网格点的坐标乘以其照度权重，然后求和后除以总照度。这样得到的重心位置会偏向于照度较高的区域。
+        distance = float(np.linalg.norm(illum_centroid - room_center))  ## 计算照度重心和房间几何中心之间的欧几里得距离，作为重心偏离程度的度量。距离越小说明照度重心越接近房间中心，分数应该越高。
+        farthest_room_distance = float(np.max(np.linalg.norm(room_cells - room_center, axis=1)))  ## 计算房间内部所有网格点到房间中心的最大距离，作为距离归一化的参考值。这个值反映了房间的大小和形状，距离越大说明房间越大或者越不规则。
+        normalization = max(farthest_room_distance, 1.0)  ## 归一化因子，避免除以零或者得到过大的分数。至少为1.0，确保合理的分数范围。
+        score = max(0.0, 1.0 - distance / normalization)  ## 计算最终的重心分数，方法是用1减去距离与归一化因子的比值。距离越小分数越接近1，距离越大分数越接近0。通过这种方式，重心位置越接近房间中心，分数越高。
+        return score, distance
+
+    def legacy_spacing_uniformity(self, state: RoomState) -> float:
+        """
+        Legacy nearest-neighbor spacing metric kept only for debugging/reference.
         """
         lamps = state.lamp_positions
         if len(lamps) < 2:
@@ -262,24 +339,7 @@ class RewardCalculator:
         variance = float(np.var(nn_array))  ## 计算每个灯具最邻近距离的方差，方差越小表示灯具分布越均匀
         mean = float(np.mean(nn_array)) if nn_array.size > 0 else 1.0  ## 计算每个灯具最邻近距离的平均值，平均值越大表示灯具之间的距离越远
         normalized_variance = variance / max(mean * mean, 1.0)  ## 将方差除以平均值的平方进行归一化，避免不同规模的房间之间的比较受到距离尺度的影响
-        return -self.config.uniformity_scale * normalized_variance  ## 最终奖励是负的归一化方差，表示方差越小（即分布越均匀），奖励越高。同时乘以一个缩放因子uniformity_scale来调整这个奖励在总奖励中的权重。
-
-    def rule_reward(self, state: RoomState) -> tuple[float, dict[str, float | int | bool | list[GridPoint]]]:
-        """
-        Compute rule reward.
-
-        The current soft constraint keeps row/column alignment preference.
-        """
-        lamps = state.lamp_positions
-
-        alignment_score = self.alignment_score(lamps)
-        alignment_reward = self.config.alignment_reward_scale * alignment_score
-
-        reward = alignment_reward
-        diagnostics: dict[str, float | int | bool | list[GridPoint]] = {
-            "alignment_score": alignment_score,
-        }
-        return reward, diagnostics
+        return -normalized_variance
 
     def alignment_score(self, lamps: Iterable[GridPoint]) -> float:
         """
@@ -299,51 +359,29 @@ class RewardCalculator:
         col_shared = sum(1 for _, c in lamp_list if col_counts[c] > 1) / len(lamp_list)
         return float(0.5 * (row_shared + col_shared))
 
-    def layout_centering_score(self, state: RoomState) -> tuple[float, float]:
-        """
-        Measure how close the lamp-layout centroid is to the room centroid.
-
-        Returns:
-            score: normalized score in [0, 1], higher is better
-            distance: Euclidean distance between lamp centroid and room centroid
-        """
-        lamps = state.lamp_positions
-        if not lamps:
-            return 0.0, inf
-
-        room_cells = np.argwhere(state.room_mask)
-        if room_cells.size == 0:
-            return 0.0, inf
-
-        room_center = room_cells.mean(axis=0)
-        lamp_center = np.asarray(lamps, dtype=np.float32).mean(axis=0)
-        distance = float(np.linalg.norm(lamp_center - room_center))
-
-        farthest_room_distance = float(np.max(np.linalg.norm(room_cells - room_center, axis=1)))  ## 计算房间内所有单元格到房间中心的最大距离，作为距离归一化的基准。这样可以确保无论房间大小如何，距离得分都在0到1之间，其中0表示灯具布局中心与房间中心重合，1表示灯具布局中心位于房间内最远的点上。
-        normalization = max(farthest_room_distance, 1.0)
-        score = max(0.0, 1.0 - distance / normalization)
-        return score, distance
-
-    def wiring_reward(
+    def wiring_score(
         self,
         state: RoomState,
         *,
         pair_cost_provider: PairCostProvider = None,
     ) -> tuple[float, float]:
         """
-        Compute the wiring reward from the MST cost over switch + lamp terminals.
+        Compute a normalized wiring score from the MST cost over switch + lamp terminals.
 
         If a precomputed pair-cost matrix `M` exists, pass it through
         `pair_cost_provider`. Otherwise the fallback is Manhattan distance.
         """
         terminals = state.switch_positions + state.lamp_positions
         if len(terminals) <= 1:
-            return 0.0, 0.0
+            return 1.0, 0.0
 
         mst_cost = self._mst_total_cost(terminals, pair_cost_provider=pair_cost_provider)
         if mst_cost == inf:
-            return -self.config.invalid_action_penalty, inf
-        return -self.config.wiring_cost_scale * mst_cost, mst_cost
+            return 0.0, inf
+
+        reference_cost = self._reference_wiring_cost(state, terminal_count=len(terminals))
+        score = max(0.0, 1.0 - float(mst_cost) / max(reference_cost, 1e-6))
+        return score, mst_cost
 
     def _mst_total_cost(
         self,
@@ -411,6 +449,23 @@ class RewardCalculator:
         if reverse_key in pair_cost_provider:
             return float(pair_cost_provider[reverse_key])
         return float(_manhattan(a, b))
+
+    def _reference_wiring_cost(self, state: RoomState, *, terminal_count: int) -> float:
+        """
+        Build a coarse upper-bound cost used to normalize MST routing cost.
+
+        The bound is proportional to room diameter times the number of required
+        tree edges, which keeps the resulting wiring score in [0, 1].
+        """
+        room_cells = np.argwhere(state.room_mask)
+        if room_cells.size == 0:
+            rows, cols = state.shape
+            room_diameter = float(rows + cols)
+        else:
+            min_row, min_col = room_cells.min(axis=0)
+            max_row, max_col = room_cells.max(axis=0)
+            room_diameter = float((max_row - min_row) + (max_col - min_col) + 1.0)
+        return max(1.0, room_diameter * max(terminal_count - 1, 1))
 
 
 def _mask_positions(mask: np.ndarray) -> list[GridPoint]:

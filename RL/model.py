@@ -70,16 +70,16 @@ class SharedEncoder(nn.Module):
     Shared U-Net encoder for the PPO actor-critic.
 
     Input shape:
-        [B, 4, 32, 32]
-        channels = [room_mask, placed_lamps, switch_mask, door_mask]
-        特征维度有四个：房间掩膜，可布置灯的位置，开关位置，门位置
+        [B, 3, 32, 32]
+        channels = [placeable_mask, placed_lamps, switch_mask]
+        特征维度有三个：当前可布置区域，已放灯位置，开关位置
 
     Output:
         EncoderFeatures with skip tensors for the policy decoder and bottleneck
         features for both policy/value heads.
     """
 
-    def __init__(self, in_channels: int = 4) -> None:
+    def __init__(self, in_channels: int = 3) -> None:
         super().__init__()
         self.stage1 = ConvBlock(in_channels, 32)
         self.pool1 = nn.MaxPool2d(2)
@@ -133,24 +133,20 @@ class PolicyDecoder(nn.Module):
         Build a valid-action mask from the observation tensor.
 
         Valid placement cells satisfy:
-            - room mask == 1
-            - switch mask == 0
-            - door mask == 0
+            - placeable mask == 1
             - optionally placed lamp mask == 0
 
         Returns:
             Boolean mask of shape [B, 1024], where True means action is valid.
         """
 
-        if obs.shape[1] < 4:
-            raise ValueError("Observation must contain 4 channels: room, lamps, switch, door.")
+        if obs.shape[1] < 3:
+            raise ValueError("Observation must contain 3 channels: placeable, lamps, switch.")
 
-        room_mask = obs[:, 0] > 0.5
+        placeable_mask = obs[:, 0] > 0.5
         placed_lamps = obs[:, 1] > 0.5
-        switch_mask = obs[:, 2] > 0.5
-        door_mask = obs[:, 3] > 0.5
 
-        valid = room_mask & ~switch_mask & ~door_mask
+        valid = placeable_mask
         if mask_existing_lamps:
             valid = valid & ~placed_lamps
         return valid.view(obs.shape[0], -1)
@@ -219,7 +215,7 @@ class LightingActorCritic(nn.Module):
         obs -> shared encoder -> policy logits + scalar value
     """
 
-    def __init__(self, in_channels: int = 4, target_lamp_count: int | None = None) -> None:
+    def __init__(self, in_channels: int = 3, target_lamp_count: int | None = None) -> None:
         super().__init__()
         self.encoder = SharedEncoder(in_channels=in_channels)
         self.policy_decoder = PolicyDecoder(target_lamp_count=target_lamp_count)
@@ -260,7 +256,7 @@ class LightingActorCritic(nn.Module):
 
         logits, values = self(obs)  ## obs经过共享编码器和两个解码器，得到动作的logits和状态值。logits的形状是[B, 1025]，其中前1024个元素对应32x32网格的放置动作，最后一个元素对应停止动作。values的形状是[B, 1]，表示每个状态的估计值。
         dist = torch.distributions.Categorical(logits=logits)  ## dist是一个Categorical分布对象，使用logits参数来定义离散动作空间的概率分布。这个分布对象可以用来采样动作或者计算动作的对数概率。
-        if deterministic:
+        if deterministic:  ## 如果是确定性策略，选择概率最大的动作
             action = torch.argmax(logits, dim=1)
         else:
             action = dist.sample()
@@ -292,8 +288,8 @@ class LightingActorCritic(nn.Module):
 def _demo() -> None:
     """Quick shape smoke test for local debugging."""
     model = LightingActorCritic(target_lamp_count=4)
-    obs = torch.zeros(2, 4, 32, 32)
-    obs[:, 0] = 1.0  # whole room is valid in this toy example
+    obs = torch.zeros(2, 3, 32, 32)
+    obs[:, 0] = 1.0  # whole room is currently placeable in this toy example
     logits, values = model(obs)
     print("policy logits:", tuple(logits.shape))
     print("value:", tuple(values.shape))

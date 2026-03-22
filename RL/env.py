@@ -38,11 +38,10 @@ class SingleRoomLightingEnv:
     Single-room PPO environment for scheme 1 in `布局布线优化.md`.
 
     State:
-        32x32x4 tensor with channels
-            0: room mask
+        32x32x3 tensor with channels
+            0: current placeable mask
             1: placed lamps
             2: switch
-            3: door
 
     Actions:
         0..1023 -> place a lamp at the flattened 32x32 cell
@@ -119,14 +118,14 @@ class SingleRoomLightingEnv:
         return self.observation()
 
     def observation(self) -> np.ndarray:
-        """Build the 32x32x4 observation tensor expected by the actor-critic."""
-        obs = np.zeros((4, self.padded_size, self.padded_size), dtype=np.float32)
+        """Build the 32x32x3 observation tensor expected by the actor-critic."""
+        obs = np.zeros((3, self.padded_size, self.padded_size), dtype=np.float32)
         sl_r = slice(self.row_offset, self.row_offset + self.grid_rows)
         sl_c = slice(self.col_offset, self.col_offset + self.grid_cols)
-        obs[0, sl_r, sl_c] = self.original_room_mask.astype(np.float32)
+        current_placeable = self.original_placeable_mask & ~self.original_lamp_mask
+        obs[0, sl_r, sl_c] = current_placeable.astype(np.float32)
         obs[1, sl_r, sl_c] = self.original_lamp_mask.astype(np.float32)
         obs[2, sl_r, sl_c] = self.original_switch_mask.astype(np.float32)
-        obs[3, sl_r, sl_c] = self.original_door_mask.astype(np.float32)
         return obs
 
     def step(self, action: int) -> tuple[np.ndarray, float, bool, dict[str, Any]]:
@@ -163,12 +162,14 @@ class SingleRoomLightingEnv:
 
         self.current_step += 1
         reached_limit = self.current_step >= self.config.max_steps  ## 如果本轮布置的步骤数量超过了最大数量，那么强制结束当前轮次的训练，进入终局状态，计算终局奖励。这是为了防止智能体在某些房间上陷入无效的尝试，导致训练停滞不前
+        ## self.lamp_count是一个只读属性，调用的时候不需要括号，直接访问就会通过计算lamp_mask中TRUE的数量，来计算当前的灯具数量
         reached_target = self.lamp_count >= self.config.target_lamp_count  ## 如果智能体放置的灯具数量达到了预设的目标数量，那么认为布置完成，进入终局状态，计算终局奖励。这是为了鼓励智能体尽快满足照明需求，完成布置任务。
         done = stop or reached_limit or reached_target
 
         terminal_bonus = 0.0
         routing_summary = None
-        if done:
+        ## 如果布置完成，那么除了本步得到的奖励增量外，还会根据终局状态计算一个额外的奖励。
+        if done: 
             terminal_breakdown = self.reward_calculator.calculate_terminal_reward(
                 state,
                 pair_cost_provider=self.pair_cost,
@@ -181,7 +182,7 @@ class SingleRoomLightingEnv:
             routing_summary = self.compute_terminal_routing()
 
         self.done = done
-        self.last_breakdown = step_breakdown
+        self.last_breakdown = step_breakdown  ## 每调用一次step方法，都会计算一次step_breakdown，并将其保存在last_breakdown属性中，用于在训练过程中的日志记录和调试分析。
         info: dict[str, Any] = {
             "step": self.current_step,
             "stop_action": stop,

@@ -1,0 +1,44 @@
+training:
+  episodes: 2000
+  gamma: 0.99
+  learning_rate: 0.0003
+  ppo_epochs: 4  ## 调低，减少对一次rollout数据的过拟合，可能会导致训练更稳定，但收敛速度变慢
+  clip_eps: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.01  ## 调大，鼓励探索，reward会收敛的很慢，会在一个数附近反复波动
+  grad_clip_norm: 1.0
+  seed: 42
+  device: "cpu"
+  visualize_every_episodes: 100
+  log_every_episodes: 10
+  reward_curve_moving_window: 20
+
+environment:
+  padded_size: 32
+  max_steps: 16
+  target_lamp_count: 4
+  turn_penalty: 0.2
+
+reward:
+  uniformity_coef: 2.0
+  illum_centroid_coef: 3.0
+  alignment_coef: 2.0
+  wiring_coef: 0.01  
+  invalid_action_penalty: 10.0
+  light_height_cells: 1.0
+
+room:
+  json_path: "RL/test_room/test_room.json"
+  room_name: "办公室1"
+
+ga:
+  population_size: 64
+  generations: 200
+  tournament_size: 3
+  elite_count: 4
+  mutation_rate: 0.3
+  mutation_count: 1
+  patience: 30
+  min_delta: 0.0001
+  seed: 42
+  log_every_generations: 10
