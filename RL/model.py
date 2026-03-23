@@ -70,16 +70,22 @@ class SharedEncoder(nn.Module):
     Shared U-Net encoder for the PPO actor-critic.
 
     Input shape:
-        [B, 3, 32, 32]
-        channels = [placeable_mask, placed_lamps, switch_mask]
-        特征维度有三个：当前可布置区域，已放灯位置，开关位置
+        [B, 5, 32, 32]
+        channels:
+            0: placeable_mask  — 当前仍可放灯的格子
+            1: placed_lamps    — 已放灯位置
+            2: switch_mask     — 开关位置
+            3: lamp_progress   — 已放灯数/目标灯数，全图广播标量平面
+                                 关键：让网络感知"当前第几步"，
+                                 推断"剩余灯应放在哪个区域互补"
+            4: room_mask       — 房间内部区域（墙外为0），辅助空间边界感知
 
     Output:
         EncoderFeatures with skip tensors for the policy decoder and bottleneck
         features for both policy/value heads.
     """
 
-    def __init__(self, in_channels: int = 3) -> None:
+    def __init__(self, in_channels: int = 5) -> None:
         super().__init__()
         self.stage1 = ConvBlock(in_channels, 32)
         self.pool1 = nn.MaxPool2d(2)
@@ -140,8 +146,8 @@ class PolicyDecoder(nn.Module):
             Boolean mask of shape [B, 1024], where True means action is valid.
         """
 
-        if obs.shape[1] < 3:
-            raise ValueError("Observation must contain 3 channels: placeable, lamps, switch.")
+        if obs.shape[1] < 2:
+            raise ValueError("Observation must contain at least 2 channels: placeable (ch0), lamps (ch1).")
 
         placeable_mask = obs[:, 0] > 0.5
         placed_lamps = obs[:, 1] > 0.5
@@ -215,7 +221,7 @@ class LightingActorCritic(nn.Module):
         obs -> shared encoder -> policy logits + scalar value
     """
 
-    def __init__(self, in_channels: int = 3, target_lamp_count: int | None = None) -> None:
+    def __init__(self, in_channels: int = 5, target_lamp_count: int | None = None) -> None:
         super().__init__()
         self.encoder = SharedEncoder(in_channels=in_channels)
         self.policy_decoder = PolicyDecoder(target_lamp_count=target_lamp_count)
@@ -287,9 +293,10 @@ class LightingActorCritic(nn.Module):
 
 def _demo() -> None:
     """Quick shape smoke test for local debugging."""
-    model = LightingActorCritic(target_lamp_count=4)
-    obs = torch.zeros(2, 3, 32, 32)
-    obs[:, 0] = 1.0  # whole room is currently placeable in this toy example
+    model = LightingActorCritic(target_lamp_count=4)  # in_channels=5 by default
+    obs = torch.zeros(2, 5, 32, 32)
+    obs[:, 0] = 1.0  # ch0: whole room placeable
+    obs[:, 4] = 1.0  # ch4: whole room interior
     logits, values = model(obs)
     print("policy logits:", tuple(logits.shape))
     print("value:", tuple(values.shape))

@@ -32,8 +32,13 @@ class GAConfig:
     generations: int = 200  ## 最大迭代次数，算法会在达到这个代数后停止
     tournament_size: int = 3  ## 锦标赛选择的竞争者数量，较小的值增加选择压力，较大的值增加多样性
     elite_count: int = 4  ## 每代保留的精英个体数量，直接进入下一代，保持优秀基因
-    mutation_rate: float = 0.3  ## 每个子代进行变异的概率，较高的值增加探索，较低的值增加稳定性
-    mutation_count: int = 1  ## 每次变异中替换的基因数量，较大的值增加变异幅度，较小的值增加微调能力
+    # --- 变异退火参数（取代旧的 mutation_rate / mutation_count 标量） ---
+    mutation_rate_start: float = 0.5   ## 初始变异概率（早期大探索）
+    mutation_rate_end: float = 0.05    ## 终止变异概率（后期微调）
+    mutation_count_start: int = 2      ## 初始每次变异替换的基因数
+    mutation_count_end: int = 1        ## 终止每次变异替换的基因数
+    # --- 多样性保护 ---
+    diversity_min_hamming: int = 1     ## 子代与所有精英的最小汉明距离阈值，低于此值则替换为随机个体
     patience: int = 30  ## 早停耐心值，如果连续这么多代没有显著改进，就停止算法
     min_delta: float = 1e-4  ## 最小改进阈值，只有当新最佳适应度比当前最佳适应度高出至少这个值时，才认为是改进
     seed: int = 42  ## 随机种子，确保结果可复现
@@ -138,7 +143,7 @@ class GALayoutOptimizer:
 
     def _legal_points(self) -> list[GridPoint]:
         coords = np.argwhere(self.env.original_placeable_mask)
-        return [tuple(map(int, coord)) for coord in coords]
+        return [(int(coord[0]), int(coord[1])) for coord in coords]
 
     def _point_to_id(self, point: GridPoint) -> int:
         return int(point[0] * self.env.grid_cols + point[1])
@@ -182,15 +187,23 @@ class GALayoutOptimizer:
             switch_mask=self.env.original_switch_mask,
             door_mask=self.env.original_door_mask,
         )
-    ## 计算一个基因组的适应度，首先根据基因组构建房间状态，然后调用reward_calculator计算奖励分数，并返回总分和详细的奖励分解
+    ## 计算一个基因组的适应度。
+    ## fitness = step_reward.total + terminal_bonus，与PPO的奖励目标对齐，
+    ## 使GA能够选出"整体布局优秀"的方案，而不仅仅是"各项中等均衡"的方案。
+    ## 返回 (total_fitness, step_breakdown)，其中 step_breakdown 用于 diagnostics 显示。
     def evaluate_genome(self, genome: tuple[int, ...]) -> tuple[float, RewardBreakdown]:
         state = self._build_state(genome)
-        breakdown = self.reward_calculator.calculate_step_reward(
+        step_bd = self.reward_calculator.calculate_step_reward(
             state,
             invalid_action=False,
             pair_cost_provider=self.env.pair_cost,
         )
-        return float(breakdown.total), breakdown
+        terminal_bd = self.reward_calculator.calculate_terminal_reward(
+            state,
+            pair_cost_provider=self.env.pair_cost,
+        )
+        total_fitness = step_bd.total + terminal_bd.total
+        return total_fitness, step_bd
 
     def _tournament_select(self, scored_population: list[tuple[tuple[int, ...], float, RewardBreakdown]]) -> tuple[int, ...]:
         competitors = random.sample(scored_population, k=min(self.ga_config.tournament_size, len(scored_population)))
@@ -198,25 +211,34 @@ class GALayoutOptimizer:
         return winner[0]
 
     def _crossover(self, parent_a: tuple[int, ...], parent_b: tuple[int, ...]) -> tuple[int, ...]:
-        shared = [gene for gene in parent_a if gene in parent_b]
-        child = list(shared)
-
-        pool = [gene for gene in parent_a + parent_b if gene not in child]
-        random.shuffle(pool)
-        for gene in pool:
-            if gene not in child:
-                child.append(gene)
-            if len(child) >= self.target_lamp_count:
+        """顺序交叉（OX）变体：随机从parent_a取一段区间基因，剩余从parent_b按顺序补充。
+        真正继承两个父代的空间信息，而不是退化为随机填充。"""
+        n = self.target_lamp_count
+        # 随机选取parent_a中的一段区间
+        lo = random.randint(0, n - 1)
+        hi = random.randint(lo + 1, n)
+        child_genes: list[int] = list(parent_a[lo:hi])
+        child_set = set(child_genes)
+        # 按parent_b的顺序补充不重复的基因
+        for gene in parent_b:
+            if gene not in child_set:
+                child_genes.append(gene)
+                child_set.add(gene)
+            if len(child_genes) >= n:
                 break
+        return self._repair_genome(child_genes)
 
-        return self._repair_genome(child)
-
-    def _mutate(self, genome: tuple[int, ...]) -> tuple[int, ...]:
-        genes = list(genome)
-        if random.random() >= self.ga_config.mutation_rate:
+    def _mutate(self, genome: tuple[int, ...], *, annealing_t: float = 0.0) -> tuple[int, ...]:
+        """带退火的变异：annealing_t ∈ [0, 1]，0=早期大探索，1=后期微调。
+        变异率和变异步长均随 t 线性衰减。"""
+        cfg = self.ga_config
+        rate = cfg.mutation_rate_start * (1.0 - annealing_t) + cfg.mutation_rate_end * annealing_t
+        if random.random() >= rate:
             return genome
 
-        replace_count = min(self.ga_config.mutation_count, self.target_lamp_count)
+        count = max(1, round(cfg.mutation_count_start * (1.0 - annealing_t) + cfg.mutation_count_end * annealing_t))
+        replace_count = min(count, self.target_lamp_count)
+        genes = list(genome)
         mutate_indices = random.sample(range(self.target_lamp_count), k=replace_count)
         used = set(genes)
         available = [gene for gene in self.legal_ids if gene not in used]
@@ -308,13 +330,28 @@ class GALayoutOptimizer:
             if stagnant_generations >= self.ga_config.patience:
                 break
 
+            # 计算当前代的退火进度 t ∈ [0, 1]
+            annealing_t = (generation - 1) / max(self.ga_config.generations - 1, 1)
+
             elites = [item[0] for item in scored_population[: self.ga_config.elite_count]]
             next_population = list(elites)
             while len(next_population) < self.ga_config.population_size:
                 parent_a = self._tournament_select(scored_population)
                 parent_b = self._tournament_select(scored_population)
                 child = self._crossover(parent_a, parent_b)
-                child = self._mutate(child)
+                child = self._mutate(child, annealing_t=annealing_t)
+
+                # 多样性保护：若子代与所有精英的汉明距离均低于阈值，则替换为随机个体
+                min_hamming = self.ga_config.diversity_min_hamming
+                if min_hamming > 0 and elites:
+                    child_set = set(child)
+                    too_close = all(
+                        len(child_set.symmetric_difference(set(elite))) < min_hamming
+                        for elite in elites
+                    )
+                    if too_close:
+                        child = self._random_genome()
+
                 next_population.append(child)
             population = next_population
 

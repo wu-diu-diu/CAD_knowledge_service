@@ -118,14 +118,30 @@ class SingleRoomLightingEnv:
         return self.observation()
 
     def observation(self) -> np.ndarray:
-        """Build the 32x32x3 observation tensor expected by the actor-critic."""
-        obs = np.zeros((3, self.padded_size, self.padded_size), dtype=np.float32)
+        """
+        Build the 32x32x5 observation tensor expected by the actor-critic.
+
+        Channels:
+            0: current placeable mask（当前仍可放灯的格子，已放过灯的格子为0）
+            1: placed lamp mask（已放灯位置）
+            2: switch mask（开关位置）
+            3: lamp progress（标量广播到全图，= 已放灯数 / 目标灯数）
+               让网络感知"当前是第几步"，从而推断"剩余灯应放在哪个区域互补"
+            4: room mask（房间内部区域，包括门、开关、已放灯；墙外为0）
+               让网络区分房间边界与可放区域，辅助空间感知
+        """
+        obs = np.zeros((5, self.padded_size, self.padded_size), dtype=np.float32)
         sl_r = slice(self.row_offset, self.row_offset + self.grid_rows)
         sl_c = slice(self.col_offset, self.col_offset + self.grid_cols)
         current_placeable = self.original_placeable_mask & ~self.original_lamp_mask
         obs[0, sl_r, sl_c] = current_placeable.astype(np.float32)
         obs[1, sl_r, sl_c] = self.original_lamp_mask.astype(np.float32)
         obs[2, sl_r, sl_c] = self.original_switch_mask.astype(np.float32)
+        # ch3: 放灯进度，归一化到 [0, 1]，全图广播为常数平面
+        progress = self.lamp_count / max(self.config.target_lamp_count, 1)
+        obs[3, sl_r, sl_c] = progress
+        # ch4: 房间内部掩码（墙外为0，房间内全为1）
+        obs[4, sl_r, sl_c] = self.original_room_mask.astype(np.float32)
         return obs
 
     def step(self, action: int) -> tuple[np.ndarray, float, bool, dict[str, Any]]:

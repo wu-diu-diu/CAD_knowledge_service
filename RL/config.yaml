@@ -1,31 +1,35 @@
 training:
-  episodes: 2000
+  episodes: 3000
   gamma: 0.99
+  gae_lambda: 0.95        # GAE lambda，平衡偏差与方差
   learning_rate: 0.0003
-  ppo_epochs: 4  ## 调低，减少对一次rollout数据的过拟合，可能会导致训练更稳定，但收敛速度变慢
+  ppo_epochs: 4
+  rollout_episodes: 32    # 每次PPO更新前累积的episode数（batch≈128步）
   clip_eps: 0.2
   value_coef: 0.5
-  entropy_coef: 0.01  ## 调大，鼓励探索，reward会收敛的很慢，会在一个数附近反复波动
-  grad_clip_norm: 1.0
+  entropy_coef: 0.05      # 维持较高熵系数，防止过早收敛到局部最优
+  grad_clip_norm: 0.5
   seed: 42
-  device: "cpu"
+  device: "cuda:0"
   visualize_every_episodes: 100
-  log_every_episodes: 10
+  log_every_episodes: 32  # 与rollout_episodes对齐，每批次输出一次日志
   reward_curve_moving_window: 20
 
 environment:
   padded_size: 32
   max_steps: 16
-  target_lamp_count: 4
+  target_lamp_count: 8  ## 试试6个灯具
   turn_penalty: 0.2
 
 reward:
-  uniformity_coef: 2.0
-  illum_centroid_coef: 3.0
-  alignment_coef: 2.0
-  wiring_coef: 0.01  
+  uniformity_coef: 3.0        # 提高：均匀性是主要优化目标
+  illum_centroid_coef: 3.5    # 适当降低：与均匀性正相关，不需要过高权重
+  alignment_coef: 1.5         # 保持
+  wiring_coef: 0.3            # 修复：原来0.01导致布线信号被完全淹没
   invalid_action_penalty: 10.0
-  light_height_cells: 1.0
+  light_height_cells: 6.0     # 修复：原来=1导致衰减过陡，任何布局uniformity都<0.3；
+                              # 19x22房间短边≈19格，灯高≈6格是合理物理比例
+  terminal_bonus_coef: 5.0    # 新增：终局质量放大系数
 
 room:
   json_path: "RL/test_room/test_room.json"
@@ -36,8 +40,13 @@ ga:
   generations: 200
   tournament_size: 3
   elite_count: 4
-  mutation_rate: 0.3
-  mutation_count: 1
+  # 变异退火参数（取代旧的 mutation_rate / mutation_count）
+  mutation_rate_start: 0.5   # 初始变异概率（早期大探索）
+  mutation_rate_end: 0.05    # 终止变异概率（后期微调）
+  mutation_count_start: 2    # 初始每次变异替换的基因数
+  mutation_count_end: 1      # 终止每次变异替换的基因数
+  # 多样性保护
+  diversity_min_hamming: 1   # 子代与所有精英的最小汉明距离阈值，低于此值替换为随机个体
   patience: 30
   min_delta: 0.0001
   seed: 42

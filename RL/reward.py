@@ -30,6 +30,7 @@ class RewardConfig:
     invalid_action_penalty: float = 10.0  ## 非法动作的惩罚，例如试图在墙上放灯
     light_height_cells: float = 1.0  ## 灯具到计算平面的等效高度，用于反平方衰减模型
     target_lamp_count: int | None = None
+    terminal_bonus_coef: float = 3.0  ## 终局奖励放大系数，终局质量得分 * 该系数作为额外bonus叠加在最后一步
 
 
 @dataclass
@@ -212,23 +213,45 @@ class RewardCalculator:
         pair_cost_provider: PairCostProvider = None,
     ) -> RewardBreakdown:
         """
-        Compute terminal diagnostics without adding extra reward terms.
+        Compute terminal bonus reward for the final layout quality.
 
-        The reward is now fully composed of:
-            - illuminance uniformity
-            - illuminance-field centroid
-            - alignment
-            - wiring cost
+        终局奖励 = terminal_bonus_coef * (各项加权质量分数之和)
+
+        这使智能体能够区分"放了4盏差灯"和"放了4盏好灯"的最终状态，
+        因为势能差分只能衡量每步增量，无法在终局聚合全局布局质量信号。
+
+        若灯具数量不满足目标（提前stop），则不给终局奖励，
+        而是施加一个与目标数量差距成比例的惩罚。
         """
         step = self.calculate_step_reward(state, pair_cost_provider=pair_cost_provider)
-        success = (  ## 判断当前状态是否满足成功条件，即灯具数量是否达到了目标数量（如果有设定的话）。如果没有设定目标数量，那么只要有灯具就算成功。这是为了决定是否给予终局成功奖励。
-            int(step.diagnostics.get("lamp_count", 0)) == int(self.config.target_lamp_count)
-            if self.config.target_lamp_count is not None
-            else int(step.diagnostics.get("lamp_count", 0)) > 0
+        lamp_count = int(step.diagnostics.get("lamp_count", 0))
+        target = self.config.target_lamp_count
+
+        success = (
+            lamp_count == int(target)
+            if target is not None
+            else lamp_count > 0
         )
-        step.terminal = 0.0
-        step.total = 0.0
+
+        if success:
+            ## 终局bonus = 各加权质量分数之和 * 放大系数
+            ## 使用 step.total 中已经计算好的加权质量分数（不含invalid_penalty）
+            quality = (
+                self.config.uniformity_coef * float(step.diagnostics.get("uniformity_score", 0.0))
+                + self.config.illum_centroid_coef * float(step.diagnostics.get("illum_centroid_score", 0.0))
+                + self.config.alignment_coef * float(step.diagnostics.get("alignment_score", 0.0))
+                + self.config.wiring_coef * float(step.diagnostics.get("wiring_score", 0.0))
+            )
+            terminal_bonus = self.config.terminal_bonus_coef * quality
+        else:
+            ## 数量不足时惩罚：每少一盏灯扣 invalid_action_penalty
+            shortage = (int(target) - lamp_count) if target is not None else 0
+            terminal_bonus = -self.config.invalid_action_penalty * shortage
+
+        step.terminal = terminal_bonus
+        step.total = terminal_bonus
         step.diagnostics["terminal_success"] = success
+        step.diagnostics["terminal_bonus"] = terminal_bonus
         return step
 
     def illuminance_map(self, state: RoomState) -> np.ndarray:

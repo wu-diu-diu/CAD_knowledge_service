@@ -29,14 +29,16 @@ class PPOConfig:
 
     episodes: int = 1500
     gamma: float = 0.99
+    gae_lambda: float = 0.95    # GAE lambda，用于平衡偏差和方差
     learning_rate: float = 3e-4
-    ppo_epochs: int = 6  ## 这个数表示，得到一批轨迹之后，要重复拿来更新策略多少轮
+    ppo_epochs: int = 4         # 每次rollout批量的更新轮数
+    rollout_episodes: int = 16  # 每次PPO更新前累积的episode数量，增大batch size以稳定优势估计
     clip_eps: float = 0.2
     value_coef: float = 0.5
     entropy_coef: float = 0.01
-    grad_clip_norm: float = 1.0
+    grad_clip_norm: float = 0.5  # 适当收紧梯度裁剪
     seed: int = 42
-    device: str = "cpu"
+    device: str = "GPU"
 
     visualize_every_episodes: int = 50
     log_every_episodes: int = 10
@@ -76,6 +78,43 @@ def discounted_returns(rewards: list[float], gamma: float) -> torch.Tensor:
         returns.append(running)
     returns.reverse()
     return torch.tensor(returns, dtype=torch.float32)
+
+
+def compute_gae(
+    rewards: list[float],
+    values: list[float],
+    gamma: float,
+    lam: float,
+    last_value: float = 0.0,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """
+    Compute GAE advantages and discounted returns for one episode.
+
+    GAE(lambda) 以 lambda 在低方差（纯TD，lambda=0）和低偏差（蒙特卡洛，lambda=1）
+    之间取得平衡，比纯蒙特卡洛return在短episode（4步）上方差更小、梯度更稳定。
+
+    Args:
+        rewards: 该episode的奖励序列
+        values: 每步的V(s)估计，长度与rewards相同
+        gamma: 折扣因子
+        lam: GAE lambda
+        last_value: 终止状态的V(s')，episode结束为0
+    Returns:
+        advantages: [T] GAE优势
+        returns: [T] 用于value loss的目标returns（advantages + values）
+    """
+    T = len(rewards)
+    advantages = [0.0] * T
+    gae = 0.0
+    for t in reversed(range(T)):
+        next_val = values[t + 1] if t + 1 < T else last_value
+        delta = rewards[t] + gamma * next_val - values[t]
+        gae = delta + gamma * lam * gae
+        advantages[t] = gae
+    adv_tensor = torch.tensor(advantages, dtype=torch.float32)
+    val_tensor = torch.tensor(values, dtype=torch.float32)
+    returns_tensor = adv_tensor + val_tensor
+    return adv_tensor, returns_tensor
 
 
 def should_visualize_episode(episode_idx: int, cfg: PPOConfig) -> bool:
@@ -170,6 +209,79 @@ def plot_score_trends(history: list[dict[str, Any]], output_path: Path) -> Path:
     return output_path
 
 
+def _collect_one_episode(
+    env: SingleRoomLightingEnv,
+    model: LightingActorCritic,
+    device: torch.device,
+    episode_idx: int,
+    cfg: PPOConfig,
+    output_dir: Path,
+) -> dict[str, Any]:
+    """
+    执行一个完整episode的rollout，返回轨迹数据和统计信息。
+
+    Returns 包含:
+        obs_list, actions, rewards, log_probs, values,
+        以及该episode的诊断指标（reward、各分项分数等）
+    """
+    obs = env.reset()
+    visualize_episode = should_visualize_episode(episode_idx, cfg)
+
+    obs_list: list[np.ndarray] = []
+    actions: list[int] = []
+    rewards: list[float] = []
+    log_probs: list[float] = []
+    values: list[float] = []
+    uniformity_scores: list[float] = []
+    illum_centroid_scores: list[float] = []
+    alignment_scores: list[float] = []
+    wiring_scores: list[float] = []
+
+    done = False
+    while not done:
+        obs_tensor = torch.from_numpy(obs).unsqueeze(0).to(device=device, dtype=torch.float32)
+        rollout = model.act(obs_tensor, deterministic=False)
+        action = int(rollout["action"].item())
+        next_obs, reward, done, info = env.step(action)
+
+        obs_list.append(obs)
+        actions.append(action)
+        rewards.append(float(reward))
+        log_probs.append(float(rollout["log_prob"].item()))
+        values.append(float(rollout["value"].squeeze().item()))
+
+        obs = next_obs
+
+        breakdown = info["reward_breakdown"]
+        uniformity_scores.append(float(breakdown.uniformity))
+        illum_centroid_scores.append(float(breakdown.illum_centroid))
+        alignment_scores.append(float(breakdown.rules - breakdown.invalid_action))
+        wiring_scores.append(float(breakdown.wiring))
+
+        if visualize_episode and env.current_step % env.config.target_lamp_count == 0:
+            export_episode_snapshot(env, output_dir, episode_idx, env.current_step)
+
+    final_breakdown = env.last_breakdown
+    return {
+        "obs_list": obs_list,
+        "actions": actions,
+        "rewards": rewards,
+        "log_probs": log_probs,
+        "values": values,
+        # --- 诊断信息 ---
+        "episode_reward": float(sum(rewards)),
+        "mst_cost": float(final_breakdown.diagnostics["mst_cost"]) if final_breakdown else 0.0,
+        "uniformity_score": float(final_breakdown.diagnostics.get("uniformity_score", 0.0)) if final_breakdown else 0.0,
+        "illum_centroid_score": float(final_breakdown.diagnostics.get("illum_centroid_score", 0.0)) if final_breakdown else 0.0,
+        "alignment_score": float(final_breakdown.diagnostics.get("alignment_score", 0.0)) if final_breakdown else 0.0,
+        "wiring_score": float(final_breakdown.diagnostics.get("wiring_score", 0.0)) if final_breakdown else 0.0,
+        "mean_uniformity_score": float(np.mean(uniformity_scores)) if uniformity_scores else 0.0,
+        "mean_illum_centroid_score": float(np.mean(illum_centroid_scores)) if illum_centroid_scores else 0.0,
+        "mean_alignment_score": float(np.mean(alignment_scores)) if alignment_scores else 0.0,
+        "mean_wiring_score": float(np.mean(wiring_scores)) if wiring_scores else 0.0,
+    }
+
+
 def train_single_room(
     env: SingleRoomLightingEnv,
     model: LightingActorCritic,
@@ -179,9 +291,10 @@ def train_single_room(
     """
     Run PPO on a single room and periodically dump room-state visualizations.
 
-    Visualized episodes save:
-        - every step snapshot
-        - one score breakdown figure for the whole episode
+    核心改动：
+    - 每 rollout_episodes 个 episode 收集一个批次后再做 PPO 更新，
+      避免只用 4 步数据进行梯度更新导致的高方差问题。
+    - 使用 GAE(lambda) 替代纯蒙特卡洛 return，降低优势估计方差。
     """
     device = torch.device(cfg.device)
     model.to(device)
@@ -191,101 +304,65 @@ def train_single_room(
     best_reward = float("-inf")
     best_model_path = output_dir / "ppo_single_room_best.pt"
 
-    for episode_idx in range(1, cfg.episodes + 1):
-        obs = env.reset()
-        ## 布尔变量，当episode的idx和cfg中设置的visualize_every_episodes的间隔条件满足时为True，表示这个episode需要进行可视化处理。在这个训练循环中，每当visualize_episode为True时，代码会在每一步结束后调用export_episode_snapshot函数
-        visualize_episode = should_visualize_episode(episode_idx, cfg)
-        episode_step_records: list[dict[str, float | int | bool]] = []
-        # if visualize_episode:
-        #     export_episode_snapshot(env, output_dir, episode_idx, 0)
+    last_policy_loss = 0.0
+    last_value_loss = 0.0
+    last_entropy = 0.0
 
-        obs_buffer: list[np.ndarray] = []
-        actions: list[int] = []
-        rewards: list[float] = []
-        old_log_probs: list[float] = []
-        old_values: list[float] = []
-        uniformity_scores_episode: list[float] = []
-        illum_centroid_scores_episode: list[float] = []
-        alignment_scores_episode: list[float] = []
-        wiring_scores_episode: list[float] = []
+    episode_idx = 0
+    while episode_idx < cfg.episodes:
+        # ---- Phase 1: 收集 rollout_episodes 个 episode 的轨迹 ----
+        rollout_obs: list[np.ndarray] = []
+        rollout_actions: list[int] = []
+        rollout_advantages: list[float] = []
+        rollout_returns: list[float] = []
+        rollout_old_log_probs: list[float] = []
 
-        done = False
-        while not done:
-            obs_tensor = torch.from_numpy(obs).unsqueeze(0).to(device=device, dtype=torch.float32)
-            rollout = model.act(obs_tensor, deterministic=False)
-            action = int(rollout["action"].item())
-            next_obs, reward, done, info = env.step(action)
+        # 本批次内所有episode的诊断统计，用于日志记录
+        batch_ep_data: list[dict[str, Any]] = []
 
-            obs_buffer.append(obs)
-            actions.append(action)
-            rewards.append(float(reward))
-            old_log_probs.append(float(rollout["log_prob"].item()))
-            old_values.append(float(rollout["value"].squeeze().item()))
+        episodes_this_batch = min(cfg.rollout_episodes, cfg.episodes - episode_idx)
+        for _ in range(episodes_this_batch):
+            episode_idx += 1
+            ep = _collect_one_episode(env, model, device, episode_idx, cfg, output_dir)
 
-            obs = next_obs
+            # GAE 计算：每个 episode 独立计算，终止状态 last_value=0
+            adv, ret = compute_gae(
+                ep["rewards"],
+                ep["values"],
+                cfg.gamma,
+                cfg.gae_lambda,
+                last_value=0.0,
+            )
+            rollout_obs.extend(ep["obs_list"])
+            rollout_actions.extend(ep["actions"])
+            rollout_advantages.extend(adv.tolist())
+            rollout_returns.extend(ret.tolist())
+            rollout_old_log_probs.extend(ep["log_probs"])
+            batch_ep_data.append(ep)
 
-            breakdown = info["reward_breakdown"]
-            diagnostics = breakdown.diagnostics
-            uniformity_scores_episode.append(float(breakdown.uniformity))
-            illum_centroid_scores_episode.append(float(breakdown.illum_centroid))
-            alignment_scores_episode.append(float(breakdown.rules - breakdown.invalid_action))
-            wiring_scores_episode.append(float(breakdown.wiring))
+        # ---- Phase 2: 对本批次整体做 PPO 更新 ----
+        batch_obs_t = torch.from_numpy(np.stack(rollout_obs)).to(device=device, dtype=torch.float32)
+        batch_actions_t = torch.tensor(rollout_actions, dtype=torch.long, device=device)
+        batch_old_log_probs_t = torch.tensor(rollout_old_log_probs, dtype=torch.float32, device=device)
+        batch_returns_t = torch.tensor(rollout_returns, dtype=torch.float32, device=device)
 
-            if visualize_episode and env.current_step % env.config.target_lamp_count == 0:  ## 每隔visualize_episode的间隔隔episode才会可视化，而且只可视化该episode的最后一步绘制完的结果
-                episode_step_records.append(
-                    {
-                        "step": env.current_step,
-                        "uniformity_score": float(diagnostics.get("uniformity_score", 0.0)),  ## 计算出来的照度均匀的奖励分数
-                        "illum_centroid_score": float(diagnostics.get("illum_centroid_score", 0.0)),
-                        "alignment_score": float(diagnostics.get("alignment_score", 0.0)),
-                        "wiring_score": float(diagnostics.get("wiring_score", 0.0)),
-                        "invalid_penalty": float(diagnostics.get("invalid_penalty", 0.0)),
-                        "uniformity_term": float(breakdown.uniformity),  ## 乘以权重之后的照度均匀奖励的分数
-                        "illum_centroid_term": float(breakdown.illum_centroid),
-                        "alignment_term": float(breakdown.rules - breakdown.invalid_action),
-                        "wiring_term": float(breakdown.wiring),
-                        "step_total": float(reward),
-                    }
-                )
-                export_episode_snapshot(env, output_dir, episode_idx, env.current_step)
+        # 对整个批次的优势做归一化，稳定训练
+        adv_t = torch.tensor(rollout_advantages, dtype=torch.float32, device=device)
+        if adv_t.numel() > 1:
+            adv_t = (adv_t - adv_t.mean()) / (adv_t.std(unbiased=False) + 1e-8)
 
-        returns = discounted_returns(rewards, cfg.gamma).to(device)
-        old_values_tensor = torch.tensor(old_values, dtype=torch.float32, device=device)
-        advantages = returns - old_values_tensor
-        if advantages.numel() > 1:
-            advantages = (advantages - advantages.mean()) / (advantages.std(unbiased=False) + 1e-8)
+        for _ in range(cfg.ppo_epochs):
+            evaluated = model.evaluate_actions(batch_obs_t, batch_actions_t)
+            log_probs_t = evaluated["log_prob"]
+            entropy_t = evaluated["entropy"]
+            values_t = evaluated["value"].squeeze(-1)
 
-        batch_obs = torch.from_numpy(np.stack(obs_buffer)).to(device=device, dtype=torch.float32)
-        batch_actions = torch.tensor(actions, dtype=torch.long, device=device)
-        batch_old_log_probs = torch.tensor(old_log_probs, dtype=torch.float32, device=device)
-
-        last_policy_loss = 0.0
-        last_value_loss = 0.0
-        last_entropy = 0.0
-        ## 实际模型更新的地方，在每个episode结束后进行多轮PPO优化，每轮都使用当前episode的完整轨迹数据来计算损失并更新模型参数。每轮优化中，首先通过模型评估当前批次的观察和动作，得到新的log_prob、entropy和value，然后计算PPO的剪切目标函数(policy_loss)以及值函数的均方误差(value_loss)，再加上熵奖励(entropy_bonus)来构成总损失(loss)。最后进行反向传播和梯度裁剪，并更新模型参数。这个过程会重复cfg.ppo_epochs次，以充分利用当前episode的数据来优化模型。
-        for _ in range(cfg.ppo_epochs): 
-            # 使用更新后的模型输入旧轨迹中的状态，得到当前策略的 logits，并构造策略分布。
-            # 然后用旧轨迹中实际执行过的动作 a_t 计算 log_prob，得到这些旧动作在当前策略下的概率。
-            # 其目的是和旧策略下这些动作的概率做比较，计算 ratio = π_new(a_t|s_t) / π_old(a_t|s_t)。
-
-            # 如果 ratio > 1，说明当前策略相比旧策略更倾向于选择这个旧动作；
-            # 如果该动作的优势 A_t > 0，说明这个动作是有利的，因此训练会倾向于进一步提高它的概率；
-            # 如果 A_t < 0，则训练会倾向于降低它的概率。
-
-            # PPO 实际优化的是剪切后的 surrogate objective，
-            # 并通过最小化 policy_loss = -mean(min(surrogate1, surrogate2))
-            # 来实现“增加有优势动作的概率、减少劣势动作的概率，同时限制策略更新幅度”。
-            evaluated = model.evaluate_actions(batch_obs, batch_actions)
-            log_probs = evaluated["log_prob"]
-            entropy = evaluated["entropy"]
-            values = evaluated["value"].squeeze(-1)
-
-            ratio = torch.exp(log_probs - batch_old_log_probs)
-            surrogate1 = ratio * advantages
-            surrogate2 = torch.clamp(ratio, 1.0 - cfg.clip_eps, 1.0 + cfg.clip_eps) * advantages
+            ratio = torch.exp(log_probs_t - batch_old_log_probs_t)
+            surrogate1 = ratio * adv_t
+            surrogate2 = torch.clamp(ratio, 1.0 - cfg.clip_eps, 1.0 + cfg.clip_eps) * adv_t
             policy_loss = -torch.min(surrogate1, surrogate2).mean()
-            value_loss = nn.functional.mse_loss(values, returns)
-            entropy_bonus = entropy.mean()
+            value_loss = nn.functional.mse_loss(values_t, batch_returns_t)
+            entropy_bonus = entropy_t.mean()
             loss = policy_loss + cfg.value_coef * value_loss - cfg.entropy_coef * entropy_bonus
 
             optimizer.zero_grad()
@@ -297,68 +374,57 @@ def train_single_room(
             last_value_loss = float(value_loss.item())
             last_entropy = float(entropy_bonus.item())
 
-        episode_reward = float(sum(rewards))
-        final_breakdown = env.last_breakdown
-        mst_cost = float(final_breakdown.diagnostics["mst_cost"]) if final_breakdown else 0.0
-        uniformity_score = float(final_breakdown.diagnostics.get("uniformity_score", 0.0)) if final_breakdown else 0.0
-        illum_centroid_score = (
-            float(final_breakdown.diagnostics.get("illum_centroid_score", 0.0)) if final_breakdown else 0.0
-        )
-        alignment_score = float(final_breakdown.diagnostics.get("alignment_score", 0.0)) if final_breakdown else 0.0
-        wiring_score = float(final_breakdown.diagnostics.get("wiring_score", 0.0)) if final_breakdown else 0.0
-        mean_uniformity_score = float(np.mean(uniformity_scores_episode)) if uniformity_scores_episode else 0.0
-        mean_illum_centroid_score = (
-            float(np.mean(illum_centroid_scores_episode)) if illum_centroid_scores_episode else 0.0
-        )
-        mean_alignment_score = float(np.mean(alignment_scores_episode)) if alignment_scores_episode else 0.0
-        mean_wiring_score = float(np.mean(wiring_scores_episode)) if wiring_scores_episode else 0.0
-
-        history.append(
-            {
-                "episode": episode_idx,
-                "episode_reward": episode_reward,
-                "mst_cost": mst_cost,
-                "uniformity_score": uniformity_score,
-                "illum_centroid_score": illum_centroid_score,
-                "alignment_score": alignment_score,
-                "wiring_score": wiring_score,
-                "mean_uniformity_score": mean_uniformity_score,
-                "mean_illum_centroid_score": mean_illum_centroid_score,
-                "mean_alignment_score": mean_alignment_score,
-                "mean_wiring_score": mean_wiring_score,
-                "policy_loss": last_policy_loss,
-                "value_loss": last_value_loss,
-                "entropy": last_entropy,
-            }
-        )
-
-        if episode_reward > best_reward:
-            best_reward = episode_reward
-            torch.save(
+        # ---- Phase 3: 记录本批次每个 episode 的统计 ----
+        for ep in batch_ep_data:
+            ep_reward = ep["episode_reward"]
+            history.append(
                 {
-                    "model_state_dict": model.state_dict(),
-                    "episode": episode_idx,
-                    "episode_reward": episode_reward,
-                    "ppo_config": asdict(cfg),
-                },
-                best_model_path,
+                    "episode": len(history) + 1,
+                    "episode_reward": ep_reward,
+                    "mst_cost": ep["mst_cost"],
+                    "uniformity_score": ep["uniformity_score"],
+                    "illum_centroid_score": ep["illum_centroid_score"],
+                    "alignment_score": ep["alignment_score"],
+                    "wiring_score": ep["wiring_score"],
+                    "mean_uniformity_score": ep["mean_uniformity_score"],
+                    "mean_illum_centroid_score": ep["mean_illum_centroid_score"],
+                    "mean_alignment_score": ep["mean_alignment_score"],
+                    "mean_wiring_score": ep["mean_wiring_score"],
+                    "policy_loss": last_policy_loss,
+                    "value_loss": last_value_loss,
+                    "entropy": last_entropy,
+                }
             )
 
-        if episode_idx % cfg.log_every_episodes == 0 or episode_idx == 1 or episode_idx == cfg.episodes:
+            if ep_reward > best_reward:
+                best_reward = ep_reward
+                torch.save(
+                    {
+                        "model_state_dict": model.state_dict(),
+                        "episode": episode_idx,
+                        "episode_reward": ep_reward,
+                        "ppo_config": asdict(cfg),
+                    },
+                    best_model_path,
+                )
+
+        # ---- Phase 4: 日志输出（以批次末尾episode为代表） ----
+        last_ep = batch_ep_data[-1]
+        if episode_idx % cfg.log_every_episodes == 0 or episode_idx == cfg.episodes:
             recent = history[-cfg.log_every_episodes :]
             moving_reward = sum(item["episode_reward"] for item in recent) / len(recent)
+            batch_size = len(rollout_obs)
             print(
                 f"[train] episode={episode_idx:04d} "
-                f"reward={episode_reward:8.3f} "
-                f"moving_reward={moving_reward:8.3f} "
-                f"uniform={uniformity_score:5.2f} "
-                f"center={illum_centroid_score:5.2f} align={alignment_score:5.2f} "
-                f"wire={wiring_score:5.2f}"
+                f"reward={last_ep['episode_reward']:8.3f} "
+                f"moving={moving_reward:8.3f} "
+                f"batch={batch_size} "
+                f"uniform={last_ep['uniformity_score']:5.2f} "
+                f"center={last_ep['illum_centroid_score']:5.2f} "
+                f"align={last_ep['alignment_score']:5.2f} "
+                f"wire={last_ep['wiring_score']:5.2f} "
+                f"ploss={last_policy_loss:6.4f} vloss={last_value_loss:6.4f}"
             )
-
-        # if visualize_episode and episode_step_records:
-        #     breakdown_path = output_dir / f"episode_{episode_idx:04d}_score_breakdown.png"
-        #     plot_episode_step_breakdown(episode_step_records, breakdown_path, episode_idx=episode_idx)
 
     summary = {
         "ppo_config": asdict(cfg),
