@@ -20,13 +20,14 @@ class RewardConfig:
     Reward hyper-parameters derived from `布局布线优化.md`.
 
     The main formula is:
-        R = 照度均匀性奖励 + 照度场重心奖励 + 对齐奖励 + 布线奖励
+        R = 照度均匀性奖励 + 照度场重心奖励 + 对齐奖励 + 等距性奖励
     """
 
     uniformity_coef: float = 2.0  ## 照度分布均匀性分数的最终系数
     illum_centroid_coef: float = 1.5  ## 照度场重心分数的最终系数
     alignment_coef: float = 1.5  ## 行列对齐分数的最终系数
-    wiring_coef: float = 1.0  ## 布线分数的最终系数
+    equidistance_coef: float = 3.0  ## 等距性分数的最终系数（新增）
+    wiring_coef: float = 0.0  ## 布线分数的最终系数（移除，设为0）
     invalid_action_penalty: float = 10.0  ## 非法动作的惩罚，例如试图在墙上放灯
     light_height_cells: float = 1.0  ## 灯具到计算平面的等效高度，用于反平方衰减模型
     target_lamp_count: int | None = None
@@ -132,7 +133,8 @@ class RewardBreakdown:  ## 是一个数据类，用于详细描述每一步或�
     illum_centroid: float
     uniformity: float
     rules: float
-    wiring: float
+    equidistance: float  # 新增：等距性奖励
+    wiring: float  # 保留但不再使用
     cost: float
     invalid_action: float
     terminal: float
@@ -148,7 +150,8 @@ class RewardCalculator:
         - illuminance uniformity score in [0, 1]
         - illuminance-centroid score in [0, 1]
         - alignment score in [0, 1]
-        - wiring score in [0, 1]
+        - equidistance score in [0, 1] (NEW: 等距性奖励)
+        - wiring score removed (布线成本不再作为奖励)
 
     Terminal evaluation now only contributes diagnostics and success flags.
     """
@@ -165,20 +168,22 @@ class RewardCalculator:
     ) -> RewardBreakdown:
         """Compute the weighted step reward for the current room state."""
         illuminance_map = self.illuminance_map(state)  ## map存储房间每个格子的照度值
-        uniformity_score = self.uniformity_score(state, illuminance_map=illuminance_map)  ## 最低照度与平均照度的比值，衡量照度分布的均匀程度，越接近1越好
+        uniformity_score = self.uniformity_score(state, illuminance_map=illuminance_map)  ## 所有格子照度的方差经过归一化后得到的均匀性分数，越接近1越好
         illum_centroid_score, lamp_center_distance = self.illum_centroid_score(  ## 照度重心和房间几何中心的距离，经过归一化后得到分数，越接近1越好
             state,
             illuminance_map=illuminance_map,
         )
         alignment_score = self.alignment_score(state.lamp_positions)  ## 对齐分数，衡量灯具是否在同一行或同一列，越接近1越好
-        wiring_score, mst_cost = self.wiring_score(state, pair_cost_provider=pair_cost_provider)  ## 布线分数，基于最小生成树的成本与参考成本的比值，越接近1越好
+        equidistance_score = self.equidistance_score(state.lamp_positions)  ## 等距性分数，衡量灯具间距是否均匀，越接近1越好（新增）
+        wiring_score, mst_cost = self.wiring_score(state, pair_cost_provider=pair_cost_provider)  ## 布线分数，保留用于诊断但不计入奖励
         invalid_penalty = -self.config.invalid_action_penalty if invalid_action else 0.0
 
         total = (
             self.config.uniformity_coef * uniformity_score
             + self.config.illum_centroid_coef * illum_centroid_score
             + self.config.alignment_coef * alignment_score
-            + self.config.wiring_coef * wiring_score
+            + self.config.equidistance_coef * equidistance_score
+            + self.config.wiring_coef * wiring_score  # wiring_coef=0.0，不再贡献奖励
             + invalid_penalty
         )
 
@@ -190,6 +195,7 @@ class RewardCalculator:
             "illum_centroid_score": illum_centroid_score,
             "lamp_center_distance": lamp_center_distance,
             "alignment_score": alignment_score,
+            "equidistance_score": equidistance_score,
             "wiring_score": wiring_score,
             "invalid_penalty": invalid_penalty,
         }
@@ -199,6 +205,7 @@ class RewardCalculator:
             illum_centroid=self.config.illum_centroid_coef * illum_centroid_score,
             uniformity=self.config.uniformity_coef * uniformity_score,
             rules=self.config.alignment_coef * alignment_score + invalid_penalty,
+            equidistance=self.config.equidistance_coef * equidistance_score,
             wiring=self.config.wiring_coef * wiring_score,
             cost=0.0,
             invalid_action=invalid_penalty,
@@ -240,6 +247,7 @@ class RewardCalculator:
                 self.config.uniformity_coef * float(step.diagnostics.get("uniformity_score", 0.0))
                 + self.config.illum_centroid_coef * float(step.diagnostics.get("illum_centroid_score", 0.0))
                 + self.config.alignment_coef * float(step.diagnostics.get("alignment_score", 0.0))
+                + self.config.equidistance_coef * float(step.diagnostics.get("equidistance_score", 0.0))
                 + self.config.wiring_coef * float(step.diagnostics.get("wiring_score", 0.0))
             )
             terminal_bonus = self.config.terminal_bonus_coef * quality
@@ -381,6 +389,77 @@ class RewardCalculator:
         row_shared = sum(1 for r, _ in lamp_list if row_counts[r] > 1) / len(lamp_list)
         col_shared = sum(1 for _, c in lamp_list if col_counts[c] > 1) / len(lamp_list)
         return float(0.5 * (row_shared + col_shared))
+
+    def equidistance_score(self, lamps: Iterable[GridPoint]) -> float:
+        """
+        Measure whether lamps are equally spaced (等距性奖励).
+
+        工程师要求：灯具不仅要对齐，还要等距排列，看起来规整美观。
+
+        计算方法：
+        1. 对于同一行的灯具，计算相邻间距的标准差
+        2. 对于同一列的灯具，计算相邻间距的标准差
+        3. 标准差越小，说明间距越均匀，分数越高
+
+        Score in [0, 1]:
+            - 1.0: 所有灯具完全等距排列
+            - 0.0: 灯具间距非常不均匀
+        """
+        lamp_list = list(lamps)
+        if len(lamp_list) < 2:
+            return 1.0
+
+        # 按行分组
+        rows: dict[int, list[int]] = {}
+        for r, c in lamp_list:
+            if r not in rows:
+                rows[r] = []
+            rows[r].append(c)
+
+        # 按列分组
+        cols: dict[int, list[int]] = {}
+        for r, c in lamp_list:
+            if c not in cols:
+                cols[c] = []
+            cols[c].append(r)
+
+        # 计算每行的间距标准差
+        row_spacing_stds = []
+        for row_lamps in rows.values():
+            if len(row_lamps) >= 2:
+                sorted_lamps = sorted(row_lamps)
+                spacings = [sorted_lamps[i+1] - sorted_lamps[i] for i in range(len(sorted_lamps)-1)]
+                if spacings:
+                    std = float(np.std(spacings))
+                    mean = float(np.mean(spacings))
+                    # 归一化标准差：std / mean，避免不同尺度的影响
+                    normalized_std = std / max(mean, 1.0)
+                    row_spacing_stds.append(normalized_std)
+
+        # 计算每列的间距标准差
+        col_spacing_stds = []
+        for col_lamps in cols.values():
+            if len(col_lamps) >= 2:
+                sorted_lamps = sorted(col_lamps)
+                spacings = [sorted_lamps[i+1] - sorted_lamps[i] for i in range(len(sorted_lamps)-1)]
+                if spacings:
+                    std = float(np.std(spacings))
+                    mean = float(np.mean(spacings))
+                    normalized_std = std / max(mean, 1.0)
+                    col_spacing_stds.append(normalized_std)
+
+        # 如果没有任何行或列有多个灯具，返回中等分数
+        if not row_spacing_stds and not col_spacing_stds:
+            return 0.5
+
+        # 计算平均归一化标准差
+        all_stds = row_spacing_stds + col_spacing_stds
+        avg_normalized_std = float(np.mean(all_stds))
+
+        # 转换为分数：标准差越小，分数越高
+        # 使用 1 / (1 + std) 映射到 [0, 1]
+        score = 1.0 / (1.0 + avg_normalized_std)
+        return float(np.clip(score, 0.0, 1.0))
 
     def wiring_score(
         self,

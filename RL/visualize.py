@@ -208,6 +208,63 @@ def _load_font(font_size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
                 continue
     return ImageFont.load_default()
 
+
+def save_padded_room_image(
+    original_matrix: np.ndarray,
+    padded_size: int,
+    output_path: str | Path,
+    *,
+    cell_size: int = DEFAULT_CELL_SIZE,
+    room_name: str | None = None,
+) -> Path:
+    """
+    Save a visualization of the room after padding to padded_size.
+
+    Padding areas are rendered in red (same as invalid/wall areas).
+
+    Args:
+        original_matrix: The original room matrix (H x W)
+        padded_size: Target padded size (e.g., 32)
+        output_path: Where to save the image
+        cell_size: Size of each grid cell in pixels
+        room_name: Optional room name for the title
+
+    Returns:
+        Path to the saved image
+    """
+    original_matrix = np.asarray(original_matrix, dtype=np.int32)
+    grid_rows, grid_cols = original_matrix.shape
+
+    if grid_rows > padded_size or grid_cols > padded_size:
+        raise ValueError(
+            f"Room shape {original_matrix.shape} exceeds padded size {padded_size}."
+        )
+
+    # Calculate offsets (same logic as in env.py)
+    row_offset = (padded_size - grid_rows) // 2
+    col_offset = (padded_size - grid_cols) // 2
+
+    # Create padded matrix filled with 0 (invalid/wall, will be red)
+    padded_matrix = np.zeros((padded_size, padded_size), dtype=np.int32)
+
+    # Copy original room into the center
+    padded_matrix[
+        row_offset:row_offset + grid_rows,
+        col_offset:col_offset + grid_cols
+    ] = original_matrix
+
+    # Generate title
+    title = f"{room_name or 'Room'} (Padded to {padded_size}x{padded_size})"
+
+    # Render and save
+    output = Path(output_path)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    image = render_room_grid(padded_matrix, cell_size=cell_size, room_name=title)
+    ok = cv2.imwrite(str(output), image)
+    if not ok:
+        raise RuntimeError(f"Failed to write image to {output}")
+    return output
+
 def plot_episode_step_breakdown(
     step_records: list[dict[str, float | int | bool]],
     output_path: Path,
@@ -262,8 +319,8 @@ def plot_episode_step_breakdown(
 
 def main() -> None:
     repo_root = Path(__file__).resolve().parents[1]
-    json_path = repo_root / "RL" / "test_room" / "test_room.json"
-    output_dir = repo_root / "RL" / "test_room"
+    json_path = repo_root / "RL" / "test_room" / "origin_room" / "unregular.json"
+    output_dir = repo_root / "RL" / "test_room" / "origin_room"
     written = export_rooms_from_json(json_path, output_dir)
     for path in written:
         print(path)

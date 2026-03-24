@@ -59,10 +59,10 @@ class UpBlock(nn.Module):
 class EncoderFeatures:
     """Shared encoder outputs used by both actor and critic decoders."""
 
-    stage1: Tensor  # [B, 32, 32, 32]
-    stage2: Tensor  # [B, 64, 16, 16]
-    stage3: Tensor  # [B, 128, 8, 8]
-    stage4: Tensor  # [B, 256, 4, 4]
+    stage1: Tensor  # [B, 32, H, W]
+    stage2: Tensor  # [B, 64, H/2, W/2]
+    stage3: Tensor  # [B, 128, H/4, W/4]
+    stage4: Tensor  # [B, 256, H/8, W/8]
 
 
 class SharedEncoder(nn.Module):
@@ -70,22 +70,24 @@ class SharedEncoder(nn.Module):
     Shared U-Net encoder for the PPO actor-critic.
 
     Input shape:
-        [B, 5, 32, 32]
+        [B, 6, H, W] where H and W are padded_size (e.g., 32, 48, 64)
         channels:
             0: placeable_mask  — 当前仍可放灯的格子
             1: placed_lamps    — 已放灯位置
             2: switch_mask     — 开关位置
-            3: lamp_progress   — 已放灯数/目标灯数，全图广播标量平面
+            3: lamp_progress   — 已放灯数/目标灯数，全图广播标量平面（动态）
                                  关键：让网络感知"当前第几步"，
                                  推断"剩余灯应放在哪个区域互补"
             4: room_mask       — 房间内部区域（墙外为0），辅助空间边界感知
+            5: target_lamp_count — 目标灯具数量，全图广播标量平面（固定，条件输入）
+                                   让模型知道"总共要放多少灯"，从而选择正确的布局策略
 
     Output:
         EncoderFeatures with skip tensors for the policy decoder and bottleneck
         features for both policy/value heads.
     """
 
-    def __init__(self, in_channels: int = 5) -> None:
+    def __init__(self, in_channels: int = 6) -> None:
         super().__init__()
         self.stage1 = ConvBlock(in_channels, 32)
         self.pool1 = nn.MaxPool2d(2)
@@ -111,9 +113,9 @@ class PolicyDecoder(nn.Module):
     Actor decoder.
 
     Produces:
-        - 1024 spatial logits for 32x32 lamp-placement actions
+        - H*W spatial logits for H×W lamp-placement actions (e.g., 32×32=1024 or 48×48=2304)
         - 1 stop-action logit
-        - concatenated logits of shape [B, 1025]
+        - concatenated logits of shape [B, H*W+1]
 
     Invalid actions are masked to a very negative value before sampling.
     """
@@ -143,7 +145,7 @@ class PolicyDecoder(nn.Module):
             - optionally placed lamp mask == 0
 
         Returns:
-            Boolean mask of shape [B, 1024], where True means action is valid.
+            Boolean mask of shape [B, H*W], where True means action is valid.
         """
 
         if obs.shape[1] < 2:
@@ -221,7 +223,7 @@ class LightingActorCritic(nn.Module):
         obs -> shared encoder -> policy logits + scalar value
     """
 
-    def __init__(self, in_channels: int = 5, target_lamp_count: int | None = None) -> None:
+    def __init__(self, in_channels: int = 6, target_lamp_count: int | None = None) -> None:
         super().__init__()
         self.encoder = SharedEncoder(in_channels=in_channels)
         self.policy_decoder = PolicyDecoder(target_lamp_count=target_lamp_count)
@@ -260,7 +262,7 @@ class LightingActorCritic(nn.Module):
             logits: [B, 1025]
         """
 
-        logits, values = self(obs)  ## obs经过共享编码器和两个解码器，得到动作的logits和状态值。logits的形状是[B, 1025]，其中前1024个元素对应32x32网格的放置动作，最后一个元素对应停止动作。values的形状是[B, 1]，表示每个状态的估计值。
+        logits, values = self(obs)  ## obs经过共享编码器和两个解码器，得到动作的logits和状态值。logits的形状是[B, H*W+1]，其中前H*W个元素对应H×W网格的放置动作（如32×32=1024或48×48=2304），最后一个元素对应停止动作。values的形状是[B, 1]，表示每个状态的估计值。
         dist = torch.distributions.Categorical(logits=logits)  ## dist是一个Categorical分布对象，使用logits参数来定义离散动作空间的概率分布。这个分布对象可以用来采样动作或者计算动作的对数概率。
         if deterministic:  ## 如果是确定性策略，选择概率最大的动作
             action = torch.argmax(logits, dim=1)
@@ -293,13 +295,18 @@ class LightingActorCritic(nn.Module):
 
 def _demo() -> None:
     """Quick shape smoke test for local debugging."""
-    model = LightingActorCritic(target_lamp_count=4)  # in_channels=5 by default
-    obs = torch.zeros(2, 5, 32, 32)
+    padded_size = 48  # Test with 48x48 instead of 32x32
+    model = LightingActorCritic(target_lamp_count=4)  # in_channels=6 by default
+    obs = torch.zeros(2, 6, padded_size, padded_size)  # 6 channels now
     obs[:, 0] = 1.0  # ch0: whole room placeable
     obs[:, 4] = 1.0  # ch4: whole room interior
+    obs[:, 5] = 0.2  # ch5: target_lamp_count normalized (e.g., 4/20)
     logits, values = model(obs)
-    print("policy logits:", tuple(logits.shape))
-    print("value:", tuple(values.shape))
+    print(f"Input shape: {tuple(obs.shape)}")
+    print(f"Policy logits shape: {tuple(logits.shape)} (expected: [2, {padded_size*padded_size + 1}])")
+    print(f"Value shape: {tuple(values.shape)}")
+    assert logits.shape == (2, padded_size * padded_size + 1), f"Expected logits shape [2, {padded_size*padded_size + 1}], got {logits.shape}"
+    print("✓ Model works with 6 channels and dynamic padded_size!")
 
 
 if __name__ == "__main__":

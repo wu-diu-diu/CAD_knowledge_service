@@ -17,7 +17,7 @@ from torch import nn
 from env import EnvironmentConfig, SingleRoomLightingEnv
 from model import LightingActorCritic
 from reward import RewardConfig
-from visualize import plot_episode_step_breakdown
+from visualize import plot_episode_step_breakdown, save_padded_room_image
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -49,7 +49,7 @@ class PPOConfig:
 class RoomConfig:
     """Room-selection settings loaded from config.yaml."""
 
-    json_path: str = "RL/test_room/test_room.json"
+    json_path: str = "RL/test_room/origin_room/test_room.json"
     room_name: str = "办公室1"
 
 
@@ -235,6 +235,7 @@ def _collect_one_episode(
     uniformity_scores: list[float] = []
     illum_centroid_scores: list[float] = []
     alignment_scores: list[float] = []
+    equidistance_scores: list[float] = []
     wiring_scores: list[float] = []
 
     done = False
@@ -256,6 +257,7 @@ def _collect_one_episode(
         uniformity_scores.append(float(breakdown.uniformity))
         illum_centroid_scores.append(float(breakdown.illum_centroid))
         alignment_scores.append(float(breakdown.rules - breakdown.invalid_action))
+        equidistance_scores.append(float(breakdown.equidistance))
         wiring_scores.append(float(breakdown.wiring))
 
         if visualize_episode and env.current_step % env.config.target_lamp_count == 0:
@@ -274,10 +276,12 @@ def _collect_one_episode(
         "uniformity_score": float(final_breakdown.diagnostics.get("uniformity_score", 0.0)) if final_breakdown else 0.0,
         "illum_centroid_score": float(final_breakdown.diagnostics.get("illum_centroid_score", 0.0)) if final_breakdown else 0.0,
         "alignment_score": float(final_breakdown.diagnostics.get("alignment_score", 0.0)) if final_breakdown else 0.0,
+        "equidistance_score": float(final_breakdown.diagnostics.get("equidistance_score", 0.0)) if final_breakdown else 0.0,
         "wiring_score": float(final_breakdown.diagnostics.get("wiring_score", 0.0)) if final_breakdown else 0.0,
         "mean_uniformity_score": float(np.mean(uniformity_scores)) if uniformity_scores else 0.0,
         "mean_illum_centroid_score": float(np.mean(illum_centroid_scores)) if illum_centroid_scores else 0.0,
         "mean_alignment_score": float(np.mean(alignment_scores)) if alignment_scores else 0.0,
+        "mean_equidistance_score": float(np.mean(equidistance_scores)) if equidistance_scores else 0.0,
         "mean_wiring_score": float(np.mean(wiring_scores)) if wiring_scores else 0.0,
     }
 
@@ -385,10 +389,12 @@ def train_single_room(
                     "uniformity_score": ep["uniformity_score"],
                     "illum_centroid_score": ep["illum_centroid_score"],
                     "alignment_score": ep["alignment_score"],
+                    "equidistance_score": ep["equidistance_score"],
                     "wiring_score": ep["wiring_score"],
                     "mean_uniformity_score": ep["mean_uniformity_score"],
                     "mean_illum_centroid_score": ep["mean_illum_centroid_score"],
                     "mean_alignment_score": ep["mean_alignment_score"],
+                    "mean_equidistance_score": ep["mean_equidistance_score"],
                     "mean_wiring_score": ep["mean_wiring_score"],
                     "policy_loss": last_policy_loss,
                     "value_loss": last_value_loss,
@@ -422,6 +428,7 @@ def train_single_room(
                 f"uniform={last_ep['uniformity_score']:5.2f} "
                 f"center={last_ep['illum_centroid_score']:5.2f} "
                 f"align={last_ep['alignment_score']:5.2f} "
+                f"equidist={last_ep['equidistance_score']:5.2f} "
                 f"wire={last_ep['wiring_score']:5.2f} "
                 f"ploss={last_policy_loss:6.4f} vloss={last_value_loss:6.4f}"
             )
@@ -471,11 +478,222 @@ def evaluate_greedy_policy(
             float(final_breakdown.diagnostics.get("illum_centroid_score", 0.0)) if final_breakdown else 0.0
         ),
         "alignment_score": float(final_breakdown.diagnostics.get("alignment_score", 0.0)) if final_breakdown else 0.0,
+        "equidistance_score": float(final_breakdown.diagnostics.get("equidistance_score", 0.0)) if final_breakdown else 0.0,
         "wiring_score": float(final_breakdown.diagnostics.get("wiring_score", 0.0)) if final_breakdown else 0.0,
     }
 
 
+def load_room_dataset(room_dir: Path) -> list[dict]:
+    """Load all room JSON files from a directory."""
+    rooms = []
+    json_files = list(room_dir.glob("*.json"))
+
+    for json_file in json_files:
+        with json_file.open('r', encoding='utf-8') as f:
+            room_data = json.load(f)
+            # Support both single-room and multi-room formats
+            if isinstance(room_data, dict):
+                if 'matrix' in room_data:
+                    # Single room format
+                    rooms.append(room_data)
+                else:
+                    # Multi-room format (like test_room.json)
+                    rooms.extend(room_data.values())
+
+    print(f"[train] Loaded {len(rooms)} rooms from {room_dir}")
+    return rooms
+
+
+def train_multi_room(
+    room_dataset: list[dict],
+    model: LightingActorCritic,
+    ppo_cfg: PPOConfig,
+    env_cfg: EnvironmentConfig,
+    output_dir: Path,
+) -> dict:
+    """Train PPO model on multiple rooms with random sampling."""
+    device = torch.device(ppo_cfg.device if torch.cuda.is_available() else "cpu")
+    model.to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=ppo_cfg.learning_rate)
+
+    history = []
+    best_reward = float("-inf")
+    best_episode = 0
+
+    rollout_buffer = []
+
+    for episode in range(1, ppo_cfg.episodes + 1):
+        # Randomly select a room for this episode
+        room_data = random.choice(room_dataset)
+
+        # Create environment for this room
+        # Update target_lamp_count from room data
+        current_env_cfg = EnvironmentConfig(
+            padded_size=env_cfg.padded_size,
+            max_steps=env_cfg.max_steps,
+            target_lamp_count=room_data['lamp']['lamp_count'],
+            turn_penalty=env_cfg.turn_penalty,
+            reward_config=env_cfg.reward_config,
+        )
+        current_env_cfg.reward_config.target_lamp_count = room_data['lamp']['lamp_count']
+
+        # Create temporary environment
+        env = SingleRoomLightingEnv(room_data, config=current_env_cfg)
+
+        # Run one episode
+        obs = env.reset()
+        done = False
+        episode_rewards = []
+        episode_states = []
+        episode_actions = []
+        episode_log_probs = []
+        episode_values = []
+
+        while not done:
+            obs_tensor = torch.from_numpy(obs).unsqueeze(0).to(device=device, dtype=torch.float32)
+            rollout = model.act(obs_tensor, deterministic=False)
+
+            action = int(rollout["action"].item())
+            log_prob = float(rollout["log_prob"].item())
+            value = float(rollout["value"].item())
+
+            episode_states.append(obs)
+            episode_actions.append(action)
+            episode_log_probs.append(log_prob)
+            episode_values.append(value)
+
+            obs, reward, done, _ = env.step(action)
+            episode_rewards.append(float(reward))
+
+        # Compute advantages and returns
+        advantages, returns = compute_gae(
+            episode_rewards,
+            episode_values,
+            ppo_cfg.gamma,
+            ppo_cfg.gae_lambda,
+            last_value=0.0,
+        )
+
+        # Add to rollout buffer
+        rollout_buffer.append({
+            "states": episode_states,
+            "actions": episode_actions,
+            "log_probs": episode_log_probs,
+            "advantages": advantages,
+            "returns": returns,
+            "room_name": room_data['room_name'],
+        })
+
+        episode_reward = sum(episode_rewards)
+
+        # Record history
+        final_breakdown = env.last_breakdown
+        history.append({
+            "episode": episode,
+            "episode_reward": episode_reward,
+            "room_name": room_data['room_name'],
+            "room_type": room_data.get('room_type', 'unknown'),
+            "lamp_count": int(final_breakdown.diagnostics["lamp_count"]) if final_breakdown else 0,
+            "uniformity_score": float(final_breakdown.diagnostics.get("uniformity_score", 0.0)) if final_breakdown else 0.0,
+            "illum_centroid_score": float(final_breakdown.diagnostics.get("illum_centroid_score", 0.0)) if final_breakdown else 0.0,
+            "alignment_score": float(final_breakdown.diagnostics.get("alignment_score", 0.0)) if final_breakdown else 0.0,
+            "wiring_score": float(final_breakdown.diagnostics.get("wiring_score", 0.0)) if final_breakdown else 0.0,
+        })
+
+        if episode_reward > best_reward:
+            best_reward = episode_reward
+            best_episode = episode
+            torch.save(model.state_dict(), output_dir / "ppo_multi_room_best.pt")
+
+        # PPO update when buffer is full
+        if len(rollout_buffer) >= ppo_cfg.rollout_episodes:
+            ppo_update_multi_room(model, optimizer, rollout_buffer, ppo_cfg, device)
+            rollout_buffer.clear()
+
+        # Logging
+        if episode % ppo_cfg.log_every_episodes == 0:
+            recent = history[-ppo_cfg.log_every_episodes:]
+            avg_reward = sum(h["episode_reward"] for h in recent) / len(recent)
+            avg_uniformity = sum(h["uniformity_score"] for h in recent) / len(recent)
+            print(f"[train] episode={episode:04d} avg_reward={avg_reward:7.2f} "
+                  f"avg_uniformity={avg_uniformity:.3f} best={best_reward:7.2f}")
+
+    return {
+        "history": history,
+        "best_reward": best_reward,
+        "best_episode": best_episode,
+        "total_episodes": ppo_cfg.episodes,
+    }
+
+
+def ppo_update_multi_room(
+    model: LightingActorCritic,
+    optimizer: torch.optim.Optimizer,
+    rollout_buffer: list[dict],
+    ppo_cfg: PPOConfig,
+    device: torch.device,
+) -> None:
+    """PPO update using collected rollouts from multiple rooms."""
+    # Flatten all rollouts
+    all_states = []
+    all_actions = []
+    all_old_log_probs = []
+    all_advantages = []
+    all_returns = []
+
+    for rollout in rollout_buffer:
+        all_states.extend(rollout["states"])
+        all_actions.extend(rollout["actions"])
+        all_old_log_probs.extend(rollout["log_probs"])
+        all_advantages.extend(rollout["advantages"].tolist())
+        all_returns.extend(rollout["returns"].tolist())
+
+    # Convert to tensors
+    states_tensor = torch.from_numpy(np.array(all_states)).to(device=device, dtype=torch.float32)
+    actions_tensor = torch.tensor(all_actions, dtype=torch.long, device=device)
+    old_log_probs_tensor = torch.tensor(all_old_log_probs, dtype=torch.float32, device=device)
+    advantages_tensor = torch.tensor(all_advantages, dtype=torch.float32, device=device)
+    returns_tensor = torch.tensor(all_returns, dtype=torch.float32, device=device)
+
+    # Normalize advantages
+    advantages_tensor = (advantages_tensor - advantages_tensor.mean()) / (advantages_tensor.std() + 1e-8)
+
+    # PPO epochs
+    for _ in range(ppo_cfg.ppo_epochs):
+        eval_result = model.evaluate_actions(states_tensor, actions_tensor)
+        new_log_probs = eval_result["log_prob"]
+        entropy = eval_result["entropy"]
+        values = eval_result["value"].squeeze(-1)
+
+        # Policy loss
+        ratio = torch.exp(new_log_probs - old_log_probs_tensor)
+        surr1 = ratio * advantages_tensor
+        surr2 = torch.clamp(ratio, 1.0 - ppo_cfg.clip_eps, 1.0 + ppo_cfg.clip_eps) * advantages_tensor
+        policy_loss = -torch.min(surr1, surr2).mean()
+
+        # Value loss
+        value_loss = ((values - returns_tensor) ** 2).mean()
+
+        # Entropy bonus
+        entropy_loss = -entropy.mean()
+
+        # Total loss
+        loss = policy_loss + ppo_cfg.value_coef * value_loss + ppo_cfg.entropy_coef * entropy_loss
+
+        optimizer.zero_grad()
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), ppo_cfg.grad_clip_norm)
+        optimizer.step()
+
+
 def main() -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Train PPO model on room layout tasks')
+    parser.add_argument('--room_dir', type=str, default=None, help='Directory containing room JSON files for multi-room training')
+    parser.add_argument('--episodes', type=int, default=None, help='Override number of training episodes')
+    args = parser.parse_args()
+
     repo_root = Path(__file__).resolve().parents[1]
     config_path = repo_root / "RL" / "config.yaml"
     config_payload = load_yaml_config(config_path)
@@ -485,6 +703,8 @@ def main() -> None:
     shutil.copy2(config_path, output_dir / "config.yaml")
 
     ppo_cfg = PPOConfig(**config_payload.get("training", {}))
+    if args.episodes:
+        ppo_cfg.episodes = args.episodes
     set_seed(ppo_cfg.seed)
 
     reward_cfg = RewardConfig(**config_payload.get("reward", {}))
@@ -493,17 +713,71 @@ def main() -> None:
         **config_payload.get("environment", {}),
         reward_config=reward_cfg,
     )
-    reward_cfg.target_lamp_count = env_cfg.target_lamp_count
 
-    env = SingleRoomLightingEnv.from_json(
-        repo_root / room_cfg.json_path,
-        room_name=room_cfg.room_name,
-        config=env_cfg,
-    )
-    model = LightingActorCritic(target_lamp_count=env_cfg.target_lamp_count)
+    # Check if multi-room training is requested
+    if args.room_dir:
+        # Multi-room training mode
+        room_dataset = load_room_dataset(Path(args.room_dir))
 
-    summary = train_single_room(env, model, ppo_cfg, output_dir)
-    summary["greedy_evaluation"] = evaluate_greedy_policy(env, model, output_dir)
+        if not room_dataset:
+            raise ValueError(f"No rooms found in {args.room_dir}")
+
+        # Use dynamic target_lamp_count (will be set per room)
+        model = LightingActorCritic(target_lamp_count=None)
+
+        print(f"[train] Starting multi-room training with {len(room_dataset)} rooms")
+        summary = train_multi_room(room_dataset, model, ppo_cfg, env_cfg, output_dir)
+        summary["training_mode"] = "multi_room"
+        summary["num_rooms"] = len(room_dataset)
+
+        # Evaluate on a sample of rooms
+        print("[train] Evaluating on sample rooms...")
+        sample_rooms = random.sample(room_dataset, min(10, len(room_dataset)))
+        eval_results = []
+        for room_data in sample_rooms:
+            current_env_cfg = EnvironmentConfig(
+                padded_size=env_cfg.padded_size,
+                max_steps=env_cfg.max_steps,
+                target_lamp_count=room_data['lamp']['lamp_count'],
+                turn_penalty=env_cfg.turn_penalty,
+                reward_config=reward_cfg,
+            )
+            current_env_cfg.reward_config.target_lamp_count = room_data['lamp']['lamp_count']
+            env = SingleRoomLightingEnv(room_data, config=current_env_cfg)
+            eval_result = evaluate_greedy_policy(env, model, output_dir)
+            eval_result['room_name'] = room_data['room_name']
+            eval_results.append(eval_result)
+
+        summary["sample_evaluations"] = eval_results
+        summary_filename = "ppo_multi_room_training_summary.json"
+    else:
+        # Single-room training mode (original behavior)
+        reward_cfg.target_lamp_count = env_cfg.target_lamp_count
+
+        env = SingleRoomLightingEnv.from_json(
+            repo_root / room_cfg.json_path,
+            room_name=room_cfg.room_name,
+            config=env_cfg,
+        )
+
+        # Save padded room visualization
+        padded_room_path = output_dir / "padded_room.png"
+        save_padded_room_image(
+            env.original_matrix,
+            env.padded_size,
+            padded_room_path,
+            cell_size=32,
+            room_name=env.room_name,
+        )
+        print(f"[train] padded room visualization saved to {padded_room_path}")
+
+        model = LightingActorCritic(target_lamp_count=env_cfg.target_lamp_count)
+
+        summary = train_single_room(env, model, ppo_cfg, output_dir)
+        summary["greedy_evaluation"] = evaluate_greedy_policy(env, model, output_dir)
+        summary["training_mode"] = "single_room"
+        summary_filename = "ppo_single_room_training_summary.json"
+
     summary["output_dir"] = str(output_dir)
     summary["config_path"] = str(config_path)
 
@@ -515,7 +789,7 @@ def main() -> None:
     plot_score_trends(summary["history"], score_trend_path)
     summary["score_trend_path"] = str(score_trend_path)
 
-    summary_path = output_dir / "ppo_single_room_training_summary.json"
+    summary_path = output_dir / summary_filename
     with summary_path.open("w", encoding="utf-8") as f:
         json.dump(summary, f, ensure_ascii=False, indent=2)
 
@@ -524,7 +798,6 @@ def main() -> None:
     print(f"[train] score trends saved to {score_trend_path}")
     print(f"[train] summary saved to {summary_path}")
     print(f"[train] best_reward={summary['best_reward']:.3f}")
-    print(f"[train] greedy_eval={summary['greedy_evaluation']}")
 
 
 if __name__ == "__main__":

@@ -22,3 +22,8 @@ cad_sessions/
 chat_output/
 RL/output/
 RL/test_room/
+RL/generated_rooms/*.jsons
+RL/GA/
+embed_model/
+eval/qa_dataset.json
+eval/results.json

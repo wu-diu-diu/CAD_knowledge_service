@@ -19,7 +19,8 @@ from visualize import save_room_grid_image
 
 
 GridPoint = tuple[int, int]
-STOP_ACTION_INDEX = 32 * 32
+# STOP_ACTION_INDEX is now computed dynamically based on padded_size
+# It will be set as an instance attribute in __init__
 
 
 @dataclass
@@ -38,14 +39,17 @@ class SingleRoomLightingEnv:
     Single-room PPO environment for scheme 1 in `布局布线优化.md`.
 
     State:
-        32x32x3 tensor with channels
+        observation tensor with 6 channels
             0: current placeable mask
             1: placed lamps
             2: switch
+            3: lamp progress (dynamic)
+            4: room mask
+            5: target lamp count (conditional input, fixed)
 
     Actions:
-        0..1023 -> place a lamp at the flattened 32x32 cell
-        1024    -> stop
+        0..H*W-1 -> place a lamp at the flattened H×W cell
+        H*W      -> stop
     """
 
     def __init__(self, room_data: dict[str, Any], config: EnvironmentConfig | None = None) -> None:
@@ -61,6 +65,7 @@ class SingleRoomLightingEnv:
         self.original_matrix = np.asarray(room_data["matrix"], dtype=np.int32)
         self.grid_rows, self.grid_cols = self.original_matrix.shape
         self.padded_size = self.config.padded_size
+        self.stop_action_index = self.padded_size * self.padded_size  # Dynamic stop action index
         if self.grid_rows > self.padded_size or self.grid_cols > self.padded_size:
             raise ValueError(
                 f"Room {self.room_name} shape {self.original_matrix.shape} exceeds padded size {self.padded_size}."
@@ -119,7 +124,7 @@ class SingleRoomLightingEnv:
 
     def observation(self) -> np.ndarray:
         """
-        Build the 32x32x5 observation tensor expected by the actor-critic.
+        Build the observation tensor expected by the actor-critic.
 
         Channels:
             0: current placeable mask（当前仍可放灯的格子，已放过灯的格子为0）
@@ -129,19 +134,26 @@ class SingleRoomLightingEnv:
                让网络感知"当前是第几步"，从而推断"剩余灯应放在哪个区域互补"
             4: room mask（房间内部区域，包括门、开关、已放灯；墙外为0）
                让网络区分房间边界与可放区域，辅助空间感知
+            5: target lamp count（目标灯具数量，条件输入，固定不变）
+               让模型知道"总共要放多少灯"，从而在第一步就能选择正确的布局策略
+               例如：1个灯→中心，4个灯→2x2网格，9个灯→3x3网格
         """
-        obs = np.zeros((5, self.padded_size, self.padded_size), dtype=np.float32)
+        obs = np.zeros((6, self.padded_size, self.padded_size), dtype=np.float32)
         sl_r = slice(self.row_offset, self.row_offset + self.grid_rows)
         sl_c = slice(self.col_offset, self.col_offset + self.grid_cols)
         current_placeable = self.original_placeable_mask & ~self.original_lamp_mask
         obs[0, sl_r, sl_c] = current_placeable.astype(np.float32)
         obs[1, sl_r, sl_c] = self.original_lamp_mask.astype(np.float32)
         obs[2, sl_r, sl_c] = self.original_switch_mask.astype(np.float32)
-        # ch3: 放灯进度，归一化到 [0, 1]，全图广播为常数平面
+        # ch3: 放灯进度，归一化到 [0, 1]，全图广播为常数平面（动态变化）
         progress = self.lamp_count / max(self.config.target_lamp_count, 1)
         obs[3, sl_r, sl_c] = progress
         # ch4: 房间内部掩码（墙外为0，房间内全为1）
         obs[4, sl_r, sl_c] = self.original_room_mask.astype(np.float32)
+        # ch5: 目标灯具数量，归一化到 [0, 1]，全图广播为常数平面（固定不变，条件输入）
+        max_possible = int(np.sum(self.original_placeable_mask))  # 可放置区域的格子数
+        target_normalized = self.config.target_lamp_count / max(max_possible, 1)
+        obs[5, sl_r, sl_c] = target_normalized
         return obs
 
     def step(self, action: int) -> tuple[np.ndarray, float, bool, dict[str, Any]]:
@@ -154,7 +166,7 @@ class SingleRoomLightingEnv:
             raise RuntimeError("Environment is done. Call reset() before stepping again.")
 
         invalid_action = False
-        stop = action == STOP_ACTION_INDEX  ## 如果action等于1024，表示策略模型输出的1024维的分布中，停止这个动作的概率最高，而且停止这个动作的索引就是1024，所以当action等于1024时，智能体选择了停止布局的动作，此时环境会进入终局状态，计算终局奖励并结束当前轮次的训练。
+        stop = action == self.stop_action_index  ## 如果action等于stop_action_index，表示策略模型输出的分布中，停止这个动作的概率最高，所以当action等于stop_action_index时，智能体选择了停止布局的动作，此时环境会进入终局状态，计算终局奖励并结束当前轮次的训练。
 
         if stop:
             if self.lamp_count < self.config.target_lamp_count:

@@ -14,7 +14,7 @@ import yaml
 
 from env import EnvironmentConfig, SingleRoomLightingEnv
 from reward import RewardBreakdown, RewardConfig, RoomState
-from visualize import save_room_grid_image
+from visualize import save_room_grid_image, save_padded_room_image
 
 
 matplotlib.use("Agg")
@@ -391,7 +391,7 @@ def main() -> None:
     )
     reward_cfg.target_lamp_count = env_cfg.target_lamp_count
 
-    output_dir = create_timestamped_output_dir(repo_root / "RL" / "output")
+    output_dir = create_timestamped_output_dir(repo_root / "RL" / "GA")
     shutil.copy2(config_path, output_dir / "config.yaml")
     set_seed(ga_config.seed)
 
@@ -400,6 +400,18 @@ def main() -> None:
         room_name=room_cfg.room_name,
         config=env_cfg,
     )
+
+    # Save padded room visualization
+    padded_room_path = output_dir / "padded_room.png"
+    save_padded_room_image(
+        env.original_matrix,
+        env.padded_size,
+        padded_room_path,
+        cell_size=32,
+        room_name=env.room_name,
+    )
+    print(f"[ga] padded room visualization saved to {padded_room_path}")
+
     optimizer = GALayoutOptimizer(env=env, ga_config=ga_config, output_dir=output_dir)
     summary = optimizer.run()
     summary["config_path"] = str(config_path)

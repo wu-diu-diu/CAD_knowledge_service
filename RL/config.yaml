@@ -1,5 +1,5 @@
 training:
-  episodes: 3000
+  episodes: 3500
   gamma: 0.99
   gae_lambda: 0.95        # GAE lambda，平衡偏差与方差
   learning_rate: 0.0003
@@ -16,24 +16,25 @@ training:
   reward_curve_moving_window: 20
 
 environment:
-  padded_size: 32
+  padded_size: 48  # 增大以容纳35x33的不规则房间
   max_steps: 16
-  target_lamp_count: 8  ## 试试6个灯具
+  target_lamp_count: 6  ## 试试6个灯具
   turn_penalty: 0.2
 
 reward:
-  uniformity_coef: 3.0        # 提高：均匀性是主要优化目标
-  illum_centroid_coef: 3.5    # 适当降低：与均匀性正相关，不需要过高权重
-  alignment_coef: 1.5         # 保持
-  wiring_coef: 0.3            # 修复：原来0.01导致布线信号被完全淹没
+  uniformity_coef: 2.0        # 照度均匀性（次要）
+  illum_centroid_coef: 2.0    # 照度重心（次要）
+  alignment_coef: 1.0         # 提高：对齐性（重要）
+  equidistance_coef: 2.0      # 新增：等距性（最重要，工程师首要关注）
+  wiring_coef: 0.0            # 移除：布线成本不再作为奖励
   invalid_action_penalty: 10.0
   light_height_cells: 6.0     # 修复：原来=1导致衰减过陡，任何布局uniformity都<0.3；
                               # 19x22房间短边≈19格，灯高≈6格是合理物理比例
-  terminal_bonus_coef: 5.0    # 新增：终局质量放大系数
+  terminal_bonus_coef: 5.0    # 终局质量放大系数
 
 room:
-  json_path: "RL/test_room/test_room.json"
-  room_name: "办公室1"
+  json_path: "RL/test_room/origin_room/unregular.json"
+  room_name: "热量室准备间"
 
 ga:
   population_size: 64
