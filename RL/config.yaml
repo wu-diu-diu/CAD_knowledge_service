@@ -1,5 +1,5 @@
 training:
-  episodes: 3500
+  episodes: 8000
   gamma: 0.99
   gae_lambda: 0.95        # GAE lambda，平衡偏差与方差
   learning_rate: 0.0003
@@ -7,48 +7,43 @@ training:
   rollout_episodes: 32    # 每次PPO更新前累积的episode数（batch≈128步）
   clip_eps: 0.2
   value_coef: 0.5
-  entropy_coef: 0.05      # 维持较高熵系数，防止过早收敛到局部最优
+  entropy_coef: 0.05      # 多房间训练需要更强探索，防止过早收敛
   grad_clip_norm: 0.5
   seed: 42
   device: "cuda:0"
   visualize_every_episodes: 100
   log_every_episodes: 32  # 与rollout_episodes对齐，每批次输出一次日志
-  reward_curve_moving_window: 20
+  reward_curve_moving_window: 50
 
 environment:
   padded_size: 48  # 增大以容纳35x33的不规则房间
   max_steps: 16
-  target_lamp_count: 6  ## 试试6个灯具
+  target_lamp_count: 5  
   turn_penalty: 0.2
 
 reward:
-  uniformity_coef: 2.0        # 照度均匀性（次要）
-  illum_centroid_coef: 2.0    # 照度重心（次要）
-  alignment_coef: 1.0         # 提高：对齐性（重要）
-  equidistance_coef: 2.0      # 新增：等距性（最重要，工程师首要关注）
-  wiring_coef: 0.0            # 移除：布线成本不再作为奖励
+  potential_coef: 3.0         # 每步势能减少奖励
+  alignment_coef: 1.0         # 终局对齐奖励
+  wiring_coef: 0.5            # 终局布线奖励（归一化wiring_score）
   invalid_action_penalty: 10.0
-  light_height_cells: 6.0     # 修复：原来=1导致衰减过陡，任何布局uniformity都<0.3；
-                              # 19x22房间短边≈19格，灯高≈6格是合理物理比例
-  terminal_bonus_coef: 5.0    # 终局质量放大系数
 
 room:
   json_path: "RL/test_room/origin_room/unregular.json"
   room_name: "热量室准备间"
 
 ga:
-  population_size: 64
-  generations: 200
-  tournament_size: 3
+  population_size: 128  ##一个种群表示一个布局方案，增加种群规模以提升多样性
+  generations: 500  ## 增加迭代次数即增加种群交叉和变异的机会
+  tournament_size: 3  ## 锦标赛选择的竞争者数量，适度增加以增强选择压力
   elite_count: 4
   # 变异退火参数（取代旧的 mutation_rate / mutation_count）
-  mutation_rate_start: 0.5   # 初始变异概率（早期大探索）
+  mutation_rate_start: 0.8   # 初始变异概率（早期大探索）
   mutation_rate_end: 0.05    # 终止变异概率（后期微调）
-  mutation_count_start: 2    # 初始每次变异替换的基因数
+  mutation_count_start: 3    # 初始每次变异替换的基因数（增大早期扰动）
   mutation_count_end: 1      # 终止每次变异替换的基因数
   # 多样性保护
-  diversity_min_hamming: 1   # 子代与所有精英的最小汉明距离阈值，低于此值替换为随机个体
-  patience: 30
+  diversity_min_hamming: 2   # 提高汉明距离阈值，强制子代与精英有更大差异
+  patience: 80               # 延长早停耐心，给算法更多时间跳出局部最优
   min_delta: 0.0001
   seed: 42
   log_every_generations: 10

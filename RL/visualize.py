@@ -271,28 +271,27 @@ def plot_episode_step_breakdown(
     *,
     episode_idx: int,
 ) -> Path:
-    """Plot per-step raw scores, penalties, weighted terms and total reward."""
+    """Plot per-step potential reward and terminal alignment/wiring diagnostics."""
     if not step_records:
         raise ValueError("Step records are empty. Cannot plot episode breakdown.")
 
     steps = [int(item["step"]) for item in step_records]
 
-    uniformity_scores = [float(item["uniformity_score"]) for item in step_records]
-    illum_centroid_scores = [float(item["illum_centroid_score"]) for item in step_records]
+    potential_scores = [float(item["potential_reduction_score"]) for item in step_records]
     alignment_scores = [float(item["alignment_score"]) for item in step_records]
     wiring_scores = [float(item["wiring_score"]) for item in step_records]
+    mst_costs = [float(item["mst_cost"]) for item in step_records]
     invalid_penalties = [float(item["invalid_penalty"]) for item in step_records]
 
-    uniformity_term = [float(item["uniformity_term"]) for item in step_records]
-    illum_centroid_term = [float(item["illum_centroid_term"]) for item in step_records]
+    potential_term = [float(item["potential_term"]) for item in step_records]
     alignment_term = [float(item["alignment_term"]) for item in step_records]
     wiring_term = [float(item["wiring_term"]) for item in step_records]
     total_reward = [float(item["step_total"]) for item in step_records]
+    terminal_bonus = [float(item["terminal_bonus"]) for item in step_records]
 
-    fig, axes = plt.subplots(2, 1, figsize=(11, 8), sharex=True)
+    fig, axes = plt.subplots(3, 1, figsize=(11, 10), sharex=True)
 
-    axes[0].plot(steps, uniformity_scores, label="uniformity_score", linewidth=2.0)
-    axes[0].plot(steps, illum_centroid_scores, label="illum_centroid_score", linewidth=2.0)
+    axes[0].plot(steps, potential_scores, label="potential_reduction_score", linewidth=2.0)
     axes[0].plot(steps, alignment_scores, label="alignment_score", linewidth=2.0)
     axes[0].plot(steps, wiring_scores, label="wiring_score", linewidth=2.0)
     axes[0].plot(steps, invalid_penalties, label="invalid_penalty", linewidth=2.0, linestyle="--")
@@ -301,16 +300,22 @@ def plot_episode_step_breakdown(
     axes[0].grid(True, linestyle="--", linewidth=0.5, alpha=0.5)
     axes[0].legend(loc="best", ncol=2)
 
-    axes[1].plot(steps, uniformity_term, label="uniformity_term", linewidth=2.0)
-    axes[1].plot(steps, illum_centroid_term, label="illum_centroid_term", linewidth=2.0)
-    axes[1].plot(steps, alignment_term, label="alignment_term", linewidth=2.0)
-    axes[1].plot(steps, wiring_term, label="wiring_term", linewidth=2.0)
+    axes[1].plot(steps, potential_term, label="potential_term", linewidth=2.0)
+    axes[1].plot(steps, alignment_term, label="terminal_alignment_term", linewidth=2.0)
+    axes[1].plot(steps, wiring_term, label="terminal_wiring_term", linewidth=2.0)
     axes[1].plot(steps, invalid_penalties, label="invalid_penalty", linewidth=2.0, linestyle="--")
     axes[1].plot(steps, total_reward, label="step_total", linewidth=2.2, color="black")
+    axes[1].plot(steps, terminal_bonus, label="terminal_bonus", linewidth=2.0, linestyle=":")
     axes[1].set_xlabel("Step")
     axes[1].set_ylabel("Weighted contribution")
     axes[1].grid(True, linestyle="--", linewidth=0.5, alpha=0.5)
     axes[1].legend(loc="best", ncol=2)
+
+    axes[2].plot(steps, mst_costs, label="mst_cost", linewidth=2.0, color="#6e3fb4")
+    axes[2].set_xlabel("Step")
+    axes[2].set_ylabel("Cost")
+    axes[2].grid(True, linestyle="--", linewidth=0.5, alpha=0.5)
+    axes[2].legend(loc="best")
 
     plt.tight_layout()
     plt.savefig(output_path, dpi=180)
@@ -318,12 +323,66 @@ def plot_episode_step_breakdown(
     return output_path
 
 def main() -> None:
+    import argparse
+
     repo_root = Path(__file__).resolve().parents[1]
-    json_path = repo_root / "RL" / "test_room" / "origin_room" / "unregular.json"
-    output_dir = repo_root / "RL" / "test_room" / "origin_room"
-    written = export_rooms_from_json(json_path, output_dir)
-    for path in written:
-        print(path)
+    default_json_dir = repo_root / "RL" / "room_gen" / "json"
+    default_output_dir = repo_root / "RL" / "room_gen" / "image"
+
+    parser = argparse.ArgumentParser(description="Batch visualize room JSON files to PNG grids.")
+    parser.add_argument("--json_dir", type=str, default=str(default_json_dir), help="Input directory containing JSON files.")
+    parser.add_argument("--output_dir", type=str, default=str(default_output_dir), help="Output directory for PNG files.")
+    parser.add_argument("--cell_size", type=int, default=DEFAULT_CELL_SIZE, help="Grid cell size in pixels.")
+    args = parser.parse_args()
+
+    json_dir = Path(args.json_dir)
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    json_files = sorted(json_dir.rglob("*.json"))
+    if not json_files:
+        print(f"[visualize] No JSON files found in: {json_dir}")
+        return
+
+    success = 0
+    failed: list[tuple[str, str]] = []
+
+    for json_path in json_files:
+        try:
+            payload = json.loads(json_path.read_text(encoding="utf-8"))
+
+            room_payload: dict[str, Any] | None = None
+            if isinstance(payload, dict) and "matrix" in payload:
+                room_payload = payload
+            elif isinstance(payload, dict):
+                for value in payload.values():
+                    if isinstance(value, dict) and "matrix" in value:
+                        room_payload = value
+                        break
+
+            if room_payload is None:
+                raise ValueError("No room payload with 'matrix' found.")
+
+            matrix = room_payload.get("matrix")
+            if matrix is None:
+                raise ValueError("Matrix is missing.")
+
+            output_path = output_dir / f"{json_path.stem}.png"
+            save_room_grid_image(
+                matrix,
+                output_path,
+                cell_size=int(args.cell_size),
+                room_name=json_path.stem,
+            )
+            success += 1
+        except Exception as exc:
+            failed.append((json_path.name, str(exc)))
+
+    print(f"[visualize] json_files={len(json_files)} success={success} failed={len(failed)}")
+    if failed:
+        print("[visualize] failed samples:")
+        for name, message in failed[:20]:
+            print(f"  - {name}: {message}")
 
 
 if __name__ == "__main__":

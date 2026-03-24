@@ -27,3 +27,6 @@ RL/GA/
 embed_model/
 eval/qa_dataset.json
 eval/results.json
+RL/room_gen/image
+RL/room_gen/json
+RL/room_gen/results

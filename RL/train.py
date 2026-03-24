@@ -17,7 +17,7 @@ from torch import nn
 from env import EnvironmentConfig, SingleRoomLightingEnv
 from model import LightingActorCritic
 from reward import RewardConfig
-from visualize import plot_episode_step_breakdown, save_padded_room_image
+from visualize import plot_episode_step_breakdown, save_padded_room_image, save_room_grid_image
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -188,18 +188,18 @@ def plot_score_trends(history: list[dict[str, Any]], output_path: Path) -> Path:
         raise ValueError("History is empty. Cannot plot score trends.")
 
     episodes = [int(item["episode"]) for item in history]
-    uniformity = np.asarray([float(item["mean_uniformity_score"]) for item in history], dtype=np.float32)
-    illum_centroid = np.asarray([float(item["mean_illum_centroid_score"]) for item in history], dtype=np.float32)
-    alignment = np.asarray([float(item["mean_alignment_score"]) for item in history], dtype=np.float32)
-    wiring = np.asarray([float(item["mean_wiring_score"]) for item in history], dtype=np.float32)
+    potential = np.asarray([float(item.get("mean_potential_normalized", 0.0)) for item in history], dtype=np.float32)
+    alignment = np.asarray([float(item.get("alignment_normalized", 0.0)) for item in history], dtype=np.float32)
+    wiring = np.asarray([float(item.get("wiring_normalized", 0.0)) for item in history], dtype=np.float32)
+    # mst_cost = np.asarray([float(item.get("mst_cost", 0.0)) for item in history], dtype=np.float32)
 
     plt.figure(figsize=(11, 5.5))
-    plt.plot(episodes, uniformity, label="mean_uniformity_score", linewidth=2.0)
-    plt.plot(episodes, illum_centroid, label="mean_illum_centroid_score", linewidth=2.0)
-    plt.plot(episodes, alignment, label="mean_alignment_score", linewidth=2.0)
-    plt.plot(episodes, wiring, label="mean_wiring_score", linewidth=2.0)
+    plt.plot(episodes, potential, label="mean_potential_normalized", linewidth=2.0)
+    plt.plot(episodes, alignment, label="alignment_normalized", linewidth=2.0)
+    plt.plot(episodes, wiring, label="wiring_normalized", linewidth=2.0)
+    # plt.plot(episodes, mst_cost, label="mst_cost", linewidth=2.0)
     plt.xlabel("Episode")
-    plt.ylabel("Mean Raw Score")
+    plt.ylabel("Score / Cost")
     plt.title("Episode-Level Mean Score Trends")
     plt.grid(True, linestyle="--", linewidth=0.5, alpha=0.5)
     plt.legend(loc="best")
@@ -218,11 +218,13 @@ def _collect_one_episode(
     output_dir: Path,
 ) -> dict[str, Any]:
     """
-    执行一个完整episode的rollout，返回轨迹数据和统计信息。
+    执行一个完整episode的rollout，返回轨迹数据和episode级统计信息。
 
     Returns 包含:
-        obs_list, actions, rewards, log_probs, values,
-        以及该episode的诊断指标（reward、各分项分数等）
+        obs_list, actions, rewards, log_probs, values（用于PPO更新）
+        episode_reward, mean_potential_normalized, mean_potential_item,
+        alignment_normalized, alignment_term, wiring_normalized, wiring_term,
+        mst_cost, terminal_bonus（用于日志和JSON记录）
     """
     obs = env.reset()
     visualize_episode = should_visualize_episode(episode_idx, cfg)
@@ -232,11 +234,9 @@ def _collect_one_episode(
     rewards: list[float] = []
     log_probs: list[float] = []
     values: list[float] = []
-    uniformity_scores: list[float] = []
-    illum_centroid_scores: list[float] = []
-    alignment_scores: list[float] = []
-    equidistance_scores: list[float] = []
-    wiring_scores: list[float] = []
+
+    potential_normalized_list: list[float] = []
+    potential_item_list: list[float] = []
 
     done = False
     while not done:
@@ -250,39 +250,34 @@ def _collect_one_episode(
         rewards.append(float(reward))
         log_probs.append(float(rollout["log_prob"].item()))
         values.append(float(rollout["value"].squeeze().item()))
-
         obs = next_obs
 
-        breakdown = info["reward_breakdown"]
-        uniformity_scores.append(float(breakdown.uniformity))
-        illum_centroid_scores.append(float(breakdown.illum_centroid))
-        alignment_scores.append(float(breakdown.rules - breakdown.invalid_action))
-        equidistance_scores.append(float(breakdown.equidistance))
-        wiring_scores.append(float(breakdown.wiring))
+        bd = info["step_breakdown"]
+        potential_normalized_list.append(float(bd.potential_reduction_normalized))
+        potential_item_list.append(float(bd.potential_reduction_item))
 
-        if visualize_episode and env.current_step % env.config.target_lamp_count == 0:
+        if visualize_episode and (env.current_step % env.config.target_lamp_count) == 0:
             export_episode_snapshot(env, output_dir, episode_idx, env.current_step)
 
-    final_breakdown = env.last_breakdown
+    final_bd = env.last_breakdown
+    n = max(len(potential_normalized_list), 1)
     return {
+        # PPO rollout data
         "obs_list": obs_list,
         "actions": actions,
         "rewards": rewards,
         "log_probs": log_probs,
         "values": values,
-        # --- 诊断信息 ---
+        # episode-level stats (averages / terminal values)
         "episode_reward": float(sum(rewards)),
-        "mst_cost": float(final_breakdown.diagnostics["mst_cost"]) if final_breakdown else 0.0,
-        "uniformity_score": float(final_breakdown.diagnostics.get("uniformity_score", 0.0)) if final_breakdown else 0.0,
-        "illum_centroid_score": float(final_breakdown.diagnostics.get("illum_centroid_score", 0.0)) if final_breakdown else 0.0,
-        "alignment_score": float(final_breakdown.diagnostics.get("alignment_score", 0.0)) if final_breakdown else 0.0,
-        "equidistance_score": float(final_breakdown.diagnostics.get("equidistance_score", 0.0)) if final_breakdown else 0.0,
-        "wiring_score": float(final_breakdown.diagnostics.get("wiring_score", 0.0)) if final_breakdown else 0.0,
-        "mean_uniformity_score": float(np.mean(uniformity_scores)) if uniformity_scores else 0.0,
-        "mean_illum_centroid_score": float(np.mean(illum_centroid_scores)) if illum_centroid_scores else 0.0,
-        "mean_alignment_score": float(np.mean(alignment_scores)) if alignment_scores else 0.0,
-        "mean_equidistance_score": float(np.mean(equidistance_scores)) if equidistance_scores else 0.0,
-        "mean_wiring_score": float(np.mean(wiring_scores)) if wiring_scores else 0.0,
+        "mean_potential_normalized": sum(potential_normalized_list) / n,
+        "mean_potential_item": sum(potential_item_list) / n,
+        "alignment_normalized": float(final_bd.alignment_normalized) if final_bd else 0.0,
+        "alignment_term": float(final_bd.alignment_term) if final_bd else 0.0,
+        "wiring_normalized": float(final_bd.wiring_normalized) if final_bd else 0.0,
+        "wiring_term": float(final_bd.wiring_term) if final_bd else 0.0,
+        "mst_cost": float(final_bd.mst_cost) if final_bd else 0.0,
+        "terminal_bonus": float(final_bd.terminal_bonus) if final_bd else 0.0,
     }
 
 
@@ -385,17 +380,14 @@ def train_single_room(
                 {
                     "episode": len(history) + 1,
                     "episode_reward": ep_reward,
+                    "mean_potential_normalized": ep["mean_potential_normalized"],
+                    "mean_potential_item": ep["mean_potential_item"],
+                    "alignment_normalized": ep["alignment_normalized"],
+                    "alignment_term": ep["alignment_term"],
+                    "wiring_normalized": ep["wiring_normalized"],
+                    "wiring_term": ep["wiring_term"],
                     "mst_cost": ep["mst_cost"],
-                    "uniformity_score": ep["uniformity_score"],
-                    "illum_centroid_score": ep["illum_centroid_score"],
-                    "alignment_score": ep["alignment_score"],
-                    "equidistance_score": ep["equidistance_score"],
-                    "wiring_score": ep["wiring_score"],
-                    "mean_uniformity_score": ep["mean_uniformity_score"],
-                    "mean_illum_centroid_score": ep["mean_illum_centroid_score"],
-                    "mean_alignment_score": ep["mean_alignment_score"],
-                    "mean_equidistance_score": ep["mean_equidistance_score"],
-                    "mean_wiring_score": ep["mean_wiring_score"],
+                    "terminal_bonus": ep["terminal_bonus"],
                     "policy_loss": last_policy_loss,
                     "value_loss": last_value_loss,
                     "entropy": last_entropy,
@@ -417,20 +409,19 @@ def train_single_room(
         # ---- Phase 4: 日志输出（以批次末尾episode为代表） ----
         last_ep = batch_ep_data[-1]
         if episode_idx % cfg.log_every_episodes == 0 or episode_idx == cfg.episodes:
-            recent = history[-cfg.log_every_episodes :]
+            recent = history[-cfg.log_every_episodes:]
             moving_reward = sum(item["episode_reward"] for item in recent) / len(recent)
-            batch_size = len(rollout_obs)
             print(
-                f"[train] episode={episode_idx:04d} "
-                f"reward={last_ep['episode_reward']:8.3f} "
-                f"moving={moving_reward:8.3f} "
-                f"batch={batch_size} "
-                f"uniform={last_ep['uniformity_score']:5.2f} "
-                f"center={last_ep['illum_centroid_score']:5.2f} "
-                f"align={last_ep['alignment_score']:5.2f} "
-                f"equidist={last_ep['equidistance_score']:5.2f} "
-                f"wire={last_ep['wiring_score']:5.2f} "
-                f"ploss={last_policy_loss:6.4f} vloss={last_value_loss:6.4f}"
+                f"[train] ep={episode_idx:04d} "
+                f"reward={last_ep['episode_reward']:7.3f} "
+                f"moving={moving_reward:7.3f} "
+                f"pot_norm={last_ep['mean_potential_normalized']:.3f} "
+                f"pot_item={last_ep['mean_potential_item']:.3f} "
+                f"align={last_ep['alignment_normalized']:.3f}*{last_ep['alignment_term']:.3f} "
+                f"wire={last_ep['wiring_normalized']:.3f}*{last_ep['wiring_term']:.3f} "
+                f"mst={last_ep['mst_cost']:6.2f} "
+                f"bonus={last_ep['terminal_bonus']:.3f} "
+                f"ploss={last_policy_loss:.4f} vloss={last_value_loss:.4f}"
             )
 
     summary = {
@@ -471,35 +462,23 @@ def evaluate_greedy_policy(
     final_breakdown = env.last_breakdown
     return {
         "greedy_reward": float(sum(rewards)),
-        "lamp_count": int(final_breakdown.diagnostics["lamp_count"]) if final_breakdown else 0,
-        "mst_cost": float(final_breakdown.diagnostics["mst_cost"]) if final_breakdown else 0.0,
-        "uniformity_score": float(final_breakdown.diagnostics.get("uniformity_score", 0.0)) if final_breakdown else 0.0,
-        "illum_centroid_score": (
-            float(final_breakdown.diagnostics.get("illum_centroid_score", 0.0)) if final_breakdown else 0.0
-        ),
-        "alignment_score": float(final_breakdown.diagnostics.get("alignment_score", 0.0)) if final_breakdown else 0.0,
-        "equidistance_score": float(final_breakdown.diagnostics.get("equidistance_score", 0.0)) if final_breakdown else 0.0,
-        "wiring_score": float(final_breakdown.diagnostics.get("wiring_score", 0.0)) if final_breakdown else 0.0,
+        "mst_cost": float(final_breakdown.mst_cost) if final_breakdown else 0.0,
+        "alignment_term": float(final_breakdown.alignment_term) if final_breakdown else 0.0,
+        "wiring_term": float(final_breakdown.wiring_term) if final_breakdown else 0.0,
     }
 
 
 def load_room_dataset(room_dir: Path) -> list[dict]:
     """Load all room JSON files from a directory."""
     rooms = []
-    json_files = list(room_dir.glob("*.json"))
-
-    for json_file in json_files:
+    for json_file in sorted(room_dir.glob("*.json")):
         with json_file.open('r', encoding='utf-8') as f:
-            room_data = json.load(f)
-            # Support both single-room and multi-room formats
-            if isinstance(room_data, dict):
-                if 'matrix' in room_data:
-                    # Single room format
-                    rooms.append(room_data)
-                else:
-                    # Multi-room format (like test_room.json)
-                    rooms.extend(room_data.values())
-
+            payload = json.load(f)
+        if not isinstance(payload, dict):
+            continue
+        for room_data in payload.values():
+            if isinstance(room_data, dict) and 'matrix' in room_data and 'lamp_count' in room_data:
+                rooms.append(room_data)
     print(f"[train] Loaded {len(rooms)} rooms from {room_dir}")
     return rooms
 
@@ -531,11 +510,11 @@ def train_multi_room(
         current_env_cfg = EnvironmentConfig(
             padded_size=env_cfg.padded_size,
             max_steps=env_cfg.max_steps,
-            target_lamp_count=room_data['lamp']['lamp_count'],
+            target_lamp_count=room_data['lamp_count'],
             turn_penalty=env_cfg.turn_penalty,
             reward_config=env_cfg.reward_config,
         )
-        current_env_cfg.reward_config.target_lamp_count = room_data['lamp']['lamp_count']
+        current_env_cfg.reward_config.target_lamp_count = room_data['lamp_count']
 
         # Create temporary environment
         env = SingleRoomLightingEnv(room_data, config=current_env_cfg)
@@ -593,11 +572,9 @@ def train_multi_room(
             "episode_reward": episode_reward,
             "room_name": room_data['room_name'],
             "room_type": room_data.get('room_type', 'unknown'),
-            "lamp_count": int(final_breakdown.diagnostics["lamp_count"]) if final_breakdown else 0,
-            "uniformity_score": float(final_breakdown.diagnostics.get("uniformity_score", 0.0)) if final_breakdown else 0.0,
-            "illum_centroid_score": float(final_breakdown.diagnostics.get("illum_centroid_score", 0.0)) if final_breakdown else 0.0,
-            "alignment_score": float(final_breakdown.diagnostics.get("alignment_score", 0.0)) if final_breakdown else 0.0,
-            "wiring_score": float(final_breakdown.diagnostics.get("wiring_score", 0.0)) if final_breakdown else 0.0,
+            "alignment_normalized": float(final_breakdown.alignment_normalized) if final_breakdown else 0.0,
+            "wiring_normalized": float(final_breakdown.wiring_normalized) if final_breakdown else 0.0,
+            "mst_cost": float(final_breakdown.mst_cost) if final_breakdown else 0.0,
         })
 
         if episode_reward > best_reward:
@@ -614,9 +591,9 @@ def train_multi_room(
         if episode % ppo_cfg.log_every_episodes == 0:
             recent = history[-ppo_cfg.log_every_episodes:]
             avg_reward = sum(h["episode_reward"] for h in recent) / len(recent)
-            avg_uniformity = sum(h["uniformity_score"] for h in recent) / len(recent)
+            avg_align = sum(h["alignment_normalized"] for h in recent) / len(recent)
             print(f"[train] episode={episode:04d} avg_reward={avg_reward:7.2f} "
-                  f"avg_uniformity={avg_uniformity:.3f} best={best_reward:7.2f}")
+                  f"avg_align={avg_align:.3f} best={best_reward:7.2f}")
 
     return {
         "history": history,
@@ -686,6 +663,66 @@ def ppo_update_multi_room(
         optimizer.step()
 
 
+def evaluate_all_rooms(
+    room_dataset: list[dict],
+    model: LightingActorCritic,
+    env_cfg: EnvironmentConfig,
+    results_dir: Path,
+) -> list[dict]:
+    """Greedy rollout on every room, save layout image to results_dir."""
+    results_dir.mkdir(parents=True, exist_ok=True)
+    device = next(model.parameters()).device
+    results = []
+    for i, room_data in enumerate(room_dataset):
+        lamp_count = room_data['lamp_count']
+        current_cfg = EnvironmentConfig(
+            padded_size=env_cfg.padded_size,
+            max_steps=env_cfg.max_steps,
+            target_lamp_count=lamp_count,
+            turn_penalty=env_cfg.turn_penalty,
+            reward_config=env_cfg.reward_config,
+        )
+        current_cfg.reward_config.target_lamp_count = lamp_count
+        env = SingleRoomLightingEnv(room_data, config=current_cfg)
+
+        obs = env.reset()
+        done = False
+        total_reward = 0.0
+        while not done:
+            obs_t = torch.from_numpy(obs).unsqueeze(0).to(device=device, dtype=torch.float32)
+            action = int(model.act(obs_t, deterministic=True)["action"].item())
+            obs, reward, done, _ = env.step(action)
+            total_reward += float(reward)
+
+        final_bd = env.last_breakdown
+        room_name = room_data.get('room_name', f'room_{i:04d}')
+        title = (
+            f"{room_name} | r={total_reward:.2f} "
+            f"p={final_bd.potential_reduction_normalized:.2f} "
+            f"a={final_bd.alignment_normalized:.2f} "
+            f"w={final_bd.wiring_normalized:.2f}"
+        ) if final_bd else f"{room_name} | r={total_reward:.2f}"
+        img_path = results_dir / f"room_{i:04d}_{lamp_count}lamp.png"
+        save_room_grid_image(env.current_encoded_matrix(), img_path, cell_size=16, room_name=title)
+
+        results.append({
+            "index": i,
+            "room_name": room_name,
+            "lamp_count": lamp_count,
+            "total_reward": total_reward,
+            "potential_normalized": float(final_bd.potential_reduction_normalized) if final_bd else 0.0,
+            "alignment_normalized": float(final_bd.alignment_normalized) if final_bd else 0.0,
+            "wiring_normalized": float(final_bd.wiring_normalized) if final_bd else 0.0,
+        })
+
+    avg_reward = sum(r["total_reward"] for r in results) / max(len(results), 1)
+    avg_align = sum(r["alignment_normalized"] for r in results) / max(len(results), 1)
+    avg_wire = sum(r["wiring_normalized"] for r in results) / max(len(results), 1)
+    print(f"[eval] {len(results)} rooms | avg_reward={avg_reward:.3f} avg_align={avg_align:.3f} avg_wire={avg_wire:.3f}")
+    print(f"[eval] results saved to {results_dir}")
+    return results
+
+
 def main() -> None:
     import argparse
 
@@ -730,25 +767,11 @@ def main() -> None:
         summary["training_mode"] = "multi_room"
         summary["num_rooms"] = len(room_dataset)
 
-        # Evaluate on a sample of rooms
-        print("[train] Evaluating on sample rooms...")
-        sample_rooms = random.sample(room_dataset, min(10, len(room_dataset)))
-        eval_results = []
-        for room_data in sample_rooms:
-            current_env_cfg = EnvironmentConfig(
-                padded_size=env_cfg.padded_size,
-                max_steps=env_cfg.max_steps,
-                target_lamp_count=room_data['lamp']['lamp_count'],
-                turn_penalty=env_cfg.turn_penalty,
-                reward_config=reward_cfg,
-            )
-            current_env_cfg.reward_config.target_lamp_count = room_data['lamp']['lamp_count']
-            env = SingleRoomLightingEnv(room_data, config=current_env_cfg)
-            eval_result = evaluate_greedy_policy(env, model, output_dir)
-            eval_result['room_name'] = room_data['room_name']
-            eval_results.append(eval_result)
-
-        summary["sample_evaluations"] = eval_results
+        # Evaluate on all rooms
+        results_dir = Path(args.room_dir).parent / "results"
+        print(f"[train] Evaluating on all {len(room_dataset)} rooms...")
+        eval_results = evaluate_all_rooms(room_dataset, model, env_cfg, results_dir)
+        summary["all_room_evaluations"] = eval_results
         summary_filename = "ppo_multi_room_training_summary.json"
     else:
         # Single-room training mode (original behavior)

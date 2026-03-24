@@ -1,477 +1,476 @@
+"""
+Room generator for RL lamp-placement training.
+
+Generates irregular rooms (L, U/concave, T/convex, hollow, cross, multi_cut)
+within a 48×48 grid, with lamp counts derived from placeable area (~100 cells/lamp).
+Each room is saved as a standalone JSON file compatible with SingleRoomLightingEnv.
+"""
 from __future__ import annotations
 
 import json
 import random
-import uuid
-from dataclasses import dataclass
+from collections import Counter
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 
+# ── constants ─────────────────────────────────────────────────────────────────
+MAX_SIZE = 48
+AREA_PER_LAMP = 100
+LAMP_MIN = 2
+LAMP_MAX = 9
 
-@dataclass
-class RoomTypeConfig:
-    """Configuration for a specific room type."""
-    target_lux: float
-    lamp_flux_lm: float
-    lamp_type: str
-    lamp_power_w: float
+# Outer bbox row/col range per target lamp count
+# Sized so that after carving, placeable ≈ lamp * AREA_PER_LAMP
+_LAMP_BBOX: dict[int, tuple[int, int]] = {
+    2: (14, 18),
+    3: (17, 21),
+    4: (20, 24),
+    5: (23, 27),
+    6: (26, 30),
+    7: (29, 33),
+    8: (32, 37),
+    9: (36, 45),
+}
+
+_TEMPLATE_FIELDS = {
+    "room_name": "房间",
+    "cell_size_px": 40,
+    "illuminance": 300,
+    "lamp_type": "荧光灯",
+    "lamp": {
+        "model": "PHILIPS TL5 HE 35w/827",
+        "lamp_power_w": 35,
+        "lamp_luminous_flux_lm": 3325,
+        "uf": 0.6,
+        "mf": 0.8,
+        "tube_count": 2,
+        "total_luminous_flux_lm": 6650,
+    },
+}
+
+SHAPES = ["L", "U", "T", "hollow", "cross", "multi_cut"]
 
 
-class RoomGenerator:
-    """Multi-shape room generator supporting rectangular, L-shaped, T-shaped, and corridor rooms."""
+# ── helpers ───────────────────────────────────────────────────────────────────
 
-    def __init__(self):
-        self.cell_size_m = 0.4
-        self.cell_size_px = 40
-        self.uf = 0.6
-        self.mf = 0.8
+def _lamp_count(matrix: np.ndarray) -> int:
+    placeable = int(np.sum(matrix == 1))
+    return int(np.clip(round(placeable / AREA_PER_LAMP), LAMP_MIN, LAMP_MAX))
 
-        # Room type configurations
-        self.room_type_configs = {
-            'office': RoomTypeConfig(
-                target_lux=300,
-                lamp_flux_lm=3000,
-                lamp_type='荧光灯',
-                lamp_power_w=35,
-            ),
-            'lab': RoomTypeConfig(
-                target_lux=500,
-                lamp_flux_lm=5000,
-                lamp_type='LED灯',
-                lamp_power_w=50,
-            ),
-            'corridor': RoomTypeConfig(
-                target_lux=200,
-                lamp_flux_lm=3000,
-                lamp_type='荧光灯',
-                lamp_power_w=28,
-            ),
-            'storage': RoomTypeConfig(
-                target_lux=150,
-                lamp_flux_lm=2000,
-                lamp_type='节能灯',
-                lamp_power_w=20,
-            ),
-        }
 
-    def calculate_lamp_count(self, room_matrix: np.ndarray, function_type: str) -> int:
-        """Calculate required lamp count based on illuminance formula."""
-        config = self.room_type_configs[function_type]
-        room_area_grids = int(np.sum(room_matrix > 0))
-        room_area_m2 = room_area_grids * (self.cell_size_m ** 2)
+def _collect_edge_runs(matrix: np.ndarray) -> list[tuple[str, int, list[int]]]:
+    """
+    Collect runs of 4+ consecutive value-1 cells on the four outer edges.
 
-        # E = (N * Φ * UF * MF) / A
-        # N = (E * A) / (Φ * UF * MF)
-        N = (config.target_lux * room_area_m2) / (
-            config.lamp_flux_lm * self.uf * self.mf
-        )
-        return max(1, int(np.ceil(N)))
+    Returns list of (edge, fixed_coord, [varying_coords]) where:
+      edge = 'top' | 'bottom' | 'left' | 'right'
+      fixed_coord = the row (top/bottom) or col (left/right) index
+      varying_coords = list of col (top/bottom) or row (left/right) indices
+    """
+    rows, cols = matrix.shape
+    results = []
 
-    def _random_door_position(self, rows: int, cols: int) -> tuple[int, int]:
-        """Generate a random door position on the edge, at least 2 cells from corners."""
-        edge = random.choice(['top', 'bottom', 'left', 'right'])
-        if edge == 'top':
-            return (0, random.randint(2, cols - 3))
-        elif edge == 'bottom':
-            return (rows - 1, random.randint(2, cols - 3))
-        elif edge == 'left':
-            return (random.randint(2, rows - 3), 0)
-        else:  # right
-            return (random.randint(2, rows - 3), cols - 1)
-
-    def _place_switch_near_door(self, door_pos: tuple[int, int], rows: int, cols: int) -> tuple[int, int]:
-        """Place switch near the door, 1-3 cells away on the same edge."""
-        door_r, door_c = door_pos
-
-        # Determine which edge the door is on
-        if door_r == 0:  # top edge
-            offset = random.randint(1, 3)
-            switch_c = max(1, min(cols - 2, door_c + random.choice([-offset, offset])))
-            return (0, switch_c)
-        elif door_r == rows - 1:  # bottom edge
-            offset = random.randint(1, 3)
-            switch_c = max(1, min(cols - 2, door_c + random.choice([-offset, offset])))
-            return (rows - 1, switch_c)
-        elif door_c == 0:  # left edge
-            offset = random.randint(1, 3)
-            switch_r = max(1, min(rows - 2, door_r + random.choice([-offset, offset])))
-            return (switch_r, 0)
-        else:  # right edge
-            offset = random.randint(1, 3)
-            switch_r = max(1, min(rows - 2, door_r + random.choice([-offset, offset])))
-            return (switch_r, cols - 1)
-
-    def generate_rectangular_room(self, rows: int, cols: int, function_type: str = 'office') -> np.ndarray:
-        """Generate a rectangular room."""
-        matrix = np.ones((rows, cols), dtype=np.int32)
-
-        # Add door
-        door_pos = self._random_door_position(rows, cols)
-        matrix[door_pos] = 2
-
-        # Add switch near door
-        switch_pos = self._place_switch_near_door(door_pos, rows, cols)
-        matrix[switch_pos] = 3
-
-        # Optionally add internal obstacles (10% probability)
-        if random.random() < 0.1 and rows > 12 and cols > 12:
-            # Add 1-2 internal walls or pillars
-            num_obstacles = random.randint(1, 2)
-            for _ in range(num_obstacles):
-                obs_r = random.randint(2, rows - 3)
-                obs_c = random.randint(2, cols - 3)
-                # Make sure not to block door or switch
-                if matrix[obs_r, obs_c] == 1:
-                    matrix[obs_r, obs_c] = 0
-
-        return matrix
-
-    def generate_l_shaped_room(self, function_type: str = 'office') -> np.ndarray:
-        """Generate an L-shaped room by combining two rectangles."""
-        # Generate two rectangles
-        rect1_rows = random.randint(8, 20)
-        rect1_cols = random.randint(8, 20)
-        rect2_rows = random.randint(8, 20)
-        rect2_cols = random.randint(8, 20)
-
-        # Determine L-shape orientation
-        orientation = random.choice(['bottom_right', 'bottom_left', 'top_right', 'top_left'])
-
-        # Create combined matrix
-        if orientation == 'bottom_right':
-            total_rows = rect1_rows + rect2_rows
-            total_cols = max(rect1_cols, rect2_cols)
-            matrix = np.zeros((total_rows, total_cols), dtype=np.int32)
-            matrix[:rect1_rows, :rect1_cols] = 1
-            matrix[rect1_rows:, total_cols - rect2_cols:] = 1
-        elif orientation == 'bottom_left':
-            total_rows = rect1_rows + rect2_rows
-            total_cols = max(rect1_cols, rect2_cols)
-            matrix = np.zeros((total_rows, total_cols), dtype=np.int32)
-            matrix[:rect1_rows, total_cols - rect1_cols:] = 1
-            matrix[rect1_rows:, :rect2_cols] = 1
-        elif orientation == 'top_right':
-            total_rows = rect1_rows + rect2_rows
-            total_cols = max(rect1_cols, rect2_cols)
-            matrix = np.zeros((total_rows, total_cols), dtype=np.int32)
-            matrix[rect2_rows:, :rect1_cols] = 1
-            matrix[:rect2_rows, total_cols - rect2_cols:] = 1
-        else:  # top_left
-            total_rows = rect1_rows + rect2_rows
-            total_cols = max(rect1_cols, rect2_cols)
-            matrix = np.zeros((total_rows, total_cols), dtype=np.int32)
-            matrix[rect2_rows:, total_cols - rect1_cols:] = 1
-            matrix[:rect2_rows, :rect2_cols] = 1
-
-        # Add door on outer edge
-        valid_positions = []
-        rows, cols = matrix.shape
-        for r in range(rows):
-            for c in range(cols):
-                if matrix[r, c] == 1:
-                    # Check if on edge
-                    if r == 0 or r == rows - 1 or c == 0 or c == cols - 1:
-                        valid_positions.append((r, c))
-
-        if valid_positions:
-            door_pos = random.choice(valid_positions)
-            matrix[door_pos] = 2
-
-            # Add switch near door
-            switch_candidates = []
-            dr, dc = door_pos
-            for offset in range(1, 4):
-                for nr, nc in [(dr + offset, dc), (dr - offset, dc), (dr, dc + offset), (dr, dc - offset)]:
-                    if 0 <= nr < rows and 0 <= nc < cols and matrix[nr, nc] == 1:
-                        switch_candidates.append((nr, nc))
-            if switch_candidates:
-                switch_pos = random.choice(switch_candidates)
-                matrix[switch_pos] = 3
-
-        return matrix
-
-    def generate_t_shaped_room(self, function_type: str = 'office') -> np.ndarray:
-        """Generate a T-shaped room by combining three rectangles."""
-        # Main stem (vertical)
-        stem_rows = random.randint(16, 28)
-        stem_cols = random.randint(8, 12)
-
-        # Horizontal bar
-        bar_rows = random.randint(8, 12)
-        bar_cols = random.randint(20, 32)
-
-        # Create combined matrix
-        total_rows = stem_rows + bar_rows
-        total_cols = bar_cols
-        matrix = np.zeros((total_rows, total_cols), dtype=np.int32)
-
-        # Place horizontal bar at top
-        matrix[:bar_rows, :] = 1
-
-        # Place vertical stem in the middle
-        stem_start_col = (bar_cols - stem_cols) // 2
-        matrix[bar_rows:, stem_start_col:stem_start_col + stem_cols] = 1
-
-        # Add door at one of the endpoints
-        door_positions = [
-            (0, random.randint(2, bar_cols - 3)),  # top
-            (total_rows - 1, stem_start_col + random.randint(1, stem_cols - 2)),  # bottom
-        ]
-        door_pos = random.choice(door_positions)
-        matrix[door_pos] = 2
-
-        # Add switch near door
-        dr, dc = door_pos
-        switch_candidates = []
-        for offset in range(1, 4):
-            for nr, nc in [(dr + offset, dc), (dr - offset, dc), (dr, dc + offset), (dr, dc - offset)]:
-                if 0 <= nr < total_rows and 0 <= nc < total_cols and matrix[nr, nc] == 1:
-                    switch_candidates.append((nr, nc))
-        if switch_candidates:
-            switch_pos = random.choice(switch_candidates)
-            matrix[switch_pos] = 3
-
-        return matrix
-
-    def generate_corridor(self, function_type: str = 'corridor') -> np.ndarray:
-        """Generate a corridor (long narrow room)."""
-        length = random.randint(40, 100)
-        width = random.randint(6, 12)
-
-        # Randomly choose horizontal or vertical orientation
-        if random.random() < 0.5:
-            rows, cols = width, length
-        else:
-            rows, cols = length, width
-
-        matrix = np.ones((rows, cols), dtype=np.int32)
-
-        # Add doors at both ends
-        if rows < cols:  # horizontal corridor
-            door1_pos = (random.randint(1, rows - 2), 0)
-            door2_pos = (random.randint(1, rows - 2), cols - 1)
-        else:  # vertical corridor
-            door1_pos = (0, random.randint(1, cols - 2))
-            door2_pos = (rows - 1, random.randint(1, cols - 2))
-
-        matrix[door1_pos] = 2
-        matrix[door2_pos] = 2
-
-        # Add switch near one door
-        dr, dc = door1_pos
-        switch_candidates = []
-        for offset in range(1, 4):
-            for nr, nc in [(dr + offset, dc), (dr - offset, dc), (dr, dc + offset), (dr, dc - offset)]:
-                if 0 <= nr < rows and 0 <= nc < cols and matrix[nr, nc] == 1:
-                    switch_candidates.append((nr, nc))
-        if switch_candidates:
-            switch_pos = random.choice(switch_candidates)
-            matrix[switch_pos] = 3
-
-        return matrix
-
-    def generate_room_sample(self, shape_type: str | None = None, function_type: str | None = None) -> dict[str, Any]:
-        """Generate a complete room sample with calculated lamp count."""
-        # Determine shape type
-        if shape_type is None:
-            shape_type = random.choices(
-                ['rectangular', 'l_shaped', 't_shaped', 'corridor'],
-                weights=[0.6, 0.2, 0.1, 0.1],
-            )[0]
-
-        # Determine function type based on shape
-        if function_type is None:
-            if shape_type == 'rectangular':
-                function_type = random.choices(['office', 'lab', 'storage'], weights=[0.6, 0.3, 0.1])[0]
-            elif shape_type in ['l_shaped', 't_shaped']:
-                function_type = random.choices(['office', 'lab'], weights=[0.8, 0.2])[0]
-            else:  # corridor
-                function_type = 'corridor'
-
-        # Generate room matrix
-        if shape_type == 'rectangular':
-            rows = random.randint(10, 32)
-            cols = random.randint(10, 32)
-            matrix = self.generate_rectangular_room(rows, cols, function_type)
-        elif shape_type == 'l_shaped':
-            matrix = self.generate_l_shaped_room(function_type)
-        elif shape_type == 't_shaped':
-            matrix = self.generate_t_shaped_room(function_type)
-        else:  # corridor
-            matrix = self.generate_corridor(function_type)
-
-        # Calculate lamp count
-        lamp_count = self.calculate_lamp_count(matrix, function_type)
-
-        # Get room type config
-        config = self.room_type_configs[function_type]
-
-        # Calculate room area
-        room_area_grids = int(np.sum(matrix > 0))
-        room_area_m2 = room_area_grids * (self.cell_size_m ** 2)
-
-        # Generate room name
-        room_name = f"generated_{shape_type}_{function_type}_{uuid.uuid4().hex[:8]}"
-
-        return {
-            'room_name': room_name,
-            'grid_rows': int(matrix.shape[0]),
-            'grid_cols': int(matrix.shape[1]),
-            'cell_size_px': self.cell_size_px,
-            'illuminance': config.target_lux,
-            'lamp_type': config.lamp_type,
-            'lamp': {
-                'lamp_power_w': config.lamp_power_w,
-                'lamp_luminous_flux_lm': config.lamp_flux_lm,
-                'uf': self.uf,
-                'mf': self.mf,
-                'lamp_count': lamp_count,
-            },
-            'matrix': matrix.tolist(),
-            'room_area_m2': room_area_m2,
-            'room_type': shape_type,
-            'function_type': function_type,
-        }
-
-    def augment_room(self, room_data: dict[str, Any]) -> list[dict[str, Any]]:
-        """Augment a room with rotations and flips."""
-        augmented = []
-        matrix = np.array(room_data['matrix'], dtype=np.int32)
-        base_name = room_data['room_name']
-
-        # Original
-        augmented.append(room_data)
-
-        # Rotation 90°
-        rot90_matrix = np.rot90(matrix, k=1)
-        augmented.append({
-            **room_data,
-            'matrix': rot90_matrix.tolist(),
-            'grid_rows': rot90_matrix.shape[0],
-            'grid_cols': rot90_matrix.shape[1],
-            'room_name': f"{base_name}_rot90",
-        })
-
-        # Rotation 180°
-        rot180_matrix = np.rot90(matrix, k=2)
-        augmented.append({
-            **room_data,
-            'matrix': rot180_matrix.tolist(),
-            'grid_rows': rot180_matrix.shape[0],
-            'grid_cols': rot180_matrix.shape[1],
-            'room_name': f"{base_name}_rot180",
-        })
-
-        # Rotation 270°
-        rot270_matrix = np.rot90(matrix, k=3)
-        augmented.append({
-            **room_data,
-            'matrix': rot270_matrix.tolist(),
-            'grid_rows': rot270_matrix.shape[0],
-            'grid_cols': rot270_matrix.shape[1],
-            'room_name': f"{base_name}_rot270",
-        })
-
-        # Horizontal flip
-        fliph_matrix = np.fliplr(matrix)
-        augmented.append({
-            **room_data,
-            'matrix': fliph_matrix.tolist(),
-            'room_name': f"{base_name}_fliph",
-        })
-
-        # Vertical flip
-        flipv_matrix = np.flipud(matrix)
-        augmented.append({
-            **room_data,
-            'matrix': flipv_matrix.tolist(),
-            'room_name': f"{base_name}_flipv",
-        })
-
-        return augmented
-
-    def generate_batch(
-        self,
-        count: int,
-        output_dir: str | Path,
-        augment: bool = False,
-        visualize: bool = False,
-    ) -> list[Path]:
-        """Generate a batch of room samples and save to JSON files."""
-        output_path = Path(output_dir)
-        output_path.mkdir(parents=True, exist_ok=True)
-
-        saved_files = []
-        for i in range(count):
-            room_data = self.generate_room_sample()
-
-            if augment:
-                augmented_rooms = self.augment_room(room_data)
+    def _runs_in_seq(seq: list[int], fixed: int, edge: str) -> None:
+        run: list[int] = []
+        for v in seq:
+            if matrix[fixed, v] == 1 if edge in ('top', 'bottom') else matrix[v, fixed] == 1:
+                run.append(v)
             else:
-                augmented_rooms = [room_data]
+                if len(run) >= 4:
+                    results.append((edge, fixed, run.copy()))
+                run = []
+        if len(run) >= 4:
+            results.append((edge, fixed, run.copy()))
 
-            for room in augmented_rooms:
-                filename = f"{room['room_name']}.json"
-                filepath = output_path / filename
+    _runs_in_seq(list(range(cols)), 0,        'top')
+    _runs_in_seq(list(range(cols)), rows - 1, 'bottom')
+    _runs_in_seq(list(range(rows)), 0,        'left')
+    _runs_in_seq(list(range(rows)), cols - 1, 'right')
 
-                # Save as single-room JSON (compatible with test_room.json format)
-                with filepath.open('w', encoding='utf-8') as f:
-                    json.dump({room['room_name']: room}, f, ensure_ascii=False, indent=2)
-
-                saved_files.append(filepath)
-
-            if (i + 1) % 100 == 0:
-                print(f"Generated {i + 1}/{count} base rooms...")
-
-        print(f"Total files saved: {len(saved_files)}")
-        return saved_files
+    return results
 
 
-def main():
-    """Command-line interface for room generator."""
+def _place_door_switch(matrix: np.ndarray, rng: random.Random) -> bool:
+    """
+    Place a 4-cell door (value=2) on one of the four outer edges and one
+    switch (value=3) on the interior side, same row/col as the door middle.
+
+    Door placement rules:
+      - Must be on row 0, last row, col 0, or last col (true outer boundary)
+      - 4 consecutive value-1 cells along that edge
+
+    Switch placement rules (strict):
+      - If door is horizontal (top/bottom edge), switch is on the same row,
+        placed at one of door's left/right sides.
+        * If door center is left-biased in 48x48 (center_col < 24), choose right side.
+        * Otherwise choose left side.
+      - If door is vertical (left/right edge), switch is on the same column,
+        placed at one of door's up/down sides.
+        * If door center is upper-biased in 48x48 (center_row < 24), choose lower side.
+        * Otherwise choose upper side.
+    """
+    rows, cols = matrix.shape
+    runs = _collect_edge_runs(matrix)
+    if not runs:
+        return False
+
+    edge, fixed, varying = rng.choice(runs)
+    max_start = len(varying) - 4
+    start = rng.randint(0, max_start)
+    door_varying = varying[start:start + 4]
+
+    # place door cells
+    for v in door_varying:
+        if edge in ('top', 'bottom'):
+            matrix[fixed, v] = 2
+        else:
+            matrix[v, fixed] = 2
+
+    switch_pos = _choose_switch_by_side_rule(matrix, edge=edge, fixed=fixed, door_varying=door_varying)
+    if switch_pos is None:
+        return False
+
+    matrix[switch_pos] = 3
+    return _is_switch_rule_compliant(matrix)
+
+
+def _is_switch_rule_compliant(matrix: np.ndarray) -> bool:
+    """
+    Validate switch-door relation under the strict side rule:
+      - exactly one switch cell (value=3)
+      - at least one door cell (value=2)
+      - horizontal door: switch shares the same row, is outside door span, and
+        side is selected by 48x48 left/right bias
+      - vertical door: switch shares the same column, is outside door span, and
+        side is selected by 48x48 upper/lower bias
+    """
+    door_cells = np.argwhere(matrix == 2)
+    switch_cells = np.argwhere(matrix == 3)
+    if len(door_cells) == 0 or len(switch_cells) != 1:
+        return False
+
+    sr, sc = map(int, switch_cells[0])
+    door_rows = sorted({int(dr) for dr, _ in door_cells.tolist()})
+    door_cols = sorted({int(dc) for _, dc in door_cells.tolist()})
+
+    # Horizontal door: same row, side based on left/right bias in 48x48.
+    if len(door_rows) == 1 and len(door_cols) >= 2:
+        row = door_rows[0]
+        c_min, c_max = min(door_cols), max(door_cols)
+        if sr != row or (c_min <= sc <= c_max):
+            return False
+        center_col = 0.5 * (c_min + c_max)
+        prefer_right = center_col < (MAX_SIZE / 2.0)
+        if prefer_right:
+            return sc > c_max
+        return sc < c_min
+
+    # Vertical door: same column, side based on upper/lower bias in 48x48.
+    if len(door_cols) == 1 and len(door_rows) >= 2:
+        col = door_cols[0]
+        r_min, r_max = min(door_rows), max(door_rows)
+        if sc != col or (r_min <= sr <= r_max):
+            return False
+        center_row = 0.5 * (r_min + r_max)
+        prefer_down = center_row < (MAX_SIZE / 2.0)
+        if prefer_down:
+            return sr > r_max
+        return sr < r_min
+
+    return False
+
+
+def _choose_switch_by_side_rule(
+    matrix: np.ndarray,
+    *,
+    edge: str,
+    fixed: int,
+    door_varying: list[int],
+) -> tuple[int, int] | None:
+    """
+    Choose switch position by the requested side rule.
+
+    Returns None if the preferred side has no valid value-1 cell.
+    """
+    rows, cols = matrix.shape
+
+    if edge in ("top", "bottom"):
+        row = fixed
+        c_min, c_max = min(door_varying), max(door_varying)
+        center_col = 0.5 * (c_min + c_max)
+        prefer_right = center_col < (MAX_SIZE / 2.0)
+
+        if prefer_right:
+            candidates = [(row, c) for c in range(c_max + 1, cols)]
+        else:
+            candidates = [(row, c) for c in range(c_min - 1, -1, -1)]
+
+    else:
+        col = fixed
+        r_min, r_max = min(door_varying), max(door_varying)
+        center_row = 0.5 * (r_min + r_max)
+        prefer_down = center_row < (MAX_SIZE / 2.0)
+
+        if prefer_down:
+            candidates = [(r, col) for r in range(r_max + 1, rows)]
+        else:
+            candidates = [(r, col) for r in range(r_min - 1, -1, -1)]
+
+    for r, c in candidates:
+        if matrix[r, c] == 1:
+            return int(r), int(c)
+    return None
+
+
+def _rand(lo: int, hi: int, rng: random.Random) -> int:
+    return rng.randint(lo, max(lo, hi))
+
+
+# ── shape generators ──────────────────────────────────────────────────────────
+
+def _gen_L(bbox_lo: int, bbox_hi: int, rng: random.Random) -> np.ndarray:
+    R = min(_rand(bbox_lo, bbox_hi, rng), MAX_SIZE)
+    C = min(_rand(bbox_lo, bbox_hi, rng), MAX_SIZE)
+    m = np.ones((R, C), dtype=np.int32)
+    cr = _rand(R // 3, R * 2 // 3, rng)
+    cc = _rand(C // 3, C * 2 // 3, rng)
+    corner = rng.randint(0, 3)
+    if corner == 0:
+        m[:cr, :cc] = 0
+    elif corner == 1:
+        m[:cr, C - cc:] = 0
+    elif corner == 2:
+        m[R - cr:, :cc] = 0
+    else:
+        m[R - cr:, C - cc:] = 0
+    return m
+
+
+def _gen_U(bbox_lo: int, bbox_hi: int, rng: random.Random) -> np.ndarray:
+    R = min(_rand(bbox_lo, bbox_hi, rng), MAX_SIZE)
+    C = min(_rand(bbox_lo, bbox_hi, rng), MAX_SIZE)
+    m = np.ones((R, C), dtype=np.int32)
+    side = rng.randint(0, 3)
+    if side == 0:
+        depth = _rand(R // 4, R // 2, rng)
+        w = _rand(C // 4, C // 2, rng)
+        c0 = _rand(1, max(1, C - w - 1), rng)
+        m[:depth, c0:c0 + w] = 0
+    elif side == 1:
+        depth = _rand(R // 4, R // 2, rng)
+        w = _rand(C // 4, C // 2, rng)
+        c0 = _rand(1, max(1, C - w - 1), rng)
+        m[R - depth:, c0:c0 + w] = 0
+    elif side == 2:
+        depth = _rand(C // 4, C // 2, rng)
+        h = _rand(R // 4, R // 2, rng)
+        r0 = _rand(1, max(1, R - h - 1), rng)
+        m[r0:r0 + h, :depth] = 0
+    else:
+        depth = _rand(C // 4, C // 2, rng)
+        h = _rand(R // 4, R // 2, rng)
+        r0 = _rand(1, max(1, R - h - 1), rng)
+        m[r0:r0 + h, C - depth:] = 0
+    return m
+
+
+def _gen_T(bbox_lo: int, bbox_hi: int, rng: random.Random) -> np.ndarray:
+    R = min(_rand(bbox_lo, bbox_hi, rng), MAX_SIZE - 6)
+    C = min(_rand(bbox_lo, bbox_hi, rng), MAX_SIZE - 6)
+    ph = _rand(max(3, R // 5), max(4, R // 3), rng)
+    pw = _rand(max(3, C // 5), max(4, C // 3), rng)
+    side = rng.randint(0, 3)
+    if side == 0:
+        total_R, total_C = min(R + ph, MAX_SIZE), C
+        m = np.zeros((total_R, total_C), dtype=np.int32)
+        m[ph:, :] = 1
+        c0 = _rand(1, max(1, total_C - pw - 1), rng)
+        m[:ph, c0:c0 + pw] = 1
+    elif side == 1:
+        total_R, total_C = min(R + ph, MAX_SIZE), C
+        m = np.zeros((total_R, total_C), dtype=np.int32)
+        m[:R, :] = 1
+        c0 = _rand(1, max(1, total_C - pw - 1), rng)
+        m[R:, c0:c0 + pw] = 1
+    elif side == 2:
+        total_R, total_C = R, min(C + ph, MAX_SIZE)
+        m = np.zeros((total_R, total_C), dtype=np.int32)
+        m[:, ph:] = 1
+        r0 = _rand(1, max(1, total_R - pw - 1), rng)
+        m[r0:r0 + pw, :ph] = 1
+    else:
+        total_R, total_C = R, min(C + ph, MAX_SIZE)
+        m = np.zeros((total_R, total_C), dtype=np.int32)
+        m[:, :C] = 1
+        r0 = _rand(1, max(1, total_R - pw - 1), rng)
+        m[r0:r0 + pw, C:] = 1
+    return m
+
+
+def _gen_hollow(bbox_lo: int, bbox_hi: int, rng: random.Random) -> np.ndarray:
+    R = min(_rand(max(bbox_lo, 12), bbox_hi, rng), MAX_SIZE)
+    C = min(_rand(max(bbox_lo, 12), bbox_hi, rng), MAX_SIZE)
+    m = np.ones((R, C), dtype=np.int32)
+    margin = 2
+    hole_r = _rand(4, max(4, R - 2 * margin - 2), rng)
+    hole_c = _rand(4, max(4, C - 2 * margin - 2), rng)
+    r0 = _rand(margin, max(margin, R - margin - hole_r), rng)
+    c0 = _rand(margin, max(margin, C - margin - hole_c), rng)
+    m[r0:r0 + hole_r, c0:c0 + hole_c] = 0
+    return m
+
+
+def _gen_cross(bbox_lo: int, bbox_hi: int, rng: random.Random) -> np.ndarray:
+    R = min(_rand(bbox_lo, bbox_hi, rng), MAX_SIZE)
+    C = min(_rand(bbox_lo, bbox_hi, rng), MAX_SIZE)
+    m = np.zeros((R, C), dtype=np.int32)
+    bar_h = _rand(max(3, R // 4), max(4, R // 2), rng)
+    r0 = (R - bar_h) // 2
+    m[r0:r0 + bar_h, :] = 1
+    bar_w = _rand(max(3, C // 4), max(4, C // 2), rng)
+    c0 = (C - bar_w) // 2
+    m[:, c0:c0 + bar_w] = 1
+    return m
+
+
+def _gen_multi_cut(bbox_lo: int, bbox_hi: int, rng: random.Random) -> np.ndarray:
+    R = min(_rand(bbox_lo, bbox_hi, rng), MAX_SIZE)
+    C = min(_rand(bbox_lo, bbox_hi, rng), MAX_SIZE)
+    m = np.ones((R, C), dtype=np.int32)
+    n_cuts = rng.randint(2, 3)
+    corners = rng.sample(range(4), min(n_cuts, 4))
+    for corner in corners:
+        cr = _rand(R // 5, R // 3, rng)
+        cc = _rand(C // 5, C // 3, rng)
+        if corner == 0:
+            m[:cr, :cc] = 0
+        elif corner == 1:
+            m[:cr, C - cc:] = 0
+        elif corner == 2:
+            m[R - cr:, :cc] = 0
+        else:
+            m[R - cr:, C - cc:] = 0
+    return m
+
+
+_SHAPE_FN = {
+    "L":         _gen_L,
+    "U":         _gen_U,
+    "T":         _gen_T,
+    "hollow":    _gen_hollow,
+    "cross":     _gen_cross,
+    "multi_cut": _gen_multi_cut,
+}
+
+
+# ── core generator ────────────────────────────────────────────────────────────
+
+def generate_room(
+    target_lamps: int,
+    shape: str,
+    rng: random.Random,
+    max_retries: int = 10,
+) -> np.ndarray | None:
+    bbox_lo, bbox_hi = _LAMP_BBOX[target_lamps]
+    fn = _SHAPE_FN[shape]
+    for _ in range(max_retries):
+        m = fn(bbox_lo, bbox_hi, rng)
+        if m.shape[0] > MAX_SIZE or m.shape[1] > MAX_SIZE:
+            continue
+        if int(np.sum(m == 1)) < LAMP_MIN * AREA_PER_LAMP:
+            continue
+        m_copy = m.copy()
+        if not _place_door_switch(m_copy, rng):
+            continue
+        if not _is_switch_rule_compliant(m_copy):
+            continue
+        if _lamp_count(m_copy) != target_lamps:
+            continue
+        return m_copy
+    return None
+
+
+def _to_json(matrix: np.ndarray) -> dict:
+    room = {
+        **_TEMPLATE_FIELDS,
+        "grid_rows": int(matrix.shape[0]),
+        "grid_cols": int(matrix.shape[1]),
+        "lamp_count": _lamp_count(matrix),
+        "matrix": matrix.tolist(),
+    }
+    return {"房间": room}
+
+
+# ── dataset generation ────────────────────────────────────────────────────────
+
+def generate_dataset(count: int, output_dir: str | Path, seed: int = 42) -> None:
+    """Generate `count` rooms with balanced lamp-count and shape distributions."""
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    rng = random.Random(seed)
+    np.random.seed(seed)
+
+    lamp_counts = list(range(LAMP_MIN, LAMP_MAX + 1))  # 2..9
+    per_lamp = max(1, count // len(lamp_counts))
+
+    # Build balanced task list: round-robin over shapes within each lamp count
+    tasks: list[tuple[int, str]] = []
+    for lamps in lamp_counts:
+        for i in range(per_lamp):
+            tasks.append((lamps, SHAPES[i % len(SHAPES)]))
+    while len(tasks) < count:
+        tasks.append((rng.choice(lamp_counts), rng.choice(SHAPES)))
+    rng.shuffle(tasks)
+    tasks = tasks[:count]
+
+    name_counter: dict[tuple[int, str], int] = {}
+    saved = 0
+    fallback_used = 0
+
+    for target_lamps, shape in tasks:
+        matrix = generate_room(target_lamps, shape, rng)
+        if matrix is None:
+            fallback_used += 1
+            for fb_shape in rng.sample(SHAPES, len(SHAPES)):
+                matrix = generate_room(target_lamps, fb_shape, rng)
+                if matrix is not None:
+                    shape = fb_shape
+                    break
+        if matrix is None:
+            continue
+
+        key = (target_lamps, shape)
+        idx = name_counter.get(key, 0) + 1
+        name_counter[key] = idx
+        filename = f"shape_{shape}_{target_lamps}lamp_{idx:04d}.json"
+        with (output_path / filename).open("w", encoding="utf-8") as f:
+            json.dump(_to_json(matrix), f, ensure_ascii=False, indent=2)
+        saved += 1
+
+    print(f"[room_gen] saved={saved}  fallback_used={fallback_used}  dir={output_path}")
+
+    lamp_dist: Counter = Counter()
+    shape_dist: Counter = Counter()
+    for (lamps, shape), cnt in name_counter.items():
+        lamp_dist[lamps] += cnt
+        shape_dist[shape] += cnt
+    print("[room_gen] lamp dist :", dict(sorted(lamp_dist.items())))
+    print("[room_gen] shape dist:", dict(sorted(shape_dist.items())))
+
+
+# ── CLI ───────────────────────────────────────────────────────────────────────
+
+def main() -> None:
     import argparse
-
-    parser = argparse.ArgumentParser(description='Generate synthetic room samples for RL training')
-    parser.add_argument('--count', type=int, default=100, help='Number of base rooms to generate')
-    parser.add_argument('--output', type=str, default='RL/generated_rooms', help='Output directory')
-    parser.add_argument('--augment', action='store_true', help='Enable data augmentation (6x)')
-    parser.add_argument('--visualize', action='store_true', help='Generate visualization images')
-    parser.add_argument('--seed', type=int, default=42, help='Random seed')
-
+    parser = argparse.ArgumentParser(description="Generate irregular rooms for RL training")
+    parser.add_argument("--count", type=int, default=400)
+    parser.add_argument("--output", type=str, default="RL/room_gen/json")
+    parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
-
-    # Set random seed
-    random.seed(args.seed)
-    np.random.seed(args.seed)
-
-    # Generate rooms
-    generator = RoomGenerator()
-    saved_files = generator.generate_batch(
-        count=args.count,
-        output_dir=args.output,
-        augment=args.augment,
-        visualize=args.visualize,
-    )
-
-    print(f"\n=== Generation Summary ===")
-    print(f"Base rooms: {args.count}")
-    print(f"Total files: {len(saved_files)}")
-    print(f"Output directory: {args.output}")
-    print(f"Augmentation: {'enabled (6x)' if args.augment else 'disabled'}")
-
-    # Show sample statistics
-    print(f"\n=== Sample Statistics ===")
-    sample_files = saved_files[:min(5, len(saved_files))]
-    for filepath in sample_files:
-        with filepath.open('r') as f:
-            data = json.load(f)
-            room = list(data.values())[0]
-            print(f"{room['room_name']}: {room['grid_rows']}x{room['grid_cols']}, "
-                  f"type={room['room_type']}, function={room['function_type']}, "
-                  f"lamps={room['lamp']['lamp_count']}")
+    generate_dataset(count=args.count, output_dir=args.output, seed=args.seed)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

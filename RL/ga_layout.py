@@ -49,8 +49,8 @@ class GAConfig:
 class RoomConfig:
     """Room-selection settings loaded from config.yaml."""
 
-    json_path: str = "RL/test_room/test_room.json"
-    room_name: str = "办公室1"
+    json_path: str = "RL/test_room/origin_room/unregular.json"
+    room_name: str = "热量室准备间"
 
 
 def set_seed(seed: int) -> None:
@@ -101,18 +101,18 @@ def plot_fitness_curve(history: list[dict[str, Any]], output_path: Path) -> Path
 def plot_score_curve(history: list[dict[str, Any]], output_path: Path) -> Path:
     """Plot best-individual raw score trends over generations."""
     generations = [int(item["generation"]) for item in history]
-    uniformity = np.asarray([float(item["uniformity_score"]) for item in history], dtype=np.float32)
-    illum_centroid = np.asarray([float(item["illum_centroid_score"]) for item in history], dtype=np.float32)
+    potential = np.asarray([float(item["potential_reduction_score"]) for item in history], dtype=np.float32)
     alignment = np.asarray([float(item["alignment_score"]) for item in history], dtype=np.float32)
     wiring = np.asarray([float(item["wiring_score"]) for item in history], dtype=np.float32)
+    mst_cost = np.asarray([float(item["mst_cost"]) for item in history], dtype=np.float32)
 
     plt.figure(figsize=(11, 5.5))
-    plt.plot(generations, uniformity, label="uniformity_score", linewidth=2.0)
-    plt.plot(generations, illum_centroid, label="illum_centroid_score", linewidth=2.0)
+    plt.plot(generations, potential, label="potential_reduction_score", linewidth=2.0)
     plt.plot(generations, alignment, label="alignment_score", linewidth=2.0)
     plt.plot(generations, wiring, label="wiring_score", linewidth=2.0)
+    plt.plot(generations, mst_cost, label="mst_cost", linewidth=2.0)
     plt.xlabel("Generation")
-    plt.ylabel("Best Individual Raw Score")
+    plt.ylabel("Score / Cost")
     plt.title("GA Layout Score Trends")
     plt.grid(True, linestyle="--", linewidth=0.5, alpha=0.5)
     plt.legend(loc="best")
@@ -178,7 +178,7 @@ class GALayoutOptimizer:
         return tuple(unique)
 
     def _build_state(self, genome: tuple[int, ...]) -> RoomState:
-        lamp_mask = np.zeros_like(self.env.original_placeable_mask, dtype=bool)
+        lamp_mask = np.zeros_like(self.env.original_placeable_mask, dtype=bool)  ## 创造一个全为 False 的灯具掩码，形状和房间网格相同，placeable_mask中True为可放置位置，False为不可放置位置
         for gene in genome:
             lamp_mask[self._id_to_point(gene)] = True
         return RoomState.from_channels(
@@ -187,23 +187,43 @@ class GALayoutOptimizer:
             switch_mask=self.env.original_switch_mask,
             door_mask=self.env.original_door_mask,
         )
+    def _potential_score(self, state: RoomState) -> float:
+        """势能奖励：布置后势能越低，得分越高，归一化到 [0, 1]。"""
+        initial_potential = self.reward_calculator.initial_potential(state)
+        if initial_potential <= 0.0:
+            return 1.0
+        current_potential = self.reward_calculator.potential(state)
+        return float(np.clip(1.0 - current_potential / initial_potential, 0.0, 1.0))
+
     ## 计算一个基因组的适应度。
-    ## fitness = step_reward.total + terminal_bonus，与PPO的奖励目标对齐，
-    ## 使GA能够选出"整体布局优秀"的方案，而不仅仅是"各项中等均衡"的方案。
-    ## 返回 (total_fitness, step_breakdown)，其中 step_breakdown 用于 diagnostics 显示。
+    ## fitness = 势能奖励（一次性）+ 终局对齐/布线奖励
     def evaluate_genome(self, genome: tuple[int, ...]) -> tuple[float, RewardBreakdown]:
         state = self._build_state(genome)
-        step_bd = self.reward_calculator.calculate_step_reward(
-            state,
-            invalid_action=False,
-            pair_cost_provider=self.env.pair_cost,
-        )
+        initial_potential = self.reward_calculator.initial_potential(state)
+
+        potential_normalized = self._potential_score(state)
+        potential_term = self.reward_calculator.config.potential_coef * potential_normalized
+
         terminal_bd = self.reward_calculator.calculate_terminal_reward(
             state,
             pair_cost_provider=self.env.pair_cost,
+            initial_potential=initial_potential,
         )
-        total_fitness = step_bd.total + terminal_bd.total
-        return total_fitness, step_bd
+        total_fitness = potential_term + terminal_bd.total
+
+        bd = RewardBreakdown(
+            total=total_fitness,
+            potential_reduction_normalized=potential_normalized,
+            potential_reduction_item=potential_term,
+            invalid_penalty=0.0,
+            alignment_normalized=terminal_bd.alignment_normalized,
+            alignment_term=terminal_bd.alignment_term,
+            wiring_normalized=terminal_bd.wiring_normalized,
+            wiring_term=terminal_bd.wiring_term,
+            mst_cost=terminal_bd.mst_cost,
+            terminal_bonus=terminal_bd.terminal_bonus,
+        )
+        return total_fitness, bd
 
     def _tournament_select(self, scored_population: list[tuple[tuple[int, ...], float, RewardBreakdown]]) -> tuple[int, ...]:
         competitors = random.sample(scored_population, k=min(self.ga_config.tournament_size, len(scored_population)))
@@ -268,10 +288,9 @@ class GALayoutOptimizer:
             encoded[self._id_to_point(gene)] = 4
         room_title = (
             f"{self.env.room_name} | fitness={breakdown.total:.3f} "
-            f"u={breakdown.diagnostics.get('uniformity_score', 0.0):.2f} "
-            f"c={breakdown.diagnostics.get('illum_centroid_score', 0.0):.2f} "
-            f"a={breakdown.diagnostics.get('alignment_score', 0.0):.2f} "
-            f"w={breakdown.diagnostics.get('wiring_score', 0.0):.2f}"
+            f"p={breakdown.potential_reduction_normalized:.2f} "
+            f"a={breakdown.alignment_normalized:.2f} "
+            f"w={breakdown.wiring_normalized:.2f}"
         )
         return save_room_grid_image(encoded, output_path, cell_size=32, room_name=room_title)
 
@@ -281,7 +300,7 @@ class GALayoutOptimizer:
         best_genome: tuple[int, ...] | None = None
         best_breakdown: RewardBreakdown | None = None
         best_fitness = float("-inf")
-        stagnant_generations = 0
+        stagnant_generations = 0  ## 连续未改进的代数计数器
 
         for generation in range(1, self.ga_config.generations + 1):
             scored_population = []
@@ -298,13 +317,10 @@ class GALayoutOptimizer:
                     "generation": generation,
                     "best_fitness": generation_best_fitness,
                     "mean_fitness": mean_fitness,
-                    "uniformity_score": float(generation_best_breakdown.diagnostics.get("uniformity_score", 0.0)),
-                    "illum_centroid_score": float(
-                        generation_best_breakdown.diagnostics.get("illum_centroid_score", 0.0)
-                    ),
-                    "alignment_score": float(generation_best_breakdown.diagnostics.get("alignment_score", 0.0)),
-                    "wiring_score": float(generation_best_breakdown.diagnostics.get("wiring_score", 0.0)),
-                    "mst_cost": float(generation_best_breakdown.diagnostics.get("mst_cost", 0.0)),
+                    "potential_reduction_score": float(generation_best_breakdown.potential_reduction_normalized),
+                    "alignment_score": float(generation_best_breakdown.alignment_normalized),
+                    "wiring_score": float(generation_best_breakdown.wiring_normalized),
+                    "mst_cost": float(generation_best_breakdown.mst_cost),
                 }
             )
 
@@ -321,10 +337,9 @@ class GALayoutOptimizer:
                     f"[ga] generation={generation:04d} "
                     f"best={generation_best_fitness:8.3f} "
                     f"mean={mean_fitness:8.3f} "
-                    f"u={generation_best_breakdown.diagnostics.get('uniformity_score', 0.0):5.2f} "
-                    f"c={generation_best_breakdown.diagnostics.get('illum_centroid_score', 0.0):5.2f} "
-                    f"a={generation_best_breakdown.diagnostics.get('alignment_score', 0.0):5.2f} "
-                    f"w={generation_best_breakdown.diagnostics.get('wiring_score', 0.0):5.2f}"
+                    f"p={generation_best_breakdown.potential_reduction_normalized:5.2f} "
+                    f"a={generation_best_breakdown.alignment_normalized:5.2f} "
+                    f"w={generation_best_breakdown.wiring_normalized:5.2f}"
                 )
 
             if stagnant_generations >= self.ga_config.patience:
@@ -368,7 +383,12 @@ class GALayoutOptimizer:
             "best_fitness": best_fitness,
             "best_genome": list(best_genome),
             "best_positions": [self._id_to_point(gene) for gene in best_genome],
-            "best_diagnostics": best_breakdown.diagnostics,
+            "best_diagnostics": {
+                "potential_reduction_score": best_breakdown.potential_reduction_normalized,
+                "alignment_score": best_breakdown.alignment_normalized,
+                "wiring_score": best_breakdown.wiring_normalized,
+                "mst_cost": best_breakdown.mst_cost,
+            },
             "history": history,
             "best_layout_path": str(best_layout_path),
             "fitness_curve_path": str(fitness_curve_path),
@@ -401,16 +421,16 @@ def main() -> None:
         config=env_cfg,
     )
 
-    # Save padded room visualization
-    padded_room_path = output_dir / "padded_room.png"
-    save_padded_room_image(
-        env.original_matrix,
-        env.padded_size,
-        padded_room_path,
-        cell_size=32,
-        room_name=env.room_name,
-    )
-    print(f"[ga] padded room visualization saved to {padded_room_path}")
+    # # Save padded room visualization
+    # padded_room_path = output_dir / "padded_room.png"
+    # save_padded_room_image(
+    #     env.original_matrix,
+    #     env.padded_size,
+    #     padded_room_path,
+    #     cell_size=32,
+    #     room_name=env.room_name,
+    # )
+    # print(f"[ga] padded room visualization saved to {padded_room_path}")
 
     optimizer = GALayoutOptimizer(env=env, ga_config=ga_config, output_dir=output_dir)
     summary = optimizer.run()

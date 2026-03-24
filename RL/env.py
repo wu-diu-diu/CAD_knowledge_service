@@ -115,11 +115,8 @@ class SingleRoomLightingEnv:
         self.episode_index += 1
         self.last_breakdown: RewardBreakdown | None = None
         initial_state = self.current_room_state()
-        self.prev_potential = self.reward_calculator.calculate_step_reward(
-            initial_state,
-            invalid_action=False,
-            pair_cost_provider=self.pair_cost,
-        ).total
+        self.initial_potential = self.reward_calculator.initial_potential(initial_state)
+        self.current_potential = self.initial_potential
         return self.observation()
 
     def observation(self) -> np.ndarray:
@@ -180,13 +177,13 @@ class SingleRoomLightingEnv:
                 self.original_lamp_mask[original_point] = True  ## 如果动作合法且对应的位置可以放置灯具，就在original_lamp_mask中将这个位置标记为True，表示已经放置了一个灯具。这个布尔掩码会在构建观察状态和计算奖励时使用，智能体的目标是通过放置灯具来满足房间的照明需求，同时遵守约束条件。
 
         state = self.current_room_state()  ## 更新了灯具状态后，构建房间状态
-        step_breakdown = self.reward_calculator.calculate_step_reward(  ## 计算该步动作的奖励，reward_calculator会根据当前房间状态、动作是否合法以及布线成本等因素，计算出一个奖励值，并返回一个包含详细诊断信息的RewardBreakdown对象。这个奖励值将用于指导智能体学习如何更有效地放置灯具以满足照明需求，同时避免非法操作和过高的布线成本。
+        step_breakdown = self.reward_calculator.calculate_step_reward(
             state,
+            prev_potential=self.current_potential,
             invalid_action=invalid_action,
-            pair_cost_provider=self.pair_cost,
         )
-        reward = step_breakdown.total - self.prev_potential  ## 计算当前步骤的奖励增量，即当前步骤的总奖励减去上一步的潜在奖励，这样可以鼓励智能体采取能够增加潜在奖励的动作，同时也能更好地反映每个动作对最终目标的贡献。
-        self.prev_potential = step_breakdown.total
+        self.current_potential = self.reward_calculator.potential(state)
+        reward = step_breakdown.total
 
         self.current_step += 1
         reached_limit = self.current_step >= self.config.max_steps  ## 如果本轮布置的步骤数量超过了最大数量，那么强制结束当前轮次的训练，进入终局状态，计算终局奖励。这是为了防止智能体在某些房间上陷入无效的尝试，导致训练停滞不前
@@ -197,16 +194,21 @@ class SingleRoomLightingEnv:
         terminal_bonus = 0.0
         routing_summary = None
         ## 如果布置完成，那么除了本步得到的奖励增量外，还会根据终局状态计算一个额外的奖励。
-        if done: 
+        if done:
             terminal_breakdown = self.reward_calculator.calculate_terminal_reward(
                 state,
                 pair_cost_provider=self.pair_cost,
+                initial_potential=self.initial_potential,
             )
             terminal_bonus = terminal_breakdown.total
             reward += terminal_bonus
-            step_breakdown.terminal = terminal_breakdown.terminal
+            step_breakdown.terminal_bonus = terminal_breakdown.terminal_bonus
+            step_breakdown.alignment_normalized = terminal_breakdown.alignment_normalized
+            step_breakdown.alignment_term = terminal_breakdown.alignment_term
+            step_breakdown.wiring_normalized = terminal_breakdown.wiring_normalized
+            step_breakdown.wiring_term = terminal_breakdown.wiring_term
+            step_breakdown.mst_cost = terminal_breakdown.mst_cost
             step_breakdown.total = reward
-            step_breakdown.diagnostics.update(terminal_breakdown.diagnostics)
             routing_summary = self.compute_terminal_routing()
 
         self.done = done
@@ -216,11 +218,7 @@ class SingleRoomLightingEnv:
             "stop_action": stop,
             "invalid_action": invalid_action,
             "target_lamp_count": self.config.target_lamp_count,
-            "reached_target": reached_target,
-            "terminal_bonus": terminal_bonus,
-            "reward_breakdown": step_breakdown,
-            "lamp_count": len(state.lamp_positions),
-            "alignment_score": step_breakdown.diagnostics.get("alignment_score", 0.0),
+            "step_breakdown": step_breakdown,
         }
         if routing_summary is not None:
             info["routing_summary"] = routing_summary
