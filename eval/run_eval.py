@@ -121,7 +121,8 @@ def run_eval(
         # BM25 结果中有 raw_cell，可以做 Exact Match
         def bm25_answer(q: str) -> str:
             res = bm25.search(q, top_k=1)
-            return res[0].get("values", [""])[0] if res else ""
+            vals = res[0].get("values", [])
+            return vals[0] if vals else ""
         bm25_em = evaluate_generation(bm25_answer, dataset)
         bm25_metrics.update(bm25_em)
         bm25_metrics["method"] = "BM25"
@@ -155,9 +156,9 @@ def run_eval(
         print(f"  [跳过] 纯向量 RAG 初始化失败: {e}")
 
     # -----------------------------------------------------------------------
-    # 方法 3：KG 向量检索（Requirement 粒度）
+    # 方法 3：KG BM25+向量混合检索（Requirement 粒度）
     # -----------------------------------------------------------------------
-    print("\n[eval] 评测 KG 向量检索（Requirement 粒度）...")
+    print("\n[eval] 评测 KG BM25+向量混合检索（Requirement 粒度）...")
     def kg_vec_search(q: str) -> List[dict]:
         result = hybrid_query(q, kg_store_dir, embed_fn, top_k=top_k)
         return result.get("results", [])
@@ -169,7 +170,7 @@ def run_eval(
         return res[0]["values"][0] if res and res[0].get("values") else ""
     kg_vec_em = evaluate_generation(kg_vec_answer, dataset)
     kg_vec_metrics.update(kg_vec_em)
-    kg_vec_metrics["method"] = "KG向量检索(Req粒度)"
+    kg_vec_metrics["method"] = "KG BM25+向量混合检索(Req粒度)"
     all_results.append(kg_vec_metrics)
     print(f"  Recall@1={kg_vec_metrics['recall@1']:.4f}  MRR={kg_vec_metrics['mrr']:.4f}  EM={kg_vec_metrics['exact_match']:.4f}")
 

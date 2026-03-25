@@ -1,9 +1,93 @@
 from __future__ import annotations
 
+import json
+import logging
+import os
 import re
 from typing import Dict, List, Optional, Tuple
 
 from ..models import GraphBuilder, MdBlock
+
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# LLM fallback client (lazy-initialised, shared across calls)
+# ---------------------------------------------------------------------------
+
+_llm_client = None
+
+
+def _get_llm_client():
+    global _llm_client
+    if _llm_client is not None:
+        return _llm_client
+    try:
+        from openai import OpenAI
+    except ImportError as e:
+        raise RuntimeError("缺少 openai 依赖，请安装 `openai`。") from e
+    api_key = os.getenv("DEEPSEEK_API_KEY", "").strip()
+    base_url = os.getenv("DEEPSEEK_BASE_URL", "").strip() or "https://api.deepseek.com/v1"
+    if not api_key:
+        raise RuntimeError("未设置 DEEPSEEK_API_KEY 环境变量，无法使用 LLM fallback。")
+    _llm_client = OpenAI(api_key=api_key, base_url=base_url)
+    return _llm_client
+
+
+_LLM_SYSTEM = (
+    "你是建筑照明规范专家。从给定的规范条款文本中抽取结构化信息，"
+    "严格按照 JSON 格式输出，不要输出任何其他内容。"
+)
+
+_LLM_PROMPT_TMPL = """\
+请从以下规范条款中抽取所有"实体-指标-值"三元组。
+
+条款文本：
+{text}
+
+输出格式（JSON 数组，每个元素对应一条要求）：
+[
+  {{
+    "entity": "适用对象，如办公室、走廊，没有则为null",
+    "metric": "被约束的指标名称，如照度标准值、维护系数、色容差",
+    "value": "数值或范围字符串，如300、0.7、300~500，没有则为null",
+    "unit": "单位，如lx、%、SDCM，没有则为null",
+    "modality": "must/recommended/optional/prohibit/discourage 之一，没有则为null",
+    "condition": "适用条件，如当天然采光不足时，没有则为null"
+  }}
+]
+
+注意：
+- entity 只写空间/场所名称，不写动词或修饰语
+- metric 写指标的规范名称，不要包含数值
+- 如果一句话包含多个指标，拆成多条
+- 只输出 JSON，不要解释"""
+
+
+def _llm_extract(text: str) -> List[Dict]:
+    """调用 LLM 从条款文本中抽取实体-指标-值三元组，失败时返回空列表。"""
+    try:
+        client = _get_llm_client()
+    except RuntimeError as e:
+        logger.debug("LLM client unavailable: %s", e)
+        return []
+    try:
+        resp = client.chat.completions.create(
+            model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
+            messages=[
+                {"role": "system", "content": _LLM_SYSTEM},
+                {"role": "user", "content": _LLM_PROMPT_TMPL.format(text=text)},
+            ],
+            temperature=0.0,
+            max_tokens=1024,
+        )
+        raw = resp.choices[0].message.content or ""
+        # 去掉可能的 markdown 代码块包裹
+        raw = re.sub(r"^```(?:json)?\s*", "", raw.strip())
+        raw = re.sub(r"\s*```$", "", raw)
+        return json.loads(raw)
+    except Exception as e:
+        logger.warning("LLM fallback 抽取失败: %s", e)
+        return []
 
 CLAUSE_RE = re.compile(r"^\s*(\d+(?:\.\d+)+)\s+(.*)")
 LIST_ITEM_RE = re.compile(r"^\s*[-•]?\s*(\d+)[、.\s]+\s*(.*\S)\s*$")
@@ -268,7 +352,7 @@ def _create_requirement(
 
     # 第二步：建立 Clause <-> Requirement 的主干关系。
     # - CLAUSE_EXPRESSES_REQUIREMENT: 这个条款表达了哪条 requirement
-    # - SOURCE_OF: 反向保留“该 requirement 来自哪个 clause”的可追溯关系
+    # - SOURCE_OF: 反向保留"该 requirement 来自哪个 clause"的可追溯关系
     builder.add_edge("CLAUSE_EXPRESSES_REQUIREMENT", clause_id, req_id)
     builder.add_edge("SOURCE_OF", req_id, clause_id)
 
@@ -283,22 +367,52 @@ def _create_requirement(
 
     # 第四步：抽取适用对象（DomainEntity）。
     # 优先从当前文本里找；如果当前分项里没写明对象，
-    # 再退回到“父条文 + 当前分项”的合并上下文里找。
+    # 再退回到"父条文 + 当前分项"的合并上下文里找。
     entity_names = _extract_entities(text, modality_token)
     if not entity_names:
         entity_names = _extract_entities(combined_text, modality_token)
+
+    # 第五步：抽取该 requirement 约束的指标（Metric），
+    # 例如照度、Ra、功率密度等。
+    # 同样采用"当前文本优先，不足时用父句补充"的策略。
+    metric_names = _extract_metrics(text)
+    if not metric_names:
+        metric_names = _extract_metrics(combined_text)
+
+    # LLM fallback：规则未能抽到实体或指标时，调用 LLM 补全。
+    # LLM 结果只用于补充缺失部分，不覆盖规则已抽到的内容。
+    llm_triples: List[Dict] = []
+    if not entity_names or not metric_names:
+        llm_triples = _llm_extract(combined_text)
+        if llm_triples:
+            logger.debug("LLM fallback triggered, clause: %s, triples: %d", clause_no, len(llm_triples))
+
+    # 若规则实体为空，从 LLM 结果里补充
+    if not entity_names and llm_triples:
+        seen: set = set()
+        for triple in llm_triples:
+            name = (triple.get("entity") or "").strip()
+            if name and name not in seen:
+                seen.add(name)
+                entity_names.append(name)
+
     for idx, entity_name in enumerate(entity_names, start=1):
         entity_id = f"entity:{entity_name}"
         builder.add_node(entity_id, "DomainEntity", name=entity_name, canonical_name=entity_name, source_id=source_id)
         builder.add_edge("APPLIES_TO", req_id, entity_id, role="subject", rank=idx)
         _attach_context_edges(builder, entity_id, source_id=source_id, page_no=page_no, section_id=section_id)
 
-    # 第五步：抽取该 requirement 约束的指标（Metric），
-    # 例如照度、Ra、功率密度等。
-    # 同样采用“当前文本优先，不足时用父句补充”的策略。
-    metric_names = _extract_metrics(text)
-    if not metric_names:
-        metric_names = _extract_metrics(combined_text)
+    # 若规则指标为空，从 LLM 结果里补充；同时收集 LLM 抽到的值用于后续 ValueSpec
+    llm_value_triples: List[Dict] = []  # 记录 LLM 补充的指标对应的值信息
+    if not metric_names and llm_triples:
+        seen_metrics: set = set()
+        for triple in llm_triples:
+            mname = (triple.get("metric") or "").strip()
+            if mname and mname not in seen_metrics:
+                seen_metrics.add(mname)
+                metric_names.append(mname)
+                llm_value_triples.append(triple)
+
     for metric_name in metric_names:
         metric_id = f"metric:{metric_name}"
         builder.add_node(metric_id, "Metric", name=metric_name, source_id=source_id)
@@ -306,21 +420,44 @@ def _create_requirement(
         _attach_context_edges(builder, metric_id, source_id=source_id, page_no=page_no, section_id=section_id)
 
     # 第六步：抽取值（ValueSpec）。
-    # 如果条文里出现数值、范围、单位，就为每个值生成独立的 ValueSpec 节点，
-    # 再通过 HAS_VALUE_SPEC 与 Requirement 相连。
-    for idx, (raw, num, unit) in enumerate(_extract_value_tokens(text), start=1):
-        val_id = f"clause_value:{source_id}:{clause_block_index}:{req_suffix}:{idx}"
-        builder.add_node(
-            val_id,
-            "ValueSpec",
-            raw_text=raw,
-            value=num,
-            unit=unit,
-            source_id=source_id,
-            page_no=page_no,
-        )
-        builder.add_edge("HAS_VALUE_SPEC", req_id, val_id)
-        _attach_context_edges(builder, val_id, source_id=source_id, page_no=page_no, section_id=section_id)
+    # 优先用规则正则抽取；若规则未抽到值且 LLM 补充了指标，则用 LLM 的值信息。
+    rule_values = _extract_value_tokens(text)
+    if rule_values:
+        for idx, (raw, num, unit) in enumerate(rule_values, start=1):
+            val_id = f"clause_value:{source_id}:{clause_block_index}:{req_suffix}:{idx}"
+            builder.add_node(
+                val_id,
+                "ValueSpec",
+                raw_text=raw,
+                value=num,
+                unit=unit,
+                source_id=source_id,
+                page_no=page_no,
+            )
+            builder.add_edge("HAS_VALUE_SPEC", req_id, val_id)
+            _attach_context_edges(builder, val_id, source_id=source_id, page_no=page_no, section_id=section_id)
+    elif llm_value_triples:
+        for idx, triple in enumerate(llm_value_triples, start=1):
+            raw = (triple.get("value") or "").strip()
+            if not raw:
+                continue
+            unit = (triple.get("unit") or "").strip() or None
+            try:
+                num: Optional[float] = float(re.match(r"[\d.]+", raw).group())  # type: ignore[union-attr]
+            except (AttributeError, ValueError):
+                num = None
+            val_id = f"clause_value:{source_id}:{clause_block_index}:{req_suffix}:llm{idx}"
+            builder.add_node(
+                val_id,
+                "ValueSpec",
+                raw_text=raw,
+                value=num,
+                unit=unit,
+                source_id=source_id,
+                page_no=page_no,
+            )
+            builder.add_edge("HAS_VALUE_SPEC", req_id, val_id)
+            _attach_context_edges(builder, val_id, source_id=source_id, page_no=page_no, section_id=section_id)
 
     # 第七步：抽取条件（Condition）。
     # 条件既可能在父条文里，也可能在当前分项里，所以两边都抽，
@@ -340,7 +477,7 @@ def _create_requirement(
         _attach_context_edges(builder, cond_id, source_id=source_id, page_no=page_no, section_id=section_id)
 
     # 第八步：抽取控制方式（ControlMethod）。
-    # 这一步主要服务于“时钟控制 / 场景控制 / 分组控制 / 语音控制”等
+    # 这一步主要服务于"时钟控制 / 场景控制 / 分组控制 / 语音控制"等
     # 非数值型文本知识，使其不只是停留在 Requirement 原文里，
     # 而是成为可查询的独立语义节点。
     for method_name in _extract_control_methods(combined_text):
@@ -358,22 +495,22 @@ def extract_clause_requirements(blocks: List[MdBlock], source_id: str, source_pa
     - source_path: 当前文档来源路径，写入 Requirement 属性以支持结果追溯。
 
     输出：
-    - GraphBuilder: 一个只包含“条文语义抽取结果”的图构建器。
+    - GraphBuilder: 一个只包含"条文语义抽取结果"的图构建器。
 
     当前抽取逻辑分两类：
     1. 普通规范条文：
-       - 识别“条款号 + 正文”
+       - 识别"条款号 + 正文"
        - 提取一条 Requirement
        - 再抽取其中的 DomainEntity / Condition / Metric / ValueSpec / ControlMethod
     2. 主条文 + 编号分项条文：
-       - 例如“7.3.7 ……宜采用下列措施：”
+       - 例如"7.3.7 ……宜采用下列措施："
        - 先识别主条文
        - 再向后扫描后续 paragraph 中的 `- 1 ... / - 2 ...` 分项
        - 每个分项单独生成一条 Requirement，并继承主条文上下文
     """
     g = GraphBuilder()  ## 初始化条文抽取结果图
     section_context = _build_section_context(blocks, source_id)  ## 预先计算每个块所在的最近标题节点，后续给语义节点补 UNDER_SECTION
-    i = 0  ## 使用 while 手工控制游标，便于在识别到“主条文 + 分项”时一次性消费多个 block
+    i = 0  ## 使用 while 手工控制游标，便于在识别到"主条文 + 分项"时一次性消费多个 block
 
     while i < len(blocks):  ## 顺序扫描所有 Markdown 块
         block = blocks[i]  ## 当前正在处理的块
@@ -381,13 +518,13 @@ def extract_clause_requirements(blocks: List[MdBlock], source_id: str, source_pa
             i += 1
             continue
 
-        match = CLAUSE_RE.match(block.text)  ## 判断该段是否是“7.3.6 正文”这种条款格式
+        match = CLAUSE_RE.match(block.text)  ## 判断该段是否是"7.3.6 正文"这种条款格式
         if not match:  ## 不是条款号开头的段落，不做条文语义抽取
             i += 1
             continue
 
         clause_no, clause_text = match.groups()  ## 拆出条款号和正文文本
-        token, modality = _detect_modality(clause_text)  ## 从正文里识别模态词，例如“应/宜/可/不得”
+        token, modality = _detect_modality(clause_text)  ## 从正文里识别模态词，例如"应/宜/可/不得"
         if modality is None:  ## 没有模态词则认为不是需要结构化的规范要求，直接跳过
             i += 1
             continue
@@ -395,8 +532,8 @@ def extract_clause_requirements(blocks: List[MdBlock], source_id: str, source_pa
         clause_id = f"clause:{source_id}:{block.index}"  ## 当前条文在结构层已经对应的 Clause 节点 ID
         section_id = section_context.get(block.index)  ## 当前条文所属的最近标题节点，用于补 section 上下文
 
-        item_blocks_text: List[str] = []  ## 用来暂存主条文后续若干个“编号分项块”的原始文本
-        if clause_text.rstrip().endswith(("：", ":")) or "下列" in clause_text:  ## 只有明显像“引出后续分项”的主条文才继续向后扫描
+        item_blocks_text: List[str] = []  ## 用来暂存主条文后续若干个"编号分项块"的原始文本
+        if clause_text.rstrip().endswith(("：", ":")) or "下列" in clause_text:  ## 只有明显像"引出后续分项"的主条文才继续向后扫描
             j = i + 1  ## 从当前条文的下一个块开始看
             saw_items = False  ## 记录是否已经看到过至少一个有效分项
             while j < len(blocks):  ## 继续向后扫描连续块，收集属于当前主条文的分项内容
@@ -442,14 +579,14 @@ def extract_clause_requirements(blocks: List[MdBlock], source_id: str, source_pa
                         modality=item_modality or modality,  ## 子项没有模态类别时继承主条文模态类别
                         page_no=block.page_no,
                         section_id=section_id,
-                        requirement_type="clause_item_rule",  ## 标记这是“条文分项 requirement”
+                        requirement_type="clause_item_rule",  ## 标记这是"条文分项 requirement"
                         item_no=item_no,
                         parent_context=parent_context,  ## 主条文上下文会被用于补充对象、条件、控制方式等抽取
                     )
                 i = j  ## 当前主条文及其后续分项已经整体消费完，游标直接跳到分项之后
                 continue
 
-        _create_requirement(  ## 如果不是“主条文 + 分项”结构，就按普通条文生成单条 Requirement
+        _create_requirement(  ## 如果不是"主条文 + 分项"结构，就按普通条文生成单条 Requirement
             g,
             source_id=source_id,
             source_path=source_path,

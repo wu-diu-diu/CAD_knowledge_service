@@ -503,7 +503,7 @@ def train_multi_room(
 
     for episode in range(1, ppo_cfg.episodes + 1):
         # Randomly select a room for this episode
-        room_data = random.choice(room_dataset)
+        room_data = random.choice(room_dataset)  ## 随机采样一个房间
 
         # Create environment for this room
         # Update target_lamp_count from room data
@@ -589,7 +589,7 @@ def train_multi_room(
 
         # Logging
         if episode % ppo_cfg.log_every_episodes == 0:
-            recent = history[-ppo_cfg.log_every_episodes:]
+            recent = history[-ppo_cfg.log_every_episodes:]  ## 计算最近几个episode的平均reward和alignment，观察训练趋势
             avg_reward = sum(h["episode_reward"] for h in recent) / len(recent)
             avg_align = sum(h["alignment_normalized"] for h in recent) / len(recent)
             print(f"[train] episode={episode:04d} avg_reward={avg_reward:7.2f} "

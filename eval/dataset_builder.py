@@ -4,6 +4,9 @@
 只处理 table_cell_constraint 类型的 Requirement，因为这类节点有明确的
 entity + metric + value，适合生成精确问答。
 
+逻辑：
+从doc_graphs目录下的文档图中，找到所有 Requirement 节点，筛选出 type 为 table_cell_constraint 的，再通过边找到对应的 DomainEntity（实体）、Metric（指标）和 ValueSpec（数值）。最后根据实体和指标生成问题，提取数值作为答案。
+
 用法：
     python eval/dataset_builder.py --kg_store kg_store --output eval/qa_dataset.json
 """

@@ -3,6 +3,7 @@
   A. BM25 稀疏检索（rank_bm25 + jieba 分词）
   B. 纯向量 RAG（现有 rag_store/index.faiss，chunk 粒度，无图谱）
   C. LLM 直接回答（无检索）
+  运行代码：python eval/run_eval.py --kg_store kg_store --dataset eval/qa_dataset.json --top_k 10 --skip_llm
 """
 from __future__ import annotations
 
