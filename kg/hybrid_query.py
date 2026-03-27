@@ -93,6 +93,7 @@ def hybrid_query(
     top_k: int = 10,
     entity: Optional[str] = None,
     metric: Optional[str] = None,
+    rrf_k: int = 60,
 ) -> Dict[str, Any]:
     """
     BM25 + 向量 RRF 混合检索，可选按 entity/metric 图结构精确过滤。
@@ -125,7 +126,7 @@ def hybrid_query(
     bm25_results = _bm25_search(query, kg_store_dir, top_k=fetch_k)
     vector_results = search_requirements(query, kg_store_dir, embed_fn, top_k=fetch_k)
 
-    merged = _rrf_merge(bm25_results, vector_results)
+    merged = _rrf_merge(bm25_results, vector_results, k=rrf_k)
 
     entity_kw = (entity or "").strip().lower()
     metric_kw = (metric or "").strip().lower()

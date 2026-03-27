@@ -1,3 +1,7 @@
+"""
+python RL/visualize.py  --json_dir RL/room_gen/regular/json/  --output_dir RL/room_gen/regular/image
+"""
+
 from __future__ import annotations
 
 import json

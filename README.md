@@ -3,7 +3,7 @@
 - 其中7687端口是用来python代码端访问
 - 可以运行`docker ps -a`查看已停止运行的容器，然后重行运行docker start
 - ` uv run uvicorn main:app --host 127.0.0.1 --port 8008`
-- 多房间训练：` python ./RL/train.py --room_dir RL/room_gen/json`
+- 多房间训练：` python ./RL/train.py --room_dir RL/room_gen/json  --curriculum`
 #### 启动命令（多GPU）
 ```python
 export RAG_EMBED_MULTI_GPU=1

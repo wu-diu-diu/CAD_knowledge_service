@@ -1,5 +1,5 @@
 training:
-  episodes: 15000
+  episodes: 20000
   gamma: 0.99
   gae_lambda: 0.95        # GAE lambda，平衡偏差与方差
   learning_rate: 0.0003
@@ -10,7 +10,7 @@ training:
   entropy_coef: 0.05      # 多房间训练需要更强探索，防止过早收敛
   grad_clip_norm: 0.5
   seed: 42
-  device: "cuda:0"
+  device: "cuda:1"
   visualize_every_episodes: 100
   log_every_episodes: 32  # 与rollout_episodes对齐，每批次输出一次日志
   reward_curve_moving_window: 50
@@ -30,6 +30,21 @@ reward:
 room:
   json_path: "RL/test_room/origin_room/unregular.json"
   room_name: "热量室准备间"
+
+curriculum:
+  stages:
+    - min_lamps: 2
+      max_lamps: 3
+      episodes: 1500
+    - min_lamps: 2
+      max_lamps: 5
+      episodes: 5000
+    - min_lamps: 2
+      max_lamps: 7
+      episodes: 8000
+    - min_lamps: 2
+      max_lamps: 9
+      episodes: 20000
 
 ga:
   population_size: 128  ##一个种群表示一个布局方案，增加种群规模以提升多样性

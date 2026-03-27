@@ -46,6 +46,8 @@ def evaluate_retrieval(
     method_fn: Callable[[str], List[Dict[str, Any]]],
     dataset: List[Dict[str, Any]],
     top_k: int = 10,
+    show_progress: bool = False,
+    progress_desc: Optional[str] = None,
 ) -> Dict[str, float]:
     """
     对检索方法在数据集上计算 Recall@1/5/K 和 MRR。
@@ -58,7 +60,16 @@ def evaluate_retrieval(
     if n == 0:
         return {"recall@1": 0.0, "recall@5": 0.0, f"recall@{top_k}": 0.0, "mrr": 0.0}
 
-    for item in dataset:
+    iterator = dataset
+    if show_progress:
+        try:
+            from tqdm.auto import tqdm
+
+            iterator = tqdm(dataset, total=n, desc=progress_desc or "Retrieval", leave=False)
+        except Exception:
+            iterator = dataset
+
+    for item in iterator:
         gold_id = item["requirement_id"]
         results = method_fn(item["question"])
         r1 += recall_at_k(results, gold_id, 1)
@@ -77,6 +88,8 @@ def evaluate_retrieval(
 def evaluate_generation(
     method_fn: Callable[[str], str],
     dataset: List[Dict[str, Any]],
+    show_progress: bool = False,
+    progress_desc: Optional[str] = None,
 ) -> Dict[str, float]:
     """
     对生成方法（直接返回答案字符串）计算 Exact Match。
@@ -86,5 +99,15 @@ def evaluate_generation(
     n = len(dataset)
     if n == 0:
         return {"exact_match": 0.0}
-    em_sum = sum(exact_match(method_fn(item["question"]), item["answer"]) for item in dataset)
+
+    iterator = dataset
+    if show_progress:
+        try:
+            from tqdm.auto import tqdm
+
+            iterator = tqdm(dataset, total=n, desc=progress_desc or "Exact Match", leave=False)
+        except Exception:
+            iterator = dataset
+
+    em_sum = sum(exact_match(method_fn(item["question"]), item["answer"]) for item in iterator)
     return {"exact_match": round(em_sum / n, 4)}

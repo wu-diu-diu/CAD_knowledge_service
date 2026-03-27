@@ -132,9 +132,8 @@ class RewardCalculator:
     ) -> RewardBreakdown:
         """Compute the per-step reward from potential reduction only."""
         current_potential = self.potential(state)
-        reduction = max(0.0, float(prev_potential) - current_potential)
-        normalized_reduction = 0.0
-        normalized_reduction = float(np.clip(reduction / prev_potential, 0.0, 1.0))
+        reduction = float(prev_potential) - current_potential
+        normalized_reduction = float(np.clip(reduction / prev_potential, -1.0, 1.0))
 
         invalid_penalty = -self.config.invalid_action_penalty if invalid_action else 0.0
         potential_term = self.config.potential_coef * normalized_reduction

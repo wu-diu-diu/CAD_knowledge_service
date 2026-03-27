@@ -1,9 +1,12 @@
 """
 Room generator for RL lamp-placement training.
 
-Generates irregular rooms (L, U/concave, T/convex, hollow, cross, multi_cut)
-within a 48×48 grid, with lamp counts derived from placeable area (~100 cells/lamp).
-Each room is saved as a standalone JSON file compatible with SingleRoomLightingEnv.
+Generates irregular and regular rooms within a 48×48 grid, with lamp counts
+derived from placeable area (~100 cells/lamp). Each room is saved as a
+standalone JSON file compatible with SingleRoomLightingEnv.
+
+房间生成命令：python RL/room_generator.py --kind regular --count 400  --output RL/room_gen/regular/json
+
 """
 from __future__ import annotations
 
@@ -50,6 +53,7 @@ _TEMPLATE_FIELDS = {
 }
 
 SHAPES = ["L", "U", "T", "hollow", "cross", "multi_cut"]
+REGULAR_LAMP_COUNTS = [2, 4, 6, 8]
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -321,6 +325,37 @@ def _gen_hollow(bbox_lo: int, bbox_hi: int, rng: random.Random) -> np.ndarray:
     return m
 
 
+def _regular_total_area_bounds(target_lamps: int) -> tuple[int, int]:
+    """
+    Return valid rectangle area bounds so that after replacing 4 door cells and
+    1 switch cell, the remaining placeable area still maps to target_lamps.
+    """
+    min_placeable = target_lamps * AREA_PER_LAMP - AREA_PER_LAMP // 2
+    max_placeable = target_lamps * AREA_PER_LAMP + AREA_PER_LAMP // 2 - 1
+    return min_placeable + 5, max_placeable + 5
+
+
+def _gen_regular_rect(target_lamps: int, rng: random.Random) -> np.ndarray | None:
+    """Generate one axis-aligned rectangular room sized for the target lamp count."""
+    min_area, max_area = _regular_total_area_bounds(target_lamps)
+    candidates: list[tuple[int, int]] = []
+    for rows in range(12, MAX_SIZE + 1):
+        for cols in range(12, MAX_SIZE + 1):
+            area = rows * cols
+            if area < min_area or area > max_area:
+                continue
+            aspect = rows / cols
+            if not (0.55 <= aspect <= 1.8):
+                continue
+            candidates.append((rows, cols))
+
+    if not candidates:
+        return None
+
+    rows, cols = rng.choice(candidates)
+    return np.ones((rows, cols), dtype=np.int32)
+
+
 def _gen_cross(bbox_lo: int, bbox_hi: int, rng: random.Random) -> np.ndarray:
     R = min(_rand(bbox_lo, bbox_hi, rng), MAX_SIZE)
     C = min(_rand(bbox_lo, bbox_hi, rng), MAX_SIZE)
@@ -380,6 +415,32 @@ def generate_room(
             continue
         if int(np.sum(m == 1)) < LAMP_MIN * AREA_PER_LAMP:
             continue
+        m_copy = m.copy()
+        if not _place_door_switch(m_copy, rng):
+            continue
+        if not _is_switch_rule_compliant(m_copy):
+            continue
+        if _lamp_count(m_copy) != target_lamps:
+            continue
+        return m_copy
+    return None
+
+
+def generate_regular_room(
+    target_lamps: int,
+    rng: random.Random,
+    max_retries: int = 20,
+) -> np.ndarray | None:
+    """Generate one regular rectangular room whose final lamp_count matches target_lamps."""
+    for _ in range(max_retries):
+        m = _gen_regular_rect(target_lamps, rng)
+        if m is None:
+            continue
+        if m.shape[0] > MAX_SIZE or m.shape[1] > MAX_SIZE:
+            continue
+        if int(np.sum(m == 1)) < LAMP_MIN * AREA_PER_LAMP:
+            continue
+
         m_copy = m.copy()
         if not _place_door_switch(m_copy, rng):
             continue
@@ -460,16 +521,67 @@ def generate_dataset(count: int, output_dir: str | Path, seed: int = 42) -> None
     print("[room_gen] shape dist:", dict(sorted(shape_dist.items())))
 
 
+def generate_regular_dataset(count: int, output_dir: str | Path, seed: int = 42) -> None:
+    """Generate regular rectangular rooms with balanced 2/4/6/8-lamp distribution."""
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+    for old_json in output_path.glob("*.json"):
+        old_json.unlink()
+
+    rng = random.Random(seed)
+    np.random.seed(seed)
+
+    lamp_targets = {lamps: count // len(REGULAR_LAMP_COUNTS) for lamps in REGULAR_LAMP_COUNTS}
+    remainder = count % len(REGULAR_LAMP_COUNTS)
+    for lamps in REGULAR_LAMP_COUNTS[:remainder]:
+        lamp_targets[lamps] += 1
+
+    name_counter: dict[int, int] = {lamps: 0 for lamps in REGULAR_LAMP_COUNTS}
+    saved = 0
+    failed_attempts = 0
+
+    for target_lamps in REGULAR_LAMP_COUNTS:
+        target_count = lamp_targets[target_lamps]
+        attempts = 0
+        max_attempts = max(200, target_count * 50)
+        while name_counter[target_lamps] < target_count and attempts < max_attempts:
+            attempts += 1
+            matrix = generate_regular_room(target_lamps, rng)
+            if matrix is None:
+                failed_attempts += 1
+                continue
+
+            idx = name_counter[target_lamps] + 1
+            name_counter[target_lamps] = idx
+            filename = f"shape_regular_{target_lamps}lamp_{idx:04d}.json"
+            with (output_path / filename).open("w", encoding="utf-8") as f:
+                json.dump(_to_json(matrix), f, ensure_ascii=False, indent=2)
+            saved += 1
+
+        if name_counter[target_lamps] < target_count:
+            raise RuntimeError(
+                f"Failed to generate enough regular rooms for lamp_count={target_lamps}. "
+                f"expected={target_count}, got={name_counter[target_lamps]}"
+            )
+
+    print(f"[room_gen][regular] saved={saved} failed_attempts={failed_attempts} dir={output_path}")
+    print("[room_gen][regular] lamp dist:", dict(sorted(name_counter.items())))
+
+
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
 def main() -> None:
     import argparse
-    parser = argparse.ArgumentParser(description="Generate irregular rooms for RL training")
+    parser = argparse.ArgumentParser(description="Generate rooms for RL training")
     parser.add_argument("--count", type=int, default=400)
     parser.add_argument("--output", type=str, default="RL/room_gen/json")
+    parser.add_argument("--kind", type=str, choices=["irregular", "regular"], default="irregular")
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
-    generate_dataset(count=args.count, output_dir=args.output, seed=args.seed)
+    if args.kind == "regular":
+        generate_regular_dataset(count=args.count, output_dir=args.output, seed=args.seed)
+    else:
+        generate_dataset(count=args.count, output_dir=args.output, seed=args.seed)
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 """
 三条基线方法实现：
   A. BM25 稀疏检索（rank_bm25 + jieba 分词）
-  B. 纯向量 RAG（现有 rag_store/index.faiss，chunk 粒度，无图谱）
+  B. 纯向量检索（Requirement 粒度，req_index.faiss）
   C. LLM 直接回答（无检索）
   运行代码：python eval/run_eval.py --kg_store kg_store --dataset eval/qa_dataset.json --top_k 10 --skip_llm
 """
@@ -13,6 +13,8 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 import numpy as np
+
+from kg.vector_store import search_requirements
 
 
 # ---------------------------------------------------------------------------
@@ -61,51 +63,31 @@ class BM25Baseline:
 
 
 # ---------------------------------------------------------------------------
-# 基线 B：纯向量 RAG（chunk 粒度，无图谱）
+# 基线 B：纯向量检索（Requirement 粒度）
 # ---------------------------------------------------------------------------
 
 class VectorRAGBaseline:
     """
-    直接使用现有 rag_store/index.faiss（chunk 粒度）做向量检索，
-    不做任何图谱结构过滤。结果不含 requirement_id，无法计算 Recall@K/MRR，
-    但可以计算 Exact Match（从 chunk 文本中提取数值）。
+    直接使用 Requirement 向量索引做纯向量检索，
+    不做 BM25 融合，也不做 entity / metric 结构过滤。
+    这样可以与 BM25、KG 混合检索在同一 Requirement 粒度上公平对比。
     """
 
     def __init__(
         self,
-        rag_store_dir: Path,
+        kg_store_dir: Path,
         embed_fn: Callable[[List[str]], np.ndarray],
     ) -> None:
-        try:
-            import faiss as _faiss
-        except ImportError as e:
-            raise RuntimeError("请安装 faiss-cpu。") from e
-
-        index_path = rag_store_dir / "index.faiss"
-        meta_path = rag_store_dir / "metadata.json"
-        if not index_path.exists():
-            raise FileNotFoundError(f"FAISS 索引不存在: {index_path}")
-        if not meta_path.exists():
-            raise FileNotFoundError(f"元数据不存在: {meta_path}")
-
-        self._index = _faiss.read_index(str(index_path))
-        self._metadata: List[dict] = json.loads(meta_path.read_text(encoding="utf-8"))
+        self._kg_store_dir = kg_store_dir
         self._embed_fn = embed_fn
 
     def search(self, query: str, top_k: int = 10) -> List[Dict[str, Any]]:
-        q_vec = self._embed_fn([query])
-        k = min(top_k, self._index.ntotal)
-        scores, indices = self._index.search(q_vec, k)
-        results = []
-        for score, idx in zip(scores[0], indices[0]):
-            if idx < 0 or idx >= len(self._metadata):
-                continue
-            rec = dict(self._metadata[idx])
-            rec["score"] = float(score)
-            # chunk 粒度没有 requirement_id，填 None 以便统一接口
-            rec.setdefault("requirement_id", None)
-            results.append(rec)
-        return results
+        return search_requirements(
+            query,
+            self._kg_store_dir,
+            self._embed_fn,
+            top_k=top_k,
+        )
 
 
 # ---------------------------------------------------------------------------
