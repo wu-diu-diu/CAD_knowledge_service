@@ -1,5 +1,5 @@
 training:
-  episodes: 20000
+  episodes: 5000
   gamma: 0.99
   gae_lambda: 0.95        # GAE lambda，平衡偏差与方差
   learning_rate: 0.0003

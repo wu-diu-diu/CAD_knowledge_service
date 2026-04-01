@@ -85,6 +85,7 @@ def _extract_requirements(doc: dict) -> List[Dict[str, Any]]:
         if req_text:
             parts.append(req_text)
         parts += values
+        ## 只保留非空部分，并用空格连接
         search_text = " ".join(p for p in parts if p).strip()
         if not search_text:
             continue

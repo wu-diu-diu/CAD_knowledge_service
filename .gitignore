@@ -27,8 +27,6 @@ RL/GA/
 embed_model/
 eval/qa_dataset.json
 eval/results.json
-RL/room_gen/image
-RL/room_gen/json
 RL/room_gen/results
 RL/room_gen/regular
 RL/output_wiring
@@ -36,3 +34,6 @@ graph/results
 eval/result
 eval/dataset
 graph/test_room
+RL/output_multiroom
+RL/room_gen/unregular
+eval/qa_multihop_test.json

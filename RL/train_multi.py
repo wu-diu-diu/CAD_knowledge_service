@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import copy
 import json
 import random
+import re
 import shutil
+from collections import Counter, defaultdict
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -14,7 +18,7 @@ from tqdm import tqdm
 
 from env import EnvironmentConfig, SingleRoomLightingEnv
 from model import LightingActorCritic
-from train import PPOConfig, create_timestamped_output_dir, load_yaml_config, plot_reward_curve, plot_score_trends, set_seed
+from train import PPOConfig, load_yaml_config, plot_reward_curve, plot_score_trends, set_seed
 from visualize import save_room_grid_image
 
 
@@ -65,19 +69,83 @@ def _compute_gae(
     return advantages_tensor, returns_tensor
 
 
+def _extract_shape_type(filename: str) -> str:
+    """Extract shape type from filename like shape_L_6lamp_0001.json -> L"""
+    # Handle multi_cut and other compound names: shape_multi_cut_8lamp_0003.json
+    match = re.search(r'^shape_(.+)_\d+lamp_\d+', filename)
+    return match.group(1) if match else "unknown"
+
+
 def load_room_dataset(room_dir: Path) -> list[dict]:
-    """Load all room JSON files from a directory."""
+    """Load all room JSON files from a directory, preserving filename and shape type."""
     rooms = []
     for json_file in sorted(room_dir.glob("*.json")):
         with json_file.open("r", encoding="utf-8") as f:
             payload = json.load(f)
+        shape_type = _extract_shape_type(json_file.name)
+
         if not isinstance(payload, dict):
             continue
-        for room_data in payload.values():
-            if isinstance(room_data, dict) and "matrix" in room_data and "lamp_count" in room_data:
-                rooms.append(room_data)
-    print(f"[train] Loaded {len(rooms)} rooms from {room_dir}")
+
+        # Handle both single-room and multi-room JSON formats
+        if "matrix" in payload and "lamp_count" in payload:
+            # Single room JSON
+            payload["_filename"] = json_file.name
+            payload["_shape_type"] = shape_type
+            rooms.append(payload)
+        else:
+            # Multi-room JSON
+            for room_data in payload.values():
+                if isinstance(room_data, dict) and "matrix" in room_data and "lamp_count" in room_data:
+                    room_data["_filename"] = json_file.name
+                    room_data["_shape_type"] = shape_type
+                    rooms.append(room_data)
+
+    print(f"[load] Loaded {len(rooms)} rooms from {room_dir}")
     return rooms
+
+
+def split_by_shape_stratified(
+    rooms: list[dict],
+    train_ratio: float = 0.64,
+    val_ratio: float = 0.16,
+    test_ratio: float = 0.20,
+    seed: int = 42,
+) -> tuple[list[dict], list[dict], list[dict]]:
+    """Split rooms by shape type, maintaining distribution across train/val/test sets."""
+    rng = random.Random(seed)
+    by_shape: dict[str, list[dict]] = defaultdict(list)
+
+    for room in rooms:
+        shape_type = room.get("_shape_type", "unknown")
+        by_shape[shape_type].append(room)
+
+    train, val, test = [], [], []
+
+    print("[split] Stratified split by shape type:")
+    for shape_type in sorted(by_shape.keys()):
+        group = by_shape[shape_type]
+        rng.shuffle(group)
+        n = len(group)
+
+        n_train = int(n * train_ratio)
+        n_val = int(n * val_ratio)
+        # Remaining goes to test
+
+        train.extend(group[:n_train])
+        val.extend(group[n_train:n_train + n_val])
+        test.extend(group[n_train + n_val:])
+
+        print(f"  {shape_type:12s}: {n:3d} total -> "
+              f"train={n_train:3d}, val={n_val:3d}, test={n - n_train - n_val:3d}")
+
+    print(f"[split] Total: train={len(train)}, val={len(val)}, test={len(test)}")
+    return train, val, test
+
+
+def _count_shapes(rooms: list[dict]) -> dict[str, int]:
+    """Count rooms by shape type."""
+    return dict(Counter(r.get("_shape_type", "unknown") for r in rooms))
 
 
 def _build_curriculum_pool(
@@ -141,6 +209,48 @@ def ppo_update_multi_room(
         optimizer.step()
 
 
+def evaluate_on_val_set(
+    val_rooms: list[dict],
+    model: LightingActorCritic,
+    env_cfg: EnvironmentConfig,
+    device: torch.device,
+) -> dict[str, float]:
+    """Greedy rollout on validation set, return average metrics."""
+    model.eval()
+    rewards, alignments, wirings = [], [], []
+    with torch.no_grad():
+        for room_data in val_rooms:
+            lamp_count = room_data["lamp_count"]
+            current_cfg = EnvironmentConfig(
+                padded_size=env_cfg.padded_size,
+                max_steps=env_cfg.max_steps,
+                target_lamp_count=lamp_count,
+                turn_penalty=env_cfg.turn_penalty,
+                reward_config=copy.copy(env_cfg.reward_config),
+            )
+            current_cfg.reward_config.target_lamp_count = lamp_count
+            env = SingleRoomLightingEnv(room_data, config=current_cfg)
+            obs = env.reset()
+            done = False
+            total_r = 0.0
+            while not done:
+                obs_t = torch.from_numpy(obs).unsqueeze(0).to(device=device, dtype=torch.float32)
+                action = int(model.act(obs_t, deterministic=True)["action"].item())
+                obs, r, done, _ = env.step(action)
+                total_r += float(r)
+            rewards.append(total_r)
+            bd = env.last_breakdown
+            if bd:
+                alignments.append(float(bd.alignment_normalized))
+                wirings.append(float(bd.wiring_normalized))
+    model.train()
+    return {
+        "avg_reward": float(np.mean(rewards)) if rewards else 0.0,
+        "avg_alignment": float(np.mean(alignments)) if alignments else 0.0,
+        "avg_wiring": float(np.mean(wirings)) if wirings else 0.0,
+    }
+
+
 def train_multi_room(
     room_dataset: list[dict],
     model: LightingActorCritic,
@@ -148,6 +258,7 @@ def train_multi_room(
     env_cfg: EnvironmentConfig,
     output_dir: Path,
     curriculum: CurriculumConfig | None = None,
+    val_rooms: list[dict] | None = None,
 ) -> dict:
     """
     Train PPO model on multiple rooms with random sampling.
@@ -157,6 +268,9 @@ def train_multi_room(
     falls within [min_lamps, max_lamps], progressing from easy to hard.
     The total episode count is the sum of all stage episodes; ppo_cfg.episodes
     is ignored when curriculum is active.
+
+    When `val_rooms` is provided, validation is run at the end of each
+    curriculum stage (or every log_every_episodes when no curriculum).
     """
     device = torch.device(ppo_cfg.device if torch.cuda.is_available() else "cpu")
     model.to(device)
@@ -169,6 +283,12 @@ def train_multi_room(
 
     if curriculum is not None:
         total_episodes = sum(s.episodes for s in curriculum.stages)
+        # Compute episode boundaries where each stage ends
+        stage_end_episodes: set[int] = set()
+        ep_acc = 0
+        for stage in curriculum.stages:
+            ep_acc += stage.episodes
+            stage_end_episodes.add(ep_acc)
 
         def episode_iter():
             ep = 0
@@ -184,6 +304,7 @@ def train_multi_room(
                     yield ep, pool, stage_idx
     else:
         total_episodes = ppo_cfg.episodes
+        stage_end_episodes = set()
 
         def episode_iter():
             for ep in range(1, total_episodes + 1):
@@ -197,7 +318,7 @@ def train_multi_room(
             max_steps=env_cfg.max_steps,
             target_lamp_count=room_data["lamp_count"],
             turn_penalty=env_cfg.turn_penalty,
-            reward_config=env_cfg.reward_config,
+            reward_config=copy.copy(env_cfg.reward_config),
         )
         current_env_cfg.reward_config.target_lamp_count = room_data["lamp_count"]
 
@@ -247,10 +368,11 @@ def train_multi_room(
         episode_reward = sum(episode_rewards)
         final_breakdown = env.last_breakdown
         history.append({
+            "type": "train",
             "episode": episode,
             "episode_reward": episode_reward,
-            "room_name": room_data["room_name"],
-            "room_type": room_data.get("room_type", "unknown"),
+            "room_name": room_data.get("room_name", ""),
+            "shape_type": room_data.get("_shape_type", "unknown"),
             "lamp_count": room_data["lamp_count"],
             "curriculum_stage": stage_idx,
             "alignment_normalized": float(final_breakdown.alignment_normalized) if final_breakdown else 0.0,
@@ -268,13 +390,35 @@ def train_multi_room(
             rollout_buffer.clear()
 
         if episode % ppo_cfg.log_every_episodes == 0:
-            recent = history[-ppo_cfg.log_every_episodes:]
-            avg_reward = sum(h["episode_reward"] for h in recent) / len(recent)
-            avg_align = sum(h["alignment_normalized"] for h in recent) / len(recent)
+            train_recent = [h for h in history[-ppo_cfg.log_every_episodes:] if h.get("type") == "train"]
+            avg_reward = sum(h["episode_reward"] for h in train_recent) / max(len(train_recent), 1)
+            avg_align = sum(h["alignment_normalized"] for h in train_recent) / max(len(train_recent), 1)
             stage_info = f" stage={stage_idx + 1}" if curriculum is not None else ""
             print(
                 f"[train] episode={episode:04d}{stage_info} avg_reward={avg_reward:7.2f} "
                 f"avg_align={avg_align:.3f} best={best_reward:7.2f}"
+            )
+
+        # Run validation at end of each curriculum stage (or periodically without curriculum)
+        run_val = (
+            val_rooms is not None and (
+                episode in stage_end_episodes
+                or (not stage_end_episodes and episode % (ppo_cfg.log_every_episodes * 4) == 0)
+            )
+        )
+        if run_val:
+            val_metrics = evaluate_on_val_set(val_rooms, model, env_cfg, device)
+            history.append({
+                "type": "validation",
+                "episode": episode,
+                "curriculum_stage": stage_idx,
+                **val_metrics,
+            })
+            print(
+                f"[val]   episode={episode:04d} stage={stage_idx + 1 if curriculum else 0} "
+                f"avg_reward={val_metrics['avg_reward']:7.2f} "
+                f"avg_align={val_metrics['avg_alignment']:.3f} "
+                f"avg_wiring={val_metrics['avg_wiring']:.3f}"
             )
 
     return {
@@ -332,6 +476,7 @@ def evaluate_all_rooms(
         results.append({
             "index": i,
             "room_name": room_name,
+            "shape_type": room_data.get("_shape_type", "unknown"),
             "lamp_count": lamp_count,
             "total_reward": total_reward,
             "potential_normalized": float(final_bd.potential_reduction_normalized) if final_bd else 0.0,
@@ -356,34 +501,93 @@ def run_multi_room_training(
     config_payload: dict[str, Any],
     ppo_cfg: Any,
     env_cfg: EnvironmentConfig,
-    output_dir: Path,
+    output_base: Path,
 ) -> tuple[dict, str]:
-    """Top-level multi-room training flow used by RL/train.py main()."""
-    room_dataset = load_room_dataset(room_dir)
-    if not room_dataset:
+    """Top-level multi-room training flow with train/val/test split and timestamped output."""
+    # Create timestamped output directory
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_dir = output_base / timestamp
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Load all rooms
+    all_rooms = load_room_dataset(room_dir)
+    if not all_rooms:
         raise ValueError(f"No rooms found in {room_dir}")
 
+    # Split by shape type
+    seed = config_payload.get("training", {}).get("seed", 42)
+    train_rooms, val_rooms, test_rooms = split_by_shape_stratified(
+        all_rooms,
+        train_ratio=0.64,
+        val_ratio=0.16,
+        test_ratio=0.20,
+        seed=seed,
+    )
+
+    # Create model
     model = LightingActorCritic(target_lamp_count=None)
 
-    print(f"[train] Starting multi-room training with {len(room_dataset)} rooms")
+    # Load curriculum if present
+    print(f"[train] Starting multi-room training on {len(train_rooms)} training rooms")
     curriculum = None
     curriculum_payload = config_payload.get("curriculum", {})
     stage_payload = curriculum_payload.get("stages", []) if isinstance(curriculum_payload, dict) else []
     if stage_payload:
         curriculum = load_curriculum_config(config_payload)
         total = sum(s.episodes for s in curriculum.stages)
-        print(f"[train] Curriculum learning enabled from config.yaml: {len(curriculum.stages)} stages, {total} total episodes")
+        print(f"[train] Curriculum learning enabled: {len(curriculum.stages)} stages, {total} total episodes")
     else:
         print("[train] Curriculum learning disabled: no curriculum.stages found in config.yaml")
 
-    summary = train_multi_room(room_dataset, model, ppo_cfg, env_cfg, output_dir, curriculum=curriculum)
-    summary["training_mode"] = "multi_room"
-    summary["num_rooms"] = len(room_dataset)
+    # Train on training set with validation monitoring
+    summary = train_multi_room(
+        train_rooms,
+        model,
+        ppo_cfg,
+        env_cfg,
+        output_dir,
+        curriculum=curriculum,
+        val_rooms=val_rooms,
+    )
 
-    results_dir = room_dir.parent / "results"
-    print(f"[train] Evaluating on all {len(room_dataset)} rooms...")
-    eval_results = evaluate_all_rooms(room_dataset, model, env_cfg, results_dir)
-    summary["all_room_evaluations"] = eval_results
+    # Evaluate on test set
+    test_results_dir = output_dir / "test_results"
+    print(f"[train] Evaluating on {len(test_rooms)} test rooms...")
+    test_results = evaluate_all_rooms(test_rooms, model, env_cfg, test_results_dir)
+
+    # Compute test metrics
+    test_metrics = {
+        "avg_reward": float(np.mean([r["total_reward"] for r in test_results])),
+        "avg_potential": float(np.mean([r["potential_normalized"] for r in test_results])),
+        "avg_alignment": float(np.mean([r["alignment_normalized"] for r in test_results])),
+        "avg_wiring": float(np.mean([r["wiring_normalized"] for r in test_results])),
+    }
+
+    # Enrich summary
+    summary.update({
+        "timestamp": timestamp,
+        "output_dir": str(output_dir),
+        "training_mode": "multi_room",
+        "dataset": {
+            "total_rooms": len(all_rooms),
+            "train_rooms": len(train_rooms),
+            "val_rooms": len(val_rooms),
+            "test_rooms": len(test_rooms),
+            "shape_distribution": {
+                "train": _count_shapes(train_rooms),
+                "val": _count_shapes(val_rooms),
+                "test": _count_shapes(test_rooms),
+            },
+        },
+        "test_evaluations": test_results,
+        "test_metrics": test_metrics,
+        "best_model": {
+            "episode": summary["best_episode"],
+            "reward": summary["best_reward"],
+            "checkpoint_path": "ppo_multi_room_best.pt",
+        },
+    })
+
     return summary, "ppo_multi_room_training_summary.json"
 
 
@@ -391,7 +595,8 @@ def main() -> None:
     import argparse
 
     parser = argparse.ArgumentParser(description="Train PPO model on multiple room tasks")
-    parser.add_argument("--room_dir", type=str, required=True, help="Directory containing room JSON files for multi-room training")
+    parser.add_argument("--room_dir", type=str, required=True, help="Directory containing room JSON files")
+    parser.add_argument("--output_base", type=str, default=None, help="Base output directory (default: RL/output_multiroom)")
     parser.add_argument("--episodes", type=int, default=None, help="Override number of training episodes when curriculum is disabled")
     args = parser.parse_args()
 
@@ -399,9 +604,7 @@ def main() -> None:
     config_path = repo_root / "RL" / "config.yaml"
     config_payload = load_yaml_config(config_path)
 
-    output_root_dir = repo_root / "RL" / "output"
-    output_dir = create_timestamped_output_dir(output_root_dir)
-    shutil.copy2(config_path, output_dir / "config.yaml")
+    output_base = Path(args.output_base) if args.output_base else repo_root / "RL" / "output_multiroom"
 
     ppo_cfg = PPOConfig(**config_payload.get("training", {}))
     if args.episodes:
@@ -419,29 +622,38 @@ def main() -> None:
         config_payload,
         ppo_cfg,
         env_cfg,
-        output_dir,
+        output_base,
     )
 
-    summary["output_dir"] = str(output_dir)
+    output_dir = Path(summary["output_dir"])
+
+    # Copy config for reproducibility
+    shutil.copy2(config_path, output_dir / "config.yaml")
     summary["config_path"] = str(config_path)
 
+    # Plot training curves (filter to train entries only)
+    train_history = [h for h in summary["history"] if h.get("type") == "train"]
     reward_curve_path = output_dir / "reward_curve.png"
-    plot_reward_curve(summary["history"], reward_curve_path, moving_window=ppo_cfg.reward_curve_moving_window)
+    plot_reward_curve(train_history, reward_curve_path, moving_window=ppo_cfg.reward_curve_moving_window)
     summary["reward_curve_path"] = str(reward_curve_path)
 
     score_trend_path = output_dir / "score_trends.png"
-    plot_score_trends(summary["history"], score_trend_path)
+    plot_score_trends(train_history, score_trend_path)
     summary["score_trend_path"] = str(score_trend_path)
 
+    # Save summary JSON
     summary_path = output_dir / summary_filename
     with summary_path.open("w", encoding="utf-8") as f:
-        json.dump(summary, f, ensure_ascii=False, indent=2)
+        json.dump(summary, f, ensure_ascii=False, indent=2, default=str)
 
-    print(f"[train] run output dir: {output_dir}")
-    print(f"[train] reward curve saved to {reward_curve_path}")
-    print(f"[train] score trends saved to {score_trend_path}")
-    print(f"[train] summary saved to {summary_path}")
-    print(f"[train] best_reward={summary['best_reward']:.3f}")
+    print(f"\n[done] Output dir:     {output_dir}")
+    print(f"[done] Reward curve:   {reward_curve_path}")
+    print(f"[done] Score trends:   {score_trend_path}")
+    print(f"[done] Summary:        {summary_path}")
+    print(f"[done] Best model:     {output_dir / 'ppo_multi_room_best.pt'}")
+    print(f"[done] Test results:   {output_dir / 'test_results'}")
+    print(f"[done] best_reward={summary['best_reward']:.3f}")
+    print(f"[done] test_metrics={summary['test_metrics']}")
 
 
 if __name__ == "__main__":
