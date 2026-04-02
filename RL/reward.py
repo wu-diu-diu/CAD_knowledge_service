@@ -19,9 +19,10 @@ class RewardConfig:
     """Single-layer reward coefficients for lamp-placement RL."""
 
     potential_coef: float = 2.0
-    alignment_coef: float = 1.0
+    alignment_coef: float = 2.0  ## 提高默认值，强化对齐优先级
     wiring_coef: float = 1.0
-    grid_regularity_coef: float = 0.5  ## 网格规则性奖励系数：鼓励灯具对齐到规则网格点
+    grid_regularity_coef: float = 0.0  ## 默认禁用，避免与对齐目标竞争
+    alignment_tolerance: float = 2.0  ## 软对齐容忍度：差1格得0.5分，差2格得0分
     invalid_action_penalty: float = 10.0
     target_lamp_count: int | None = None
 
@@ -191,7 +192,7 @@ class RewardCalculator:
                 terminal_bonus=0.0,
             )
 
-        alignment_normalized = self.alignment_score(state.lamp_positions)
+        alignment_normalized = self.soft_alignment_score(state.lamp_positions)
         wiring_normalized, mst_cost = self.wiring_score(state, pair_cost_provider=pair_cost_provider)
         grid_regularity_normalized = self.grid_regularity_score(state)
         alignment_term = self.config.alignment_coef * alignment_normalized
@@ -248,7 +249,7 @@ class RewardCalculator:
 
     def alignment_score(self, lamps: Iterable[GridPoint]) -> float:
         """
-        Measure whether lamps form shared rows/columns.
+        Measure whether lamps form shared rows/columns (hard binary metric).
 
         The score is normalized to [0, 1].
         """
@@ -261,6 +262,43 @@ class RewardCalculator:
         row_shared = sum(1 for r, _ in lamp_list if row_counts[r] > 1) / len(lamp_list)
         col_shared = sum(1 for _, c in lamp_list if col_counts[c] > 1) / len(lamp_list)
         return float(np.clip(0.5 * (row_shared + col_shared), 0.0, 1.0))
+
+    def soft_alignment_score(self, lamps: Iterable[GridPoint]) -> float:
+        """
+        Soft alignment: reward lamp pairs that are close to sharing a row or column.
+
+        For each pair (i, j):
+            dr = |row_i - row_j|
+            dc = |col_i - col_j|
+            row_close = max(0, 1 - dr / tolerance)
+            col_close = max(0, 1 - dc / tolerance)
+            pair_score = max(row_close, col_close)  # aligned in either axis counts
+
+        Final score = mean of all pair scores, in [0, 1].
+
+        With tolerance=2:
+            exact same row/col  -> 1.0
+            1 cell apart        -> 0.5
+            2+ cells apart      -> 0.0
+        """
+        lamp_list = list(lamps)
+        n = len(lamp_list)
+        if n < 2:
+            return 1.0
+
+        tolerance = self.config.alignment_tolerance
+        total = 0.0
+        pairs = 0
+        for i in range(n):
+            for j in range(i + 1, n):
+                dr = abs(lamp_list[i][0] - lamp_list[j][0])
+                dc = abs(lamp_list[i][1] - lamp_list[j][1])
+                row_close = max(0.0, 1.0 - dr / tolerance)
+                col_close = max(0.0, 1.0 - dc / tolerance)
+                total += max(row_close, col_close)
+                pairs += 1
+
+        return float(total / pairs)
 
     def grid_regularity_score(self, state: RoomState) -> float:
         """

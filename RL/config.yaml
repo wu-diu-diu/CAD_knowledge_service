@@ -24,9 +24,10 @@ environment:
 
 reward:
   potential_coef: 3.0         # 每步势能减少奖励
-  alignment_coef: 1.0         # 终局行列对齐奖励
+  alignment_coef: 2.0         # 终局行列对齐奖励（提高到2.0，强化对齐优先级）
   wiring_coef: 0.5            # 终局布线奖励（归一化wiring_score）
-  grid_regularity_coef: 0.5   # 终局网格规则性奖励（鼓励等间距对齐）
+  grid_regularity_coef: 0.0   # 终局网格规则性奖励（禁用，避免与对齐竞争）
+  alignment_tolerance: 2.0    # 软对齐容忍度：差1格得0.5分，差2格得0分
   invalid_action_penalty: 10.0
 
 room:
