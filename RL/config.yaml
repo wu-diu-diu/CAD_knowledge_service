@@ -18,13 +18,15 @@ training:
 environment:
   padded_size: 48  # 增大以容纳35x33的不规则房间
   max_steps: 16
-  target_lamp_count: 5  
+  target_lamp_count: 5
   turn_penalty: 0.2
+  wall_margin: 1  # 灯具距墙/门/开关的最小安全距离（格子数）
 
 reward:
   potential_coef: 3.0         # 每步势能减少奖励
-  alignment_coef: 1.0         # 终局对齐奖励
+  alignment_coef: 1.0         # 终局行列对齐奖励
   wiring_coef: 0.5            # 终局布线奖励（归一化wiring_score）
+  grid_regularity_coef: 0.5   # 终局网格规则性奖励（鼓励等间距对齐）
   invalid_action_penalty: 10.0
 
 room:

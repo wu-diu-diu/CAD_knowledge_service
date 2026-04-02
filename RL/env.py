@@ -31,6 +31,7 @@ class EnvironmentConfig:
     max_steps: int = 24  ## 每轮布局的最大步骤数，即智能体在一个房间上连续经过了24个状态，还没有布置结束就会被强制终止
     target_lamp_count: int = 4  ## 期望的灯具数量，智能体达到或超过这个数量时布局完成，进入终局奖励计算
     turn_penalty: float = 0.2  ## A*路径规划中的转弯惩罚，鼓励更直的布线路径，减少不必要的转弯
+    wall_margin: int = 1  ## 灯具距离墙壁/门/开关的最小安全距离（格子数），避免灯具紧贴边界
     reward_config: RewardConfig | None = None
 
 
@@ -77,7 +78,26 @@ class SingleRoomLightingEnv:
         self.original_room_mask = self.original_matrix != 0
         self.original_door_mask = self.original_matrix == 2
         self.original_switch_mask = self.original_matrix == 3
-        self.original_placeable_mask = self.original_matrix == 1
+
+        # Apply wall_margin: erode the raw placeable area so lamps stay away from
+        # walls, doors, and switches by at least `wall_margin` cells.
+        raw_placeable = self.original_matrix == 1
+        margin = self.config.wall_margin
+        if margin > 0:
+            from scipy.ndimage import binary_erosion
+            # Obstacle mask: anything that is NOT room interior (walls outside) OR
+            # is a door/switch counts as a boundary to keep distance from.
+            obstacle = ~self.original_room_mask | self.original_door_mask | self.original_switch_mask
+            # Erode the raw placeable mask: a cell is placeable only if all cells
+            # within `margin` steps are free of obstacles.
+            struct = np.ones((2 * margin + 1, 2 * margin + 1), dtype=bool)
+            safe_zone = binary_erosion(~obstacle, structure=struct, border_value=0)
+            self.original_placeable_mask = raw_placeable & safe_zone
+            # Fallback: if erosion removes ALL placeable cells, revert to raw mask
+            if not np.any(self.original_placeable_mask):
+                self.original_placeable_mask = raw_placeable
+        else:
+            self.original_placeable_mask = raw_placeable
 
         self.route_grid = np.where(self.original_matrix == 0, 0, 1).astype(np.int32)
         self.route_grid[self.original_door_mask] = 0
@@ -234,9 +254,16 @@ class SingleRoomLightingEnv:
         )
 
     def current_encoded_matrix(self) -> np.ndarray:
-        """Return the original room matrix with current lamp placements encoded as 4."""
+        """Return the original room matrix with current lamp placements encoded as 4.
+
+        Uses the raw room interior (not the eroded placeable_mask) so that
+        wall-margin cells appear as green (value=1) rather than red (value=0)
+        in visualizations — the true room boundary stays visible.
+        """
         encoded = np.zeros_like(self.original_matrix, dtype=np.int32)
-        encoded[self.original_placeable_mask] = 1
+        # Fill all walkable interior cells as 1 (green), including margin cells
+        raw_placeable = self.original_matrix == 1
+        encoded[raw_placeable] = 1
         encoded[self.original_door_mask] = 2
         encoded[self.original_switch_mask] = 3
         encoded[self.original_lamp_mask] = 4
