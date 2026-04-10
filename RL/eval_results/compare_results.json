@@ -1,0 +1,1784 @@
+{
+  "rl": [
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 7183.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 580.4844591766596
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 8543.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 38.58712501823902
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 7463.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 39.88661011680961
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 5312.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 20.766027737408876
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 10429.0,
+      "alignment": 0.5,
+      "time_ms": 38.555906154215336
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 16982.0,
+      "alignment": 0.6,
+      "time_ms": 56.28229910507798
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 7486.0,
+      "alignment": 1.0,
+      "time_ms": 33.795156981796026
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 10586.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 22.245232947170734
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 10872.0,
+      "alignment": 1.0,
+      "time_ms": 30.17003508284688
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 17915.0,
+      "alignment": 0.6,
+      "time_ms": 31.66532889008522
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 6135.0,
+      "alignment": 0.0,
+      "time_ms": 32.595680095255375
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 6745.0,
+      "alignment": 1.0,
+      "time_ms": 10.115392971783876
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 8740.0,
+      "alignment": 0.3333333333333333,
+      "time_ms": 16.46291697397828
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 6035.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 34.13671534508467
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 6395.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 19.020717125386
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 6861.0,
+      "alignment": 1.0,
+      "time_ms": 28.2078986056149
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 6504.0,
+      "alignment": 1.0,
+      "time_ms": 9.809170383960009
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 30147.0,
+      "alignment": 0.6,
+      "time_ms": 41.155533865094185
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 30210.0,
+      "alignment": 0.6,
+      "time_ms": 44.350235257297754
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 13489.0,
+      "alignment": 0.5,
+      "time_ms": 52.31976415961981
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 6300.0,
+      "alignment": 1.0,
+      "time_ms": 34.26104271784425
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 12567.0,
+      "alignment": 0.5,
+      "time_ms": 28.570976573973894
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 13737.0,
+      "alignment": 0.5,
+      "time_ms": 68.98132711648941
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 11463.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 46.30888579413295
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 28121.0,
+      "alignment": 0.3,
+      "time_ms": 74.20415058732033
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 9364.0,
+      "alignment": 1.0,
+      "time_ms": 33.47733896225691
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 8443.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 17.665493302047253
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 10668.0,
+      "alignment": 0.3333333333333333,
+      "time_ms": 36.45597258582711
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 10293.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 36.80550493299961
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 9851.0,
+      "alignment": 1.0,
+      "time_ms": 37.32730494812131
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 8268.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 38.27342810109258
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 9123.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 41.647149715572596
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 5665.0,
+      "alignment": 0.0,
+      "time_ms": 12.070372700691223
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 11353.0,
+      "alignment": 0.5,
+      "time_ms": 21.59845968708396
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 6436.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 36.63750132545829
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 5497.0,
+      "alignment": 1.0,
+      "time_ms": 27.507435996085405
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 9306.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 15.343932900577784
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 18516.0,
+      "alignment": 0.5,
+      "time_ms": 24.64345097541809
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 5537.0,
+      "alignment": 1.0,
+      "time_ms": 22.202232852578163
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 11623.0,
+      "alignment": 0.5,
+      "time_ms": 30.522556975483894
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 8162.0,
+      "alignment": 0.3333333333333333,
+      "time_ms": 39.865683764219284
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 22887.0,
+      "alignment": 0.6,
+      "time_ms": 36.777179688215256
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 10067.0,
+      "alignment": 0.3333333333333333,
+      "time_ms": 36.61474725231528
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 9947.0,
+      "alignment": 1.0,
+      "time_ms": 9.360779076814651
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 18628.0,
+      "alignment": 0.4,
+      "time_ms": 34.84629699960351
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 8995.0,
+      "alignment": 0.3333333333333333,
+      "time_ms": 39.90438487380743
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 19035.0,
+      "alignment": 0.6,
+      "time_ms": 33.93254615366459
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 7165.0,
+      "alignment": 1.0,
+      "time_ms": 35.3080490604043
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 6564.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 15.23531274870038
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 8299.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 21.495304070413113
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 10779.0,
+      "alignment": 0.6,
+      "time_ms": 53.75555856153369
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 8249.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 45.56974582374096
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 6016.0,
+      "alignment": 1.0,
+      "time_ms": 31.361133325845003
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 6183.0,
+      "alignment": 0.3333333333333333,
+      "time_ms": 14.707833994179964
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 6620.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 13.953804038465023
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 14045.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 12.719590216875076
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 5947.0,
+      "alignment": 1.0,
+      "time_ms": 8.076216094195843
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 22532.0,
+      "alignment": 0.6,
+      "time_ms": 28.476154897361994
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 19273.0,
+      "alignment": 0.6,
+      "time_ms": 51.50540405884385
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 7413.0,
+      "alignment": 1.0,
+      "time_ms": 41.69828211888671
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 12835.0,
+      "alignment": 0.3333333333333333,
+      "time_ms": 16.358542256057262
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 8512.0,
+      "alignment": 0.3333333333333333,
+      "time_ms": 18.30995688214898
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 19010.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 14.268964994698763
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 14655.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 19.958314951509237
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 9319.0,
+      "alignment": 1.0,
+      "time_ms": 32.19465119764209
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 15126.0,
+      "alignment": 0.6,
+      "time_ms": 36.93535318598151
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 16568.0,
+      "alignment": 0.4,
+      "time_ms": 53.66460094228387
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 9687.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 45.73884094133973
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 11169.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 13.812220189720392
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 6289.0,
+      "alignment": 1.0,
+      "time_ms": 8.17927997559309
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 15644.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 19.880483858287334
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 5197.0,
+      "alignment": 1.0,
+      "time_ms": 30.312353279441595
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 15498.0,
+      "alignment": 0.4,
+      "time_ms": 47.28708602488041
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 4556.0,
+      "alignment": 1.0,
+      "time_ms": 31.797303818166256
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 9199.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 21.445384714752436
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 10626.0,
+      "alignment": 0.5,
+      "time_ms": 49.92053471505642
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 6445.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 27.523785829544067
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 7638.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 18.052485771477222
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 14166.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 42.169016785919666
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 19306.0,
+      "alignment": 0.5,
+      "time_ms": 63.332569785416126
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 11022.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 44.08806608989835
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 5139.0,
+      "alignment": 1.0,
+      "time_ms": 32.032120041549206
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 4901.0,
+      "alignment": 1.0,
+      "time_ms": 8.426877204328775
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 6371.0,
+      "alignment": 1.0,
+      "time_ms": 13.462795875966549
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 8017.0,
+      "alignment": 1.0,
+      "time_ms": 9.858110919594765
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 9676.0,
+      "alignment": 0.5,
+      "time_ms": 23.437005002051592
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 7541.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 35.3350630030036
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 6343.0,
+      "alignment": 1.0,
+      "time_ms": 8.354278281331062
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 6703.0,
+      "alignment": 1.0,
+      "time_ms": 9.171645622700453
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 4353.0,
+      "alignment": 1.0,
+      "time_ms": 8.943978697061539
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 6343.0,
+      "alignment": 1.0,
+      "time_ms": 8.992418646812439
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 4940.0,
+      "alignment": 1.0,
+      "time_ms": 8.655517362058163
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 11220.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 21.329759620130062
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 4604.0,
+      "alignment": 1.0,
+      "time_ms": 37.4638712964952
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 6468.0,
+      "alignment": 1.0,
+      "time_ms": 7.804807275533676
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 8798.0,
+      "alignment": 1.0,
+      "time_ms": 11.008687317371368
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 7044.0,
+      "alignment": 1.0,
+      "time_ms": 9.284598287194967
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 10142.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 20.72350261732936
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 8870.0,
+      "alignment": 1.0,
+      "time_ms": 31.543449964374304
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 7664.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 19.961839076131582
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 9627.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 45.45784695073962
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 8526.0,
+      "alignment": 1.0,
+      "time_ms": 31.279263086616993
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 7453.0,
+      "alignment": 1.0,
+      "time_ms": 9.616797789931297
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 7973.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 21.472216118127108
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 4644.0,
+      "alignment": 1.0,
+      "time_ms": 32.59089821949601
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 9929.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 23.463997058570385
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 9553.0,
+      "alignment": 1.0,
+      "time_ms": 32.564749009907246
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 5046.0,
+      "alignment": 1.0,
+      "time_ms": 9.400207083672285
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 8511.0,
+      "alignment": 1.0,
+      "time_ms": 9.0147671289742
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 10456.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 21.20851306244731
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 9129.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 48.77644730731845
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 12484.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 47.9410937987268
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 9205.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 44.9630836956203
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 10760.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 47.399860341101885
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 8510.0,
+      "alignment": 1.0,
+      "time_ms": 33.940973691642284
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 5470.0,
+      "alignment": 1.0,
+      "time_ms": 8.077163249254227
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 8905.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 21.7564613558352
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 5241.0,
+      "alignment": 1.0,
+      "time_ms": 29.362037777900696
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 4498.0,
+      "alignment": 1.0,
+      "time_ms": 7.962536066770554
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 5615.0,
+      "alignment": 1.0,
+      "time_ms": 9.343650192022324
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 8915.0,
+      "alignment": 1.0,
+      "time_ms": 8.075621910393238
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 5580.0,
+      "alignment": 1.0,
+      "time_ms": 9.628868196159601
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 11530.0,
+      "alignment": 1.0,
+      "time_ms": 20.61754884198308
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 10102.0,
+      "alignment": 0.6666666666666666,
+      "time_ms": 45.98959302529693
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 5740.0,
+      "alignment": 1.0,
+      "time_ms": 31.261372845619917
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 7108.0,
+      "alignment": 1.0,
+      "time_ms": 10.081351269036531
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 4004.0,
+      "alignment": 1.0,
+      "time_ms": 9.460559114813805
+    }
+  ],
+  "ga": [
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 11539.0,
+      "alignment": 1.0,
+      "time_ms": 25317.50072585419
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 10862.0,
+      "alignment": 1.0,
+      "time_ms": 18903.099151328206
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 6687.0,
+      "alignment": 1.0,
+      "time_ms": 15594.966492149979
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 9302.0,
+      "alignment": 1.0,
+      "time_ms": 14309.140071738511
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 21189.0,
+      "alignment": 1.0,
+      "time_ms": 32096.253314986825
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 25701.0,
+      "alignment": 1.0,
+      "time_ms": 43942.71689513698
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 5922.0,
+      "alignment": 1.0,
+      "time_ms": 8786.028688773513
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 13907.0,
+      "alignment": 1.0,
+      "time_ms": 29477.475862950087
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 7110.0,
+      "alignment": 1.0,
+      "time_ms": 6778.173936996609
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 39730.0,
+      "alignment": 1.0,
+      "time_ms": 43154.62505212054
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 5707.0,
+      "alignment": 1.0,
+      "time_ms": 6232.870267238468
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 6572.0,
+      "alignment": 1.0,
+      "time_ms": 6927.097579929978
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 10450.0,
+      "alignment": 1.0,
+      "time_ms": 16795.180406887084
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 8507.0,
+      "alignment": 1.0,
+      "time_ms": 15561.011060141027
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 8580.0,
+      "alignment": 1.0,
+      "time_ms": 18353.4316807054
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 5207.0,
+      "alignment": 1.0,
+      "time_ms": 6209.191804751754
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 5388.0,
+      "alignment": 1.0,
+      "time_ms": 5889.984427951276
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 69487.0,
+      "alignment": 1.0,
+      "time_ms": 50790.21652042866
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 49176.0,
+      "alignment": 1.0,
+      "time_ms": 47672.4070366472
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 19094.0,
+      "alignment": 1.0,
+      "time_ms": 30102.57320618257
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 8450.0,
+      "alignment": 1.0,
+      "time_ms": 8733.381860889494
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 20771.0,
+      "alignment": 1.0,
+      "time_ms": 31178.877539001405
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 19135.0,
+      "alignment": 1.0,
+      "time_ms": 33948.43408698216
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 19393.0,
+      "alignment": 1.0,
+      "time_ms": 30958.696900866926
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 69732.0,
+      "alignment": 1.0,
+      "time_ms": 56095.37397231907
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 5752.0,
+      "alignment": 1.0,
+      "time_ms": 7782.739396672696
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 11093.0,
+      "alignment": 1.0,
+      "time_ms": 20960.199289023876
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 13782.0,
+      "alignment": 1.0,
+      "time_ms": 17326.530521269888
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 12015.0,
+      "alignment": 1.0,
+      "time_ms": 18160.0035186857
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 8992.0,
+      "alignment": 1.0,
+      "time_ms": 18734.39557198435
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 10175.0,
+      "alignment": 1.0,
+      "time_ms": 17212.17916160822
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 7812.0,
+      "alignment": 1.0,
+      "time_ms": 13951.757468283176
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 4711.0,
+      "alignment": 1.0,
+      "time_ms": 7174.3659526109695
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 20273.0,
+      "alignment": 1.0,
+      "time_ms": 28494.487137068063
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 8543.0,
+      "alignment": 1.0,
+      "time_ms": 16779.088778886944
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 5785.0,
+      "alignment": 1.0,
+      "time_ms": 5875.525671057403
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 7819.0,
+      "alignment": 1.0,
+      "time_ms": 13103.592438157648
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 15958.0,
+      "alignment": 1.0,
+      "time_ms": 27236.94594670087
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 4610.0,
+      "alignment": 1.0,
+      "time_ms": 8324.19008295983
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 21019.0,
+      "alignment": 1.0,
+      "time_ms": 36093.174937181175
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 8312.0,
+      "alignment": 1.0,
+      "time_ms": 15242.86886304617
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 50450.0,
+      "alignment": 1.0,
+      "time_ms": 48194.07217903063
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 12084.0,
+      "alignment": 1.0,
+      "time_ms": 13560.285604093224
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 6910.0,
+      "alignment": 1.0,
+      "time_ms": 8614.953309763223
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 34356.0,
+      "alignment": 1.0,
+      "time_ms": 42252.76761781424
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 7620.0,
+      "alignment": 1.0,
+      "time_ms": 15804.673507343978
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 52168.0,
+      "alignment": 1.0,
+      "time_ms": 42322.766231838614
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 7155.0,
+      "alignment": 1.0,
+      "time_ms": 10545.08750140667
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 8490.0,
+      "alignment": 1.0,
+      "time_ms": 11887.689663097262
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 13454.0,
+      "alignment": 1.0,
+      "time_ms": 23972.80051233247
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 31884.0,
+      "alignment": 1.0,
+      "time_ms": 29854.925042949617
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 14301.0,
+      "alignment": 1.0,
+      "time_ms": 19039.601190946996
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 5632.0,
+      "alignment": 1.0,
+      "time_ms": 8247.428028844297
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 7382.0,
+      "alignment": 1.0,
+      "time_ms": 11339.3119815737
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 8595.0,
+      "alignment": 1.0,
+      "time_ms": 14299.517512787133
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 16972.0,
+      "alignment": 1.0,
+      "time_ms": 13430.948453955352
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 6452.0,
+      "alignment": 1.0,
+      "time_ms": 5498.8374300301075
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 53028.0,
+      "alignment": 1.0,
+      "time_ms": 34825.18072100356
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 63706.0,
+      "alignment": 1.0,
+      "time_ms": 29415.173982735723
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 10243.0,
+      "alignment": 1.0,
+      "time_ms": 8227.330341935158
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 10277.0,
+      "alignment": 1.0,
+      "time_ms": 16111.018567811698
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 9218.0,
+      "alignment": 1.0,
+      "time_ms": 12612.444491125643
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 13889.0,
+      "alignment": 1.0,
+      "time_ms": 12245.01831131056
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 20375.0,
+      "alignment": 1.0,
+      "time_ms": 27927.995160222054
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 6471.0,
+      "alignment": 1.0,
+      "time_ms": 5064.966220874339
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 65634.0,
+      "alignment": 1.0,
+      "time_ms": 39068.43388220295
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 48378.0,
+      "alignment": 1.0,
+      "time_ms": 31429.53105410561
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 13219.0,
+      "alignment": 1.0,
+      "time_ms": 13928.600825369358
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 12113.0,
+      "alignment": 1.0,
+      "time_ms": 13612.341953907162
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 6262.0,
+      "alignment": 1.0,
+      "time_ms": 7069.928154814988
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 17860.0,
+      "alignment": 1.0,
+      "time_ms": 20098.113028798252
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 4683.0,
+      "alignment": 1.0,
+      "time_ms": 7195.968814194202
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 34287.0,
+      "alignment": 1.0,
+      "time_ms": 40092.46718836948
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 4735.0,
+      "alignment": 1.0,
+      "time_ms": 6308.040693867952
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 22308.0,
+      "alignment": 1.0,
+      "time_ms": 31101.214424241334
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 15417.0,
+      "alignment": 1.0,
+      "time_ms": 30770.36396600306
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 8163.0,
+      "alignment": 1.0,
+      "time_ms": 14190.762129146606
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 10321.0,
+      "alignment": 1.0,
+      "time_ms": 17659.44933705032
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 16887.0,
+      "alignment": 1.0,
+      "time_ms": 25974.04152387753
+    },
+    {
+      "lamp_count": 5,
+      "room_name": "房间",
+      "potential_raw": 34734.0,
+      "alignment": 1.0,
+      "time_ms": 45241.772858891636
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 18106.0,
+      "alignment": 1.0,
+      "time_ms": 21692.56215589121
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 4582.0,
+      "alignment": 1.0,
+      "time_ms": 5455.7815939188
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 4383.0,
+      "alignment": 1.0,
+      "time_ms": 8435.857102274895
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 7658.0,
+      "alignment": 1.0,
+      "time_ms": 10908.79220282659
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 4977.0,
+      "alignment": 1.0,
+      "time_ms": 5922.482112888247
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 15548.0,
+      "alignment": 1.0,
+      "time_ms": 23823.048032820225
+    },
+    {
+      "lamp_count": 3,
+      "room_name": "房间",
+      "potential_raw": 9332.0,
+      "alignment": 1.0,
+      "time_ms": 12818.731130100787
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 5691.0,
+      "alignment": 1.0,
+      "time_ms": 9253.318313974887
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 3930.0,
+      "alignment": 1.0,
+      "time_ms": 6192.699564155191
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 4933.0,
+      "alignment": 1.0,
+      "time_ms": 6331.490525044501
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 5691.0,
+      "alignment": 1.0,
+      "time_ms": 11098.073503933847
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 4585.0,
+      "alignment": 1.0,
+      "time_ms": 6495.757726021111
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 16717.0,
+      "alignment": 1.0,
+      "time_ms": 28656.333392020315
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 4944.0,
+      "alignment": 1.0,
+      "time_ms": 8142.501983325928
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 4584.0,
+      "alignment": 1.0,
+      "time_ms": 7458.965509198606
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 5654.0,
+      "alignment": 1.0,
+      "time_ms": 7478.493702597916
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 4992.0,
+      "alignment": 1.0,
+      "time_ms": 8109.608752187341
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 36163.0,
+      "alignment": 1.0,
+      "time_ms": 27704.95382975787
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 6381.0,
+      "alignment": 1.0,
+      "time_ms": 7889.8651408962905
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 9495.0,
+      "alignment": 1.0,
+      "time_ms": 22824.169835075736
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 12428.0,
+      "alignment": 1.0,
+      "time_ms": 25116.249793209136
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 6124.0,
+      "alignment": 1.0,
+      "time_ms": 11670.566958840936
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 4306.0,
+      "alignment": 1.0,
+      "time_ms": 8706.948723178357
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 13880.0,
+      "alignment": 1.0,
+      "time_ms": 23258.251666091383
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 4904.0,
+      "alignment": 1.0,
+      "time_ms": 9304.159375838935
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 10830.0,
+      "alignment": 1.0,
+      "time_ms": 24066.85250531882
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 6134.0,
+      "alignment": 1.0,
+      "time_ms": 8297.90561972186
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 4864.0,
+      "alignment": 1.0,
+      "time_ms": 6854.589037131518
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 4614.0,
+      "alignment": 1.0,
+      "time_ms": 6750.371405854821
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 18475.0,
+      "alignment": 1.0,
+      "time_ms": 23183.530353941023
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 9650.0,
+      "alignment": 1.0,
+      "time_ms": 22428.785365074873
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 11858.0,
+      "alignment": 1.0,
+      "time_ms": 30500.564126763493
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 13326.0,
+      "alignment": 1.0,
+      "time_ms": 25867.25534265861
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 12873.0,
+      "alignment": 1.0,
+      "time_ms": 24370.22787705064
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 6683.0,
+      "alignment": 1.0,
+      "time_ms": 10093.813535757363
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 5858.0,
+      "alignment": 1.0,
+      "time_ms": 8579.590517096221
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 15430.0,
+      "alignment": 1.0,
+      "time_ms": 25879.93402266875
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 4919.0,
+      "alignment": 1.0,
+      "time_ms": 8082.949748262763
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 4281.0,
+      "alignment": 1.0,
+      "time_ms": 5639.334972947836
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 6144.0,
+      "alignment": 1.0,
+      "time_ms": 7430.8331538923085
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 6124.0,
+      "alignment": 1.0,
+      "time_ms": 9092.292623128742
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 5670.0,
+      "alignment": 1.0,
+      "time_ms": 8509.625521954149
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 13445.0,
+      "alignment": 1.0,
+      "time_ms": 30009.52494284138
+    },
+    {
+      "lamp_count": 4,
+      "room_name": "房间",
+      "potential_raw": 23132.0,
+      "alignment": 1.0,
+      "time_ms": 24954.74177505821
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 6189.0,
+      "alignment": 1.0,
+      "time_ms": 7772.455783095211
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 4321.0,
+      "alignment": 1.0,
+      "time_ms": 8030.434871092439
+    },
+    {
+      "lamp_count": 2,
+      "room_name": "房间",
+      "potential_raw": 5542.0,
+      "alignment": 1.0,
+      "time_ms": 6697.980720084161
+    }
+  ]
+}

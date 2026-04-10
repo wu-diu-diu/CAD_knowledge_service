@@ -17,6 +17,15 @@
 
   # 启用课程学习
   python RL/train_wiring.py --room_dir RL/generated_rooms --curriculum
+
+  # 使用预定义的训练/测试集划分训练
+  cd /home/chen/punchy/CAD_knowledge_service/RL
+../.venv/bin/python train_wiring.py \
+  --room_dir test_room/layout_room/json \
+  --split_dir test_room/layout_room/split \
+  --episodes 5000 \
+  --curriculum \
+  --output_dir output_wiring
 """
 from __future__ import annotations
 
@@ -40,6 +49,12 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from wiring_env import WiringEnv, WiringEnvConfig, compute_mst_baseline
 from wiring_model import WiringPolicyNet, build_lamp_coords_tensor
+
+import yaml
+
+def _load_yaml_config(config_path: Path) -> dict[str, Any]:
+    with config_path.open("r", encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -116,6 +131,7 @@ def load_room_dataset(room_dir: Path) -> list[dict[str, Any]]:
                 n_switches = int((matrix == 3).sum())
                 if n_lamps >= 2 and n_switches >= 1:
                     room_data["_n_lamps"] = n_lamps
+                    room_data["_filename"] = json_file.name
                     rooms.append(room_data)
         except Exception as e:
             print(f"[warn] skip {json_file}: {e}")
@@ -125,6 +141,37 @@ def load_room_dataset(room_dir: Path) -> list[dict[str, Any]]:
 
 def filter_by_lamp_count(rooms: list[dict], min_lamps: int, max_lamps: int) -> list[dict]:
     return [r for r in rooms if min_lamps <= r.get("_n_lamps", 0) <= max_lamps]
+
+
+def load_wiring_split(
+    split_dir: Path,
+    all_rooms: list[dict[str, Any]],
+) -> tuple[list[dict], list[dict], list[dict]]:
+    """从预分割索引文件加载训练集、验证集和测试集。"""
+    by_name: dict[str, dict] = {}
+    for room in all_rooms:
+        fname = room.get("_filename", "")
+        by_name[fname] = room
+
+    result = []
+    for split_name in ("train", "val", "test"):
+        idx_path = split_dir / f"{split_name}.json"
+        if not idx_path.exists():
+            print(f"[load_wiring_split] {split_name}.json not found, returning empty list")
+            result.append([])
+            continue
+        with idx_path.open("r", encoding="utf-8") as f:
+            entries = json.load(f)
+        rooms = []
+        for entry in entries:
+            fname = entry["filename"]
+            if fname in by_name:
+                rooms.append(by_name[fname])
+            else:
+                print(f"[load_wiring_split] WARNING: {fname} not found, skipping")
+        print(f"[load_wiring_split] {split_name}: {len(rooms)} rooms")
+        result.append(rooms)
+    return result[0], result[1], result[2]
 
 
 def split_train_test(
@@ -352,6 +399,7 @@ def train_wiring(
     env_cfg: WiringEnvConfig,
     output_dir: Path,
     curriculum: WiringCurriculumConfig | None = None,
+    val_rooms: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """
     多房间布线PPO训练主循环。
@@ -456,16 +504,53 @@ def train_wiring(
                     f"stage={stage_name}"
                 )
 
-            # ── 可视化（每 visualize_every_episodes 步保存一张布线图）──
-            if episode_idx % cfg.visualize_every_episodes == 0 or episode_idx >= total_episodes:
-                vis_room = random.choice(pool)
-                vis_path = output_dir / "wiring_vis" / f"ep_{episode_idx:05d}.png"
-                try:
-                    visualize_wiring_result(
-                        vis_room, model, env_cfg, device, vis_path, episode_idx
-                    )
-                except Exception as e:
-                    print(f"[warn] visualize failed at ep={episode_idx}: {e}")
+            # ── 验证集评估（每个课程阶段末 + 每4个log周期）──
+            run_val = (
+                val_rooms
+                and (
+                    episode_idx >= stage_end
+                    or episode_idx % (cfg.log_every_episodes * 4) == 0
+                )
+            )
+            if run_val:
+                model.eval()
+                val_rewards, val_costs = [], []
+                with torch.no_grad():
+                    for vroom in val_rooms:
+                        venv = WiringEnv(vroom, config=env_cfg)
+                        vobs = venv.reset()
+                        vdone = False
+                        vtotal = 0.0
+                        while not vdone:
+                            vobs_t = torch.from_numpy(vobs).unsqueeze(0).to(device, dtype=torch.float32)
+                            vlamp_coords = build_lamp_coords_tensor(
+                                venv.lamp_positions, venv.row_offset, venv.col_offset, device
+                            )
+                            vmask = torch.tensor(
+                                [not venv.connected[i] for i in range(venv.n_lamps)],
+                                dtype=torch.bool, device=device,
+                            ).unsqueeze(0)
+                            vout = model.act(vobs_t, vlamp_coords, vmask, deterministic=True)
+                            vobs, vr, vdone, vinfo = venv.step(int(vout["action"].item()))
+                            vtotal += float(vr)
+                        val_rewards.append(vtotal)
+                        val_costs.append(float(vinfo.get("total_cost", 0.0)))
+                model.train()
+                avg_val_reward = float(np.mean(val_rewards))
+                avg_val_cost = float(np.mean(val_costs))
+                history.append({
+                    "type": "validation",
+                    "episode": episode_idx,
+                    "avg_reward": avg_val_reward,
+                    "avg_cost": avg_val_cost,
+                    "stage": stage_name,
+                })
+                print(
+                    f"[val]    ep={episode_idx:05d} avg_reward={avg_val_reward:7.3f} "
+                    f"avg_cost={avg_val_cost:.1f} stage={stage_name}"
+                )
+
+            # ── 可视化（训练过程中不再保存，训练结束后统一用测试集生成）──
 
     summary = {
         "total_episodes": total_episodes,
@@ -641,24 +726,40 @@ def compare_with_mst(
 def plot_wiring_reward_curve(history: list[dict], output_path: Path, window: int = 50) -> None:
     if not history:
         return
-    episodes = [h["episode"] for h in history]
-    rewards = np.array([h["episode_reward"] for h in history], dtype=np.float32)
-    costs = np.array([h["total_cost"] for h in history], dtype=np.float32)
+    train_h = [h for h in history if h.get("type") != "validation"]
+    val_h   = [h for h in history if h.get("type") == "validation"]
+
+    episodes = [h["episode"] for h in train_h]
+    rewards  = np.array([h["episode_reward"] for h in train_h], dtype=np.float32)
+    costs    = np.array([h["total_cost"]     for h in train_h], dtype=np.float32)
 
     w = max(1, min(window, len(rewards)))
     kernel = np.ones(w) / w
     moving = np.convolve(rewards, kernel, mode="valid")
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
-    ax1.plot(episodes, rewards, color="#7aa6ff", alpha=0.6, linewidth=1.0, label="Reward")
-    ax1.plot(episodes[w - 1:], moving, color="#d94f30", linewidth=2.0, label=f"Moving Avg ({w})")
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(11, 8))
+
+    # ── 上图：奖励曲线 ──
+    ax1.plot(episodes, rewards, color="#7aa6ff", alpha=0.5, linewidth=0.8, label="Train Reward")
+    ax1.plot(episodes[w - 1:], moving, color="#2563eb", linewidth=2.0, label=f"Train Moving Avg ({w})")
+    if val_h:
+        val_eps = [h["episode"] for h in val_h]
+        val_rws = np.array([h["avg_reward"] for h in val_h], dtype=np.float32)
+        ax1.plot(val_eps, val_rws, color="#e74c3c", linewidth=2.0,
+                 marker="o", markersize=4, label="Val Avg Reward")
     ax1.set_xlabel("Episode")
     ax1.set_ylabel("Reward")
     ax1.set_title("Wiring RL Training Reward")
     ax1.legend()
     ax1.grid(True, linestyle="--", alpha=0.5)
 
-    ax2.plot(episodes, costs, color="#4caf50", alpha=0.6, linewidth=1.0, label="Total Wire Cost")
+    # ── 下图：布线代价曲线 ──
+    ax2.plot(episodes, costs, color="#4caf50", alpha=0.6, linewidth=1.0, label="Train Wire Cost")
+    if val_h:
+        val_eps = [h["episode"] for h in val_h]
+        val_costs = np.array([h["avg_cost"] for h in val_h], dtype=np.float32)
+        ax2.plot(val_eps, val_costs, color="#e67e22", linewidth=2.0,
+                 marker="s", markersize=4, label="Val Avg Cost")
     ax2.set_xlabel("Episode")
     ax2.set_ylabel("Wire Cost (grid steps)")
     ax2.set_title("Total Wiring Cost per Episode")
@@ -735,13 +836,14 @@ def plot_rl_vs_mst_comparison(results: list[dict[str, Any]], output_path: Path) 
 def main() -> None:
     parser = argparse.ArgumentParser(description="布线RL训练")
     parser.add_argument("--room", type=str, default=None, help="单个房间 JSON 路径")
-    parser.add_argument("--room_dir", type=str, default=None, help="房间数据集目录")
+    parser.add_argument("--room_dir", type=str, default="RL/test_room/layout_room/json", help="房间数据集目录")
     parser.add_argument("--episodes", type=int, default=3000)
     parser.add_argument("--curriculum", action="store_true", help="启用课程学习")
     parser.add_argument("--device", type=str, default=None)
     parser.add_argument("--output_dir", type=str, default="RL/output_wiring")
     parser.add_argument("--compare_mst", action="store_true", help="训练后与MST对比")
     parser.add_argument("--test_ratio", type=float, default=0.2, help="测试集比例")
+    parser.add_argument("--split_dir", type=str, default=None, help="预分割索引目录（train.json/test.json）")
     args = parser.parse_args()
 
     # 输出目录
@@ -750,11 +852,50 @@ def main() -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # 配置
-    ppo_cfg = WiringPPOConfig(episodes=args.episodes)
-    if args.device:
-        ppo_cfg.device = args.device
-    env_cfg = WiringEnvConfig()
-    curriculum = WiringCurriculumConfig() if args.curriculum else None
+    config_path = Path(__file__).resolve().parent / "config.yaml"
+    cfg_payload = _load_yaml_config(config_path)
+
+    ppo_raw = cfg_payload.get("wiring_training", {})
+    ppo_cfg = WiringPPOConfig(
+        episodes=args.episodes if args.episodes else ppo_raw.get("episodes", 5000),
+        gamma=ppo_raw.get("gamma", 0.99),
+        gae_lambda=ppo_raw.get("gae_lambda", 0.95),
+        learning_rate=ppo_raw.get("learning_rate", 3e-4),
+        ppo_epochs=ppo_raw.get("ppo_epochs", 4),
+        rollout_episodes=ppo_raw.get("rollout_episodes", 16),
+        clip_eps=ppo_raw.get("clip_eps", 0.2),
+        value_coef=ppo_raw.get("value_coef", 0.5),
+        entropy_coef=ppo_raw.get("entropy_coef", 0.01),
+        grad_clip_norm=ppo_raw.get("grad_clip_norm", 0.5),
+        seed=ppo_raw.get("seed", 42),
+        device=args.device if args.device else ppo_raw.get("device", "cuda"),
+        log_every_episodes=ppo_raw.get("log_every_episodes", 32),
+        visualize_every_episodes=ppo_raw.get("visualize_every_episodes", 100),
+        reward_curve_moving_window=ppo_raw.get("reward_curve_moving_window", 50),
+    )
+
+    env_raw = cfg_payload.get("wiring_environment", {})
+    env_cfg = WiringEnvConfig(
+        padded_size=env_raw.get("padded_size", 48),
+        turn_penalty=env_raw.get("turn_penalty", 0.2),
+        potential_coef=env_raw.get("potential_coef", 2.0),
+        invalid_action_penalty=env_raw.get("invalid_action_penalty", 1.0),
+        terminal_length_coef=env_raw.get("terminal_length_coef", 1.0),
+        terminal_sharing_coef=env_raw.get("terminal_sharing_coef", 0.5),
+        terminal_depth_coef=env_raw.get("terminal_depth_coef", 0.3),
+    )
+
+    if args.curriculum:
+        cur_raw = cfg_payload.get("wiring_curriculum", {})
+        raw_stages = cur_raw.get("stages", [])
+        if raw_stages:
+            curriculum = WiringCurriculumConfig(
+                stages=[CurriculumStage(**s) for s in raw_stages]
+            )
+        else:
+            curriculum = WiringCurriculumConfig()
+    else:
+        curriculum = None
 
     random.seed(ppo_cfg.seed)
     np.random.seed(ppo_cfg.seed)
@@ -762,9 +903,13 @@ def main() -> None:
 
     # 加载房间数据
     test_rooms: list[dict[str, Any]] = []
+    val_rooms: list[dict[str, Any]] = []
     if args.room_dir:
         all_rooms = load_room_dataset(Path(args.room_dir))
-        train_rooms, test_rooms = split_train_test(all_rooms, test_ratio=args.test_ratio, seed=ppo_cfg.seed)
+        if args.split_dir:
+            train_rooms, val_rooms, test_rooms = load_wiring_split(Path(args.split_dir), all_rooms)
+        else:
+            train_rooms, test_rooms = split_train_test(all_rooms, test_ratio=args.test_ratio, seed=ppo_cfg.seed)
         rooms = train_rooms
     elif args.room:
         room_path = Path(args.room)
@@ -785,13 +930,13 @@ def main() -> None:
         print("[error] 没有可用的房间数据")
         return
 
-    print(f"[main] train={len(rooms)}, test={len(test_rooms)}, episodes={ppo_cfg.episodes}, device={ppo_cfg.device}")
+    print(f"[main] train={len(rooms)}, val={len(val_rooms)}, test={len(test_rooms)}, episodes={ppo_cfg.episodes}, device={ppo_cfg.device}")
 
     # 创建模型
     model = WiringPolicyNet(in_channels=6)
 
-    # 训练（只用训练集）
-    summary = train_wiring(rooms, model, ppo_cfg, env_cfg, output_dir, curriculum=curriculum)
+    # 训练（只用训练集，验证集用于监控过拟合）
+    summary = train_wiring(rooms, model, ppo_cfg, env_cfg, output_dir, curriculum=curriculum, val_rooms=val_rooms or None)
 
     # 保存训练曲线
     plot_wiring_reward_curve(
@@ -829,20 +974,22 @@ def main() -> None:
                 output_dir / "rl_vs_mst_comparison.png",
             )
 
-    # 在测试集（或全部房间）上保存布线可视化
-    vis_rooms = eval_rooms[:20]  # 最多可视化 20 个
-    for idx, room_data in enumerate(vis_rooms):
-        room_name = room_data.get("room_name", f"room_{idx}")
+    # 在测试集上保存布线可视化（全部测试房间）
+    vis_dir = output_dir / "wiring_vis"
+    vis_dir.mkdir(parents=True, exist_ok=True)
+    print(f"[main] saving wiring vis for {len(eval_rooms)} test rooms...")
+    for idx, room_data in enumerate(eval_rooms):
+        room_name = room_data.get("room_name", f"room_{idx:04d}")
         safe_name = room_name.replace("/", "_").replace("\\", "_")
-        vis_path = output_dir / "wiring_vis" / f"final_{safe_name}.png"
+        vis_path = vis_dir / f"{idx:04d}_{safe_name}.png"
         try:
             visualize_wiring_result(
                 room_data, model, env_cfg, device, vis_path,
                 episode_idx=summary["total_episodes"],
             )
         except Exception as e:
-            print(f"[warn] final vis failed for {room_name}: {e}")
-    print(f"[main] final wiring vis saved to {output_dir / 'wiring_vis'}")
+            print(f"[warn] vis failed for {room_name}: {e}")
+    print(f"[main] wiring vis saved to {vis_dir}")
 
     print(f"\n[main] done. best_reward={summary['best_reward']:.3f}")
     print(f"[main] output: {output_dir}")

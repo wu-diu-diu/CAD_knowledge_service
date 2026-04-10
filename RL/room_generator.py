@@ -21,7 +21,7 @@ import numpy as np
 MAX_SIZE = 48
 AREA_PER_LAMP = 100
 LAMP_MIN = 2
-LAMP_MAX = 9
+LAMP_MAX = 6
 
 # Outer bbox row/col range per target lamp count
 # Sized so that after carving, placeable ≈ lamp * AREA_PER_LAMP
@@ -53,7 +53,7 @@ _TEMPLATE_FIELDS = {
 }
 
 SHAPES = ["L", "U", "T", "hollow", "cross", "multi_cut"]
-REGULAR_LAMP_COUNTS = [2, 4, 6, 8]
+REGULAR_LAMP_COUNTS = [2, 4, 6]
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -522,7 +522,7 @@ def generate_dataset(count: int, output_dir: str | Path, seed: int = 42) -> None
 
 
 def generate_regular_dataset(count: int, output_dir: str | Path, seed: int = 42) -> None:
-    """Generate regular rectangular rooms with balanced 2/4/6/8-lamp distribution."""
+    """Generate regular rectangular rooms with balanced 2/4/6-lamp distribution."""
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     for old_json in output_path.glob("*.json"):

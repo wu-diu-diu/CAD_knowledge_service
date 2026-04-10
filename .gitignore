@@ -37,3 +37,6 @@ graph/test_room
 RL/output_multiroom
 RL/room_gen/unregular
 eval/qa_multihop_test.json
+RL/output_multiroom_gate_test
+article/results
+RL/room_gen/all

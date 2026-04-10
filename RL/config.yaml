@@ -38,16 +38,10 @@ curriculum:
   stages:
     - min_lamps: 2
       max_lamps: 3
-      episodes: 1500
+      episodes: 3000
     - min_lamps: 2
       max_lamps: 5
-      episodes: 5000
-    - min_lamps: 2
-      max_lamps: 7
-      episodes: 8000
-    - min_lamps: 2
-      max_lamps: 9
-      episodes: 20000
+      episodes: 10000
 
 ga:
   population_size: 128  ##一个种群表示一个布局方案，增加种群规模以提升多样性
@@ -65,3 +59,38 @@ ga:
   min_delta: 0.0001
   seed: 42
   log_every_generations: 10
+
+wiring_training:
+  episodes: 5000
+  gamma: 0.99
+  gae_lambda: 0.95
+  learning_rate: 0.0003
+  ppo_epochs: 4
+  rollout_episodes: 16
+  clip_eps: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.01
+  grad_clip_norm: 0.5
+  seed: 42
+  device: "cuda:1"
+  log_every_episodes: 32
+  visualize_every_episodes: 100
+  reward_curve_moving_window: 50
+
+wiring_environment:
+  padded_size: 48
+  turn_penalty: 0.2
+  potential_coef: 2.0
+  invalid_action_penalty: 1.0
+  terminal_length_coef: 1.0
+  terminal_sharing_coef: 0.5
+  terminal_depth_coef: 0.3
+
+wiring_curriculum:
+  stages:
+    - min_lamps: 2
+      max_lamps: 3
+      episodes: 1500
+    - min_lamps: 2
+      max_lamps: 5
+      episodes: 3500

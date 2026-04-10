@@ -235,4 +235,41 @@ def describe_tool_result(tool_name: str, tool_output: Dict[str, Any]) -> str:
         return f"本轮设计结束，结束原因为{tool_output.get('reason', 'done')}。"
     if tool_name == "internal_replan_design":
         return f"已完成一轮规则初稿设计，初始评分为{tool_output.get('validation_score', '?')}分。"
+    if tool_name == "tool_parse_user_requirement":
+        parts = []
+        if tool_output.get("color_temp"):
+            parts.append(f"色温{tool_output['color_temp']}")
+        if tool_output.get("lux_override"):
+            parts.append(f"目标照度{tool_output['lux_override']}lx")
+        if tool_output.get("lamp_type_preference"):
+            parts.append(f"偏好灯具{tool_output['lamp_type_preference']}")
+        if tool_output.get("lamp_count_preference"):
+            parts.append(f"期望数量{tool_output['lamp_count_preference']}盏")
+        return f"需求解析完成：{'，'.join(parts) if parts else '无特殊约束'}。"
+    if tool_name == "tool_query_design_standard":
+        status = tool_output.get("status", "unknown")
+        if status != "ok":
+            return f"规范检索失败：{tool_output.get('message', status)}。"
+        count = len(tool_output.get("results", []))
+        return f"检索到{count}条相关规范条文。"
+    if tool_name == "tool_summarize_design":
+        return (
+            f"设计汇总：{tool_output.get('lamp_type','未知')}×{tool_output.get('lamp_count',0)}盏，"
+            f"预估照度{tool_output.get('estimated_lux','?')}lx（目标{tool_output.get('target_lux','?')}lx），"
+            f"总功率{tool_output.get('total_power_w','?')}W。"
+        )
+    if tool_name == "tool_check_standard_compliance":
+        is_ok = tool_output.get("is_compliant", False)
+        issues = tool_output.get("issues", []) or []
+        if is_ok:
+            return "合规检查通过，设计满足规范要求。"
+        return f"合规检查发现{len(issues)}项问题：{issues[0] if issues else ''}。"
+    if tool_name == "tool_diagnose_layout_issue":
+        diag = tool_output.get("diagnosis", []) or []
+        if not diag or diag[0].get("problem") == "无明显问题":
+            return "布局诊断：无明显问题，可继续布线。"
+        problems = [d.get("problem", "") for d in diag[:2]]
+        return f"布局诊断发现{len(diag)}项问题：{'；'.join(problems)}。"
+    if tool_name == "tool_generate_report":
+        return f"设计报告已生成，共{tool_output.get('report_markdown', '').__len__()}字符。"
     return f"{tool_name} 已执行。"

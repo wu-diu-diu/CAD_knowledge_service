@@ -1,3 +1,10 @@
+"""
+cd RL && ../.venv/bin/python train_multi.py   
+--room_dir ../RL/room_gen/all/json   
+--split_dir ../RL/room_gen/all/split   
+--output_base ../RL/output_multiroom
+"""
+
 from __future__ import annotations
 
 import copy
@@ -148,6 +155,33 @@ def _count_shapes(rooms: list[dict]) -> dict[str, int]:
     return dict(Counter(r.get("_shape_type", "unknown") for r in rooms))
 
 
+def load_split(split_dir: Path, room_dir: Path) -> tuple[list[dict], list[dict], list[dict]]:
+    """Load pre-split train/val/test rooms from index files saved by split_dataset.py."""
+    # Build filename -> room_data cache
+    all_rooms = load_room_dataset(room_dir)
+    by_filename: dict[str, dict] = {}
+    for room in all_rooms:
+        fname = room.get("_filename", "")
+        by_filename[fname] = room
+
+    result = []
+    for split_name in ("train", "val", "test"):
+        idx_path = split_dir / f"{split_name}.json"
+        with idx_path.open("r", encoding="utf-8") as f:
+            entries = json.load(f)
+        rooms = []
+        for entry in entries:
+            fname = entry["filename"]
+            if fname in by_filename:
+                rooms.append(by_filename[fname])
+            else:
+                print(f"[load_split] WARNING: {fname} not found in room_dir, skipping")
+        print(f"[load_split] {split_name}: {len(rooms)} rooms")
+        result.append(rooms)
+
+    return result[0], result[1], result[2]
+
+
 def _build_curriculum_pool(
     room_dataset: list[dict],
     stage: CurriculumStage,
@@ -285,10 +319,6 @@ def train_multi_room(
         total_episodes = sum(s.episodes for s in curriculum.stages)
         # Compute episode boundaries where each stage ends
         stage_end_episodes: set[int] = set()
-        ep_acc = 0
-        for stage in curriculum.stages:
-            ep_acc += stage.episodes
-            stage_end_episodes.add(ep_acc)
 
         def episode_iter():
             ep = 0
@@ -496,12 +526,93 @@ def evaluate_all_rooms(
     return results
 
 
+def plot_reward_curve_with_val(
+    train_history: list[dict],
+    val_history: list[dict],
+    output_path: Path,
+    *,
+    moving_window: int = 50,
+) -> Path:
+    """Plot training reward with moving average and validation reward overlay."""
+    import matplotlib.pyplot as plt
+
+    if not train_history:
+        raise ValueError("Train history is empty.")
+
+    train_episodes = [int(h["episode"]) for h in train_history]
+    train_rewards = np.asarray([float(h["episode_reward"]) for h in train_history], dtype=np.float32)
+
+    window = max(1, min(int(moving_window), len(train_rewards)))
+    kernel = np.ones(window, dtype=np.float32) / window
+    moving = np.convolve(train_rewards, kernel, mode="valid")
+    moving_episodes = train_episodes[window - 1:]
+
+    fig, ax = plt.subplots(figsize=(11, 5))
+    ax.plot(train_episodes, train_rewards, color="#7aa6ff", linewidth=0.8, alpha=0.5, label="Train Reward")
+    ax.plot(moving_episodes, moving, color="#2563eb", linewidth=2.0, label=f"Train Moving Avg ({window})")
+
+    if val_history:
+        val_episodes = [int(h["episode"]) for h in val_history]
+        val_rewards = np.asarray([float(h["avg_reward"]) for h in val_history], dtype=np.float32)
+        ax.plot(val_episodes, val_rewards, color="#e74c3c", linewidth=2.0,
+                marker="o", markersize=4, label="Val Avg Reward")
+
+    ax.set_xlabel("Episode")
+    ax.set_ylabel("Reward")
+    ax.set_title("Multi-Room PPO Training Reward Curve")
+    ax.grid(True, linestyle="--", linewidth=0.5, alpha=0.5)
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=180)
+    plt.close(fig)
+    return output_path
+
+
+def evaluate_test_metrics(
+    test_rooms: list[dict],
+    model: LightingActorCritic,
+    env_cfg: EnvironmentConfig,
+) -> dict[str, float]:
+    """Greedy rollout on test set, return avg potential (raw) and avg alignment."""
+    model.eval()
+    device = next(model.parameters()).device
+    potentials: list[float] = []
+    alignments: list[float] = []
+    with torch.no_grad():
+        for room_data in test_rooms:
+            lamp_count = room_data["lamp_count"]
+            cfg = copy.copy(env_cfg)
+            cfg.target_lamp_count = lamp_count
+            cfg.reward_config = copy.copy(env_cfg.reward_config)
+            cfg.reward_config.target_lamp_count = lamp_count
+            env = SingleRoomLightingEnv(room_data, config=cfg)
+            obs = env.reset()
+            done = False
+            while not done:
+                obs_t = torch.from_numpy(obs).unsqueeze(0).to(device=device, dtype=torch.float32)
+                action = int(model.act(obs_t, deterministic=True)["action"].item())
+                obs, _, done, _ = env.step(action)
+            potentials.append(float(env.reward_calculator.potential(env.current_room_state())))
+            bd = env.last_breakdown
+            if bd:
+                alignments.append(float(bd.alignment_normalized))
+    model.train()
+    avg_potential = float(np.mean(potentials)) if potentials else 0.0
+    avg_alignment = float(np.mean(alignments)) if alignments else 0.0
+    print(
+        f"[test]  {len(test_rooms)} rooms | "
+        f"avg_potential={avg_potential:.1f}  avg_alignment={avg_alignment:.3f}"
+    )
+    return {"avg_potential_raw": avg_potential, "avg_alignment": avg_alignment}
+
+
 def run_multi_room_training(
     room_dir: Path,
     config_payload: dict[str, Any],
     ppo_cfg: Any,
     env_cfg: EnvironmentConfig,
     output_base: Path,
+    split_dir: Path | None = None,
 ) -> tuple[dict, str]:
     """Top-level multi-room training flow with train/val/test split and timestamped output."""
     # Create timestamped output directory
@@ -516,13 +627,17 @@ def run_multi_room_training(
 
     # Split by shape type
     seed = config_payload.get("training", {}).get("seed", 42)
-    train_rooms, val_rooms, test_rooms = split_by_shape_stratified(
-        all_rooms,
-        train_ratio=0.64,
-        val_ratio=0.16,
-        test_ratio=0.20,
-        seed=seed,
-    )
+    if split_dir is not None:
+        print(f"[train] Loading pre-split dataset from {split_dir}")
+        train_rooms, val_rooms, test_rooms = load_split(split_dir, room_dir)
+    else:
+        train_rooms, val_rooms, test_rooms = split_by_shape_stratified(
+            all_rooms,
+            train_ratio=0.64,
+            val_ratio=0.16,
+            test_ratio=0.20,
+            seed=seed,
+        )
 
     # Create model
     model = LightingActorCritic(target_lamp_count=None)
@@ -549,6 +664,10 @@ def run_multi_room_training(
         curriculum=curriculum,
         val_rooms=val_rooms,
     )
+
+    # Test set metrics (potential raw + alignment)
+    print(f"[train] Testing on {len(test_rooms)} test rooms...")
+    test_metrics_new = evaluate_test_metrics(test_rooms, model, env_cfg)
 
     # Evaluate on test set
     test_results_dir = output_dir / "test_results"
@@ -598,6 +717,7 @@ def main() -> None:
     parser.add_argument("--room_dir", type=str, required=True, help="Directory containing room JSON files")
     parser.add_argument("--output_base", type=str, default=None, help="Base output directory (default: RL/output_multiroom)")
     parser.add_argument("--episodes", type=int, default=None, help="Override number of training episodes when curriculum is disabled")
+    parser.add_argument("--split_dir", type=str, default=None, help="Pre-split index directory (train.json/val.json/test.json)")
     args = parser.parse_args()
 
     repo_root = Path(__file__).resolve().parents[1]
@@ -623,6 +743,7 @@ def main() -> None:
         ppo_cfg,
         env_cfg,
         output_base,
+        split_dir=Path(args.split_dir) if args.split_dir else None,
     )
 
     output_dir = Path(summary["output_dir"])
@@ -633,8 +754,9 @@ def main() -> None:
 
     # Plot training curves (filter to train entries only)
     train_history = [h for h in summary["history"] if h.get("type") == "train"]
+    val_history = [h for h in summary["history"] if h.get("type") == "validation"]
     reward_curve_path = output_dir / "reward_curve.png"
-    plot_reward_curve(train_history, reward_curve_path, moving_window=ppo_cfg.reward_curve_moving_window)
+    plot_reward_curve_with_val(train_history, val_history, reward_curve_path, moving_window=ppo_cfg.reward_curve_moving_window)
     summary["reward_curve_path"] = str(reward_curve_path)
 
     score_trend_path = output_dir / "score_trends.png"

@@ -130,8 +130,8 @@ class WiringPolicyNet(nn.Module):
 
         # 将灯具坐标从 padded obs 空间映射到 feat_map 空间（H/2, W/2）
         # lamp_coords 已经是 padded 坐标
-        lamp_r = lamp_coords[:, :, 0].float()  # [B, N]
-        lamp_c = lamp_coords[:, :, 1].float()  # [B, N]
+        lamp_r = lamp_coords[:, :, 0].float()  # [B, N]  所有lamp的行坐标
+        lamp_c = lamp_coords[:, :, 1].float()  # [B, N]  所有lamp的列坐标
 
         # 归一化到 [-1, 1]（feat_map 尺寸是 H/2, W/2）
         norm_x = (lamp_c / (W / 2)) * 2.0 - 1.0  # col → x
@@ -143,18 +143,18 @@ class WiringPolicyNet(nn.Module):
         node_feats = torch.nn.functional.grid_sample(
             feat_map, grid, mode="bilinear", align_corners=True
         ).squeeze(-1)  # [B, 64, N]
-        node_feats = node_feats.permute(0, 2, 1)  # [B, N, 64]
+        node_feats = node_feats.permute(0, 2, 1)  # [B, N, 64]  每个批次的N个灯具的局部特征，每个特征的维度是64
 
         # 拼接全局特征
-        global_expanded = global_feat.unsqueeze(1).expand(B, N, -1)  # [B, N, 128]
-        combined = torch.cat([node_feats, global_expanded], dim=-1)  # [B, N, 192]
+        global_expanded = global_feat.unsqueeze(1).expand(B, N, -1)  # [B, N, 128] 将1*128的全局特征扩展到N*128，每个灯具都使用相同的全局特征
+        combined = torch.cat([node_feats, global_expanded], dim=-1)  # [B, N, 192]  将N个灯具的特征拼接成N*192的特征，每个灯具的特征是局部特征和全局特征的拼接
 
-        # 打分
-        logits = self.node_scorer(combined).squeeze(-1)  # [B, N]
+        # 打分  combined: [1,2,192]
+        logits = self.node_scorer(combined).squeeze(-1)  # [B, N] 
 
         # 应用动作掩码
         logits = logits.masked_fill(~action_mask, NEG_INF)
-
+        ## global_feat: [B, 128]
         value = self.value_head(global_feat)  # [B, 1]
         return logits, value
 
