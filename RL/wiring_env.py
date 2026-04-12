@@ -20,6 +20,12 @@
 动作空间（离散）：
   0..N-1 → 选择第 i 个灯具接入
   动作掩码：已连接的灯具被屏蔽
+奖励设计：
+    每步奖励：新增线路长度的负值（归一化）
+    终局奖励：相对MST的线长改善 + 线槽共享得分 - 最大深度惩罚
+        - MST改善：与预计算的 MST baseline 成本比较，正值=比MST好，负值=比MST差
+        - 线槽共享得分：共用路径段数 / 总路径段数  （鼓励共用线路）
+        - 最大深度惩罚：最长路径格子数 / 灯具数  （鼓励树的平衡，避免过深）
 """
 from __future__ import annotations
 
@@ -46,11 +52,11 @@ class WiringEnvConfig:
     """布线环境配置。"""
     padded_size: int = 48       # 观察空间的填充尺寸
     turn_penalty: float = 0.2   # A* 转弯惩罚
-    # 每步奖励：势能下降
-    potential_coef: float = 2.0          # 势能下降奖励系数
+    # 每步奖励：路径增量成本
+    step_cost_coef: float = 0.1          # 步进成本归一化系数
     invalid_action_penalty: float = 1.0  # 非法动作惩罚
-    # 终局奖励系数（拓扑层面，保留）
-    terminal_length_coef: float = 1.0   # 总线长得分
+    # 终局奖励系数
+    terminal_length_coef: float = 1.0   # 相对MST的线长改善得分
     terminal_sharing_coef: float = 0.5  # 线槽共享得分
     terminal_depth_coef: float = 0.3    # 最大深度惩罚
 
@@ -67,6 +73,7 @@ class WiringEnv:
     def __init__(self, room_data: dict[str, Any], config: WiringEnvConfig | None = None) -> None:
         self.config = config or WiringEnvConfig()
         self.room_name = str(room_data.get("room_name", "unknown"))
+        self._room_data = room_data  # 保存用于 MST 预计算
 
         matrix = np.asarray(room_data["matrix"], dtype=np.int32)
         self.grid_rows, self.grid_cols = matrix.shape
@@ -153,9 +160,12 @@ class WiringEnv:
         self.step_paths: list[list[GridPoint]] = []
         self.step_costs: list[float] = []
 
-        # 势能奖励：记录初始势能和上一步势能
-        self._prev_potential = self._compute_potential()
-        self._initial_potential = self._prev_potential
+        # 预计算 MST cost 作为终局奖励基准（只在第一次 reset 时计算）
+        if not hasattr(self, "_mst_cost"):
+            self._mst_cost = max(
+                compute_mst_baseline(self._room_data, turn_penalty=self.config.turn_penalty)["total_cost"],
+                1.0,
+            )
 
         self.done = False
         return self.observation()
@@ -266,33 +276,22 @@ class WiringEnv:
     # ------------------------------------------------------------------
 
     def _step_reward(self) -> float:
-        """每步奖励：势能下降的归一化值。
+        """每步奖励：本步新增线路长度的负值（归一化）。
 
-        势能 = 所有未连接灯具到 tree_cells 最近格子的 BFS 距离之和。
-        每步奖励 = potential_coef × (Φ_prev - Φ_curr) / Φ_initial
+        reward = -step_cost_coef * last_route_cost / room_diagonal
         """
-        current_potential = self._compute_potential()
-        reduction = self._prev_potential - current_potential
-        if self._initial_potential > 0:
-            normalized = reduction / self._initial_potential
-        else:
-            normalized = 0.0
-        self._prev_potential = current_potential
-        return self.config.potential_coef * normalized
+        if not self.step_costs:
+            return 0.0
+        last_cost = self.step_costs[-1]
+        return -self.config.step_cost_coef * last_cost / max(self.room_diagonal, 1.0)
 
     def _terminal_reward(self) -> tuple[float, dict[str, Any]]:
-        """终局奖励：总线长得分 + 线槽共享得分 - 最大深度惩罚。"""
+        """终局奖励：相对MST的线长改善 + 线槽共享得分 - 最大深度惩罚。"""
         total_cost = sum(self.step_costs)
-        # 最大可能线长：每个灯具到开关的直线距离之和
-        max_possible = sum(
-            abs(pos[0] - self.switch_pos[0]) + abs(pos[1] - self.switch_pos[1])
-            for pos in self.lamp_positions
-        ) * 2.0  # 乘以2作为宽松上界
-        max_possible = max(max_possible, 1.0)
 
-        # 总线长得分（越短越好）
-        length_score = 1.0 - min(total_cost / max_possible, 1.0)
-        length_reward = self.config.terminal_length_coef * length_score
+        # 对标 MST：正值=比MST好，负值=比MST差
+        mst_relative = (self._mst_cost - total_cost) / self._mst_cost
+        length_reward = self.config.terminal_length_coef * mst_relative
 
         # 线槽共享得分（共用路径段的比例）
         sharing_score = _compute_sharing_score(self.step_paths)
@@ -305,7 +304,9 @@ class WiringEnv:
         total = length_reward + sharing_reward + depth_penalty
         info = {
             "terminal_reward": total,
-            "length_score": length_score,
+            "mst_relative": mst_relative,
+            "mst_cost": self._mst_cost,
+            "length_score": mst_relative,   # 保持 key 兼容性
             "sharing_score": sharing_score,
             "max_depth": max_depth,
             "total_cost": total_cost,
@@ -315,47 +316,6 @@ class WiringEnv:
     # ------------------------------------------------------------------
     # 辅助方法
     # ------------------------------------------------------------------
-
-    def _compute_potential(self) -> float:
-        """
-        计算当前布线势能：所有未连接灯具到 tree_cells 最近格子的 BFS 距离之和。
-
-        势能越小，说明剩余灯具离树越近，布线状态越好。
-        """
-        total = 0.0
-        for i, pos in enumerate(self.lamp_positions):
-            if not self.connected[i]:
-                dist = self._bfs_dist_to_tree(pos)
-                total += dist
-        return total
-
-    def _bfs_dist_to_tree(self, target: GridPoint) -> float:
-        """BFS 计算 target 到 tree_cells 的最短距离（格子步数）。"""
-        if target in self.tree_cells:
-            return 0.0
-
-        visited = set()
-        queue: deque[tuple[GridPoint, int]] = deque([(target, 0)])
-        visited.add(target)
-
-        while queue:
-            (r, c), dist = queue.popleft()
-            if (r, c) in self.tree_cells:
-                return float(dist)
-
-            for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-                nr, nc = r + dr, c + dc
-                if (nr, nc) in visited:
-                    continue
-                if not (0 <= nr < self.grid_rows and 0 <= nc < self.grid_cols):
-                    continue
-                if self.route_grid[nr, nc] == 0 and (nr, nc) not in self.tree_cells:
-                    continue
-                visited.add((nr, nc))
-                queue.append(((nr, nc), dist + 1))
-
-        # 不可达，返回房间对角线作为大值惩罚
-        return self.room_diagonal
 
     def _find_nearest_tree_cell(self, target: GridPoint) -> GridPoint | None:
         """

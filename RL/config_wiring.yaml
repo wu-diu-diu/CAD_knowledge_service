@@ -1,0 +1,25 @@
+wiring_training:
+  episodes: 10000
+  gamma: 0.99
+  gae_lambda: 0.95
+  learning_rate: 0.0003
+  ppo_epochs: 4
+  rollout_episodes: 128
+  clip_eps: 0.2
+  value_coef: 0.5
+  entropy_coef: 0.01
+  grad_clip_norm: 0.5
+  seed: 42
+  device: "cuda:1"
+  log_every_episodes: 32
+  visualize_every_episodes: 100
+  reward_curve_moving_window: 50
+
+wiring_environment:
+  padded_size: 48
+  turn_penalty: 0.2
+  step_cost_coef: 0.1
+  invalid_action_penalty: 1.0
+  terminal_length_coef: 1.0
+  terminal_sharing_coef: 0.5
+  terminal_depth_coef: 0.3

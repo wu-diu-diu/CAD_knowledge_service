@@ -160,7 +160,7 @@ class RewardCalculator:
         *,
         pair_cost_provider: PairCostProvider = None,
         initial_potential: float | None = None,
-        potential_quality_threshold: float = 0.15,
+        potential_quality_threshold: float = 0.75,  ## 这一步势能降低到上一部势能的 25% 以下才有资格获得对齐和布线奖励
     ) -> RewardBreakdown:
         """Compute terminal reward from alignment and wiring only.
 

@@ -1,5 +1,20 @@
+"""
+多房间探索
+cd /home/chen/punchy/CAD_knowledge_service/RL
+../.venv/bin/python ga_layout.py --multi
+
+制定数据集
+../.venv/bin/python ga_layout.py --multi \
+  --split_dir RL/room_gen/all/split \
+  --room_dir RL/room_gen/all/json
+单房间探索
+cd /home/chen/punchy/CAD_knowledge_service/RL
+../.venv/bin/python ga_layout.py
+"""
+
 from __future__ import annotations
 
+import copy
 import json
 import random
 import shutil
@@ -15,7 +30,6 @@ import yaml
 from env import EnvironmentConfig, SingleRoomLightingEnv
 from reward import RewardBreakdown, RewardConfig, RoomState
 from visualize import save_room_grid_image, save_padded_room_image
-
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -47,7 +61,7 @@ class GAConfig:
 
 @dataclass
 class RoomConfig:
-    """Room-selection settings loaded from config.yaml."""
+    """Room-selection settings loaded from config_ga.yaml."""
 
     json_path: str = "RL/test_room/origin_room/unregular.json"
     room_name: str = "热量室准备间"
@@ -64,6 +78,16 @@ def load_yaml_config(config_path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError(f"Expected top-level mapping in {config_path}")
     return payload
+
+
+def compute_uniformity_from_state(env: SingleRoomLightingEnv, state: RoomState) -> tuple[float, float]:
+    """Return (uniformity_normalized, potential_raw) using 1 - current/initial potential."""
+    potential_raw = float(env.reward_calculator.potential(state))
+    initial_potential = float(env.reward_calculator.initial_potential(state))
+    if initial_potential <= 0.0:
+        return 1.0, potential_raw
+    uniformity = float(np.clip(1.0 - potential_raw / initial_potential, 0.0, 1.0))
+    return uniformity, potential_raw
 
 
 def create_timestamped_output_dir(base_output_dir: Path) -> Path:
@@ -193,35 +217,36 @@ class GALayoutOptimizer:
         if initial_potential <= 0.0:
             return 1.0
         current_potential = self.reward_calculator.potential(state)
-        return float(np.clip(1.0 - current_potential / initial_potential, 0.0, 1.0))
+        return float(np.clip(1.0 - current_potential / initial_potential, 0.0, 1.0))  
 
     ## 计算一个基因组的适应度。
-    ## fitness = 势能奖励（一次性）+ 终局对齐/布线奖励
+    ## fitness = 势能均匀度 + 对齐奖励 + 布线奖励（直接评估最终布局，不走RL过程奖励逻辑）
     def evaluate_genome(self, genome: tuple[int, ...]) -> tuple[float, RewardBreakdown]:
         state = self._build_state(genome)
-        initial_potential = self.reward_calculator.initial_potential(state)
+        cfg = self.reward_calculator.config
 
         potential_normalized = self._potential_score(state)
-        potential_term = self.reward_calculator.config.potential_coef * potential_normalized
-
-        terminal_bd = self.reward_calculator.calculate_terminal_reward(
-            state,
-            pair_cost_provider=self.env.pair_cost,
-            initial_potential=initial_potential,
+        alignment_normalized = self.reward_calculator.soft_alignment_score(state.lamp_positions)
+        wiring_normalized, mst_cost = self.reward_calculator.wiring_score(
+            state, pair_cost_provider=self.env.pair_cost
         )
-        total_fitness = potential_term + terminal_bd.total
+
+        potential_term = cfg.potential_coef * potential_normalized
+        alignment_term = cfg.alignment_coef * alignment_normalized
+        wiring_term = cfg.wiring_coef * wiring_normalized
+        total_fitness = potential_term + alignment_term + wiring_term
 
         bd = RewardBreakdown(
             total=total_fitness,
             potential_reduction_normalized=potential_normalized,
             potential_reduction_item=potential_term,
             invalid_penalty=0.0,
-            alignment_normalized=terminal_bd.alignment_normalized,
-            alignment_term=terminal_bd.alignment_term,
-            wiring_normalized=terminal_bd.wiring_normalized,
-            wiring_term=terminal_bd.wiring_term,
-            mst_cost=terminal_bd.mst_cost,
-            terminal_bonus=terminal_bd.terminal_bonus,
+            alignment_normalized=alignment_normalized,
+            alignment_term=alignment_term,
+            wiring_normalized=wiring_normalized,
+            wiring_term=wiring_term,
+            mst_cost=mst_cost,
+            terminal_bonus=alignment_term + wiring_term,
         )
         return total_fitness, bd
 
@@ -281,7 +306,9 @@ class GALayoutOptimizer:
         output_path: Path,
     ) -> Path:
         encoded = np.zeros_like(self.env.original_matrix, dtype=np.int32)
-        encoded[self.env.original_placeable_mask] = 1
+        # Visualize the whole room area in green; edge cells blocked by wall_margin
+        # are still part of the room and should not be rendered as outside-room red.
+        encoded[self.env.original_room_mask] = 1
         encoded[self.env.original_door_mask] = 2
         encoded[self.env.original_switch_mask] = 3
         for gene in genome:
@@ -348,13 +375,13 @@ class GALayoutOptimizer:
             # 计算当前代的退火进度 t ∈ [0, 1]
             annealing_t = (generation - 1) / max(self.ga_config.generations - 1, 1)
 
-            elites = [item[0] for item in scored_population[: self.ga_config.elite_count]]
+            elites = [item[0] for item in scored_population[: self.ga_config.elite_count]]  ## 直接保留适应度最高的 elite_count 个个体进入下一代,比如有四个进入下一代，种群是64个，则还需要60个通过选择、交叉、变异生成的个体来填满下一代种群
             next_population = list(elites)
-            while len(next_population) < self.ga_config.population_size:
-                parent_a = self._tournament_select(scored_population)
+            while len(next_population) < self.ga_config.population_size:  ## 通过锦标赛选择、交叉和变异生成剩余个体，直到达到种群规模
+                parent_a = self._tournament_select(scored_population)  ## 锦标赛选择：从种群中随机选取 tournament_size 个个体，选择适应度最高的一个作为 parent_a
                 parent_b = self._tournament_select(scored_population)
-                child = self._crossover(parent_a, parent_b)
-                child = self._mutate(child, annealing_t=annealing_t)
+                child = self._crossover(parent_a, parent_b)  ## 交叉：从 parent_a 中随机选取一段基因，剩余部分按 parent_b 的顺序补充，生成 child
+                child = self._mutate(child, annealing_t=annealing_t)  ## 变异：以一定概率随机替换 child 中的基因，变异率和变异步长随 annealing_t 线性衰减，早期大探索，后期微调
 
                 # 多样性保护：若子代与所有精英的汉明距离均低于阈值，则替换为随机个体
                 min_hamming = self.ga_config.diversity_min_hamming
@@ -397,54 +424,159 @@ class GALayoutOptimizer:
         return summary
 
 
+def run_multi_room_test(
+    test_rooms: list[dict],
+    ga_config: GAConfig,
+    base_env_cfg: EnvironmentConfig,
+    output_dir: Path,
+) -> dict[str, Any]:
+    """Run GA on every room in test_rooms, save per-room images, return aggregate stats."""
+    import time
+
+    images_dir = output_dir / "test_images"
+    images_dir.mkdir(parents=True, exist_ok=True)
+
+    uniformities: list[float] = []
+    potentials: list[float] = []
+    alignments: list[float] = []
+    elapsed_times: list[float] = []
+    total = len(test_rooms)
+
+    for i, room_data in enumerate(test_rooms):
+        t_start = time.perf_counter()
+        lamp_count = room_data["lamp_count"]
+        room_name = room_data.get("room_name", f"room_{i:04d}")
+
+        cfg = copy.deepcopy(base_env_cfg)
+        cfg.target_lamp_count = lamp_count
+        cfg.reward_config = copy.deepcopy(base_env_cfg.reward_config)
+        cfg.reward_config.target_lamp_count = lamp_count
+
+        env = SingleRoomLightingEnv(room_data, config=cfg)
+        tmp_dir = output_dir / f"_tmp_{i:04d}"
+        tmp_dir.mkdir(exist_ok=True)
+
+        optimizer = GALayoutOptimizer(env=env, ga_config=ga_config, output_dir=tmp_dir)
+        summary = optimizer.run()
+
+        best_genome = tuple(summary["best_genome"])
+        best_state = optimizer._build_state(best_genome)
+        uniformity, potential_raw = compute_uniformity_from_state(env, best_state)
+        alignment_normalized = float(summary["best_diagnostics"]["alignment_score"])
+
+        uniformities.append(uniformity)
+        potentials.append(potential_raw)
+        alignments.append(alignment_normalized)
+
+        # 保存可视化图片
+        encoded = env.original_matrix.copy()
+        for r, c in summary["best_positions"]:
+            encoded[r, c] = 4
+        title = (
+            f"{room_name} | u={uniformity:.2f} "
+            f"a={alignment_normalized:.2f} lamps={lamp_count}"
+        )
+        save_room_grid_image(
+            encoded,
+            images_dir / f"room_{i:04d}_{lamp_count}lamp.png",
+            cell_size=16,
+            room_name=title,
+        )
+
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+        elapsed = time.perf_counter() - t_start
+        elapsed_times.append(elapsed)
+        avg_time = sum(elapsed_times) / len(elapsed_times)
+        remaining = avg_time * (total - i - 1)
+        bar_filled = int(30 * (i + 1) / total)
+        bar = "█" * bar_filled + "░" * (30 - bar_filled)
+        print(
+            f"[ga_multi] [{i+1:3d}/{total}] |{bar}| "
+            f"{elapsed:.1f}s  ETA {remaining/60:.1f}min  "
+            f"{room_name}  u={uniformity:.3f} align={alignment_normalized:.3f}"
+        )
+
+    avg_uniformity = float(np.mean(uniformities)) if uniformities else 0.0
+    avg_potential = float(np.mean(potentials)) if potentials else 0.0
+    avg_alignment = float(np.mean(alignments)) if alignments else 0.0
+    print(f"\n[ga_multi] test set results: {len(test_rooms)} rooms")
+    print(f"[ga_multi] avg_uniformity={avg_uniformity:.4f}  avg_alignment={avg_alignment:.4f}")
+
+    return {
+        "num_rooms": len(test_rooms),
+        "avg_uniformity": avg_uniformity,
+        "avg_potential": avg_potential,
+        "avg_alignment": avg_alignment,
+        "per_room_uniformity": uniformities,
+        "per_room_potential": potentials,
+        "per_room_alignment": alignments,
+    }
+
+
 def main() -> None:
+    import argparse
+    parser = argparse.ArgumentParser(description="GA lamp layout optimizer")
+    parser.add_argument("--multi", action="store_true", help="Run on test split instead of single room")
+    parser.add_argument(
+        "--split_dir", type=str,
+        default="RL/room_gen/all/split",
+        help="Directory with train.json/val.json/test.json",
+    )
+    parser.add_argument(
+        "--room_dir", type=str,
+        default="RL/room_gen/all/json",
+        help="Directory with room JSON files",
+    )
+    args = parser.parse_args()
+
     repo_root = Path(__file__).resolve().parents[1]
-    config_path = repo_root / "RL" / "config.yaml"
-    config_payload = load_yaml_config(config_path)
+    config_ga_path = repo_root / "RL" / "config_ga.yaml"
+    config_payload = load_yaml_config(config_ga_path)
 
     ga_config = GAConfig(**config_payload.get("ga", {}))
-    room_cfg = RoomConfig(**config_payload.get("room", {}))
     reward_cfg = RewardConfig(**config_payload.get("reward", {}))
     env_cfg = EnvironmentConfig(
         **config_payload.get("environment", {}),
         reward_config=reward_cfg,
     )
-    reward_cfg.target_lamp_count = env_cfg.target_lamp_count
 
     output_dir = create_timestamped_output_dir(repo_root / "RL" / "GA")
-    shutil.copy2(config_path, output_dir / "config.yaml")
+    shutil.copy2(config_ga_path, output_dir / "config_ga.yaml")
     set_seed(ga_config.seed)
 
-    env = SingleRoomLightingEnv.from_json(
-        repo_root / room_cfg.json_path,
-        room_name=room_cfg.room_name,
-        config=env_cfg,
-    )
-
-    # # Save padded room visualization
-    # padded_room_path = output_dir / "padded_room.png"
-    # save_padded_room_image(
-    #     env.original_matrix,
-    #     env.padded_size,
-    #     padded_room_path,
-    #     cell_size=32,
-    #     room_name=env.room_name,
-    # )
-    # print(f"[ga] padded room visualization saved to {padded_room_path}")
-
-    optimizer = GALayoutOptimizer(env=env, ga_config=ga_config, output_dir=output_dir)
-    summary = optimizer.run()
-    summary["config_path"] = str(config_path)
-    summary["output_dir"] = str(output_dir)
-
-    summary_path = output_dir / "ga_summary.json"
-    with summary_path.open("w", encoding="utf-8") as f:
-        json.dump(summary, f, ensure_ascii=False, indent=2)
-
-    print(f"[ga] run output dir: {output_dir}")
-    print(f"[ga] summary saved to {summary_path}")
-    print(f"[ga] best_fitness={summary['best_fitness']:.3f}")
-    print(f"[ga] best_positions={summary['best_positions']}")
+    if args.multi:
+        from train_multi import load_split
+        split_dir = repo_root / args.split_dir
+        room_dir = repo_root / args.room_dir
+        _, _, test_rooms = load_split(split_dir, room_dir)
+        stats = run_multi_room_test(test_rooms, ga_config, env_cfg, output_dir)
+        stats["config_path"] = str(config_ga_path)
+        stats["output_dir"] = str(output_dir)
+        summary_path = output_dir / "ga_multi_summary.json"
+        with summary_path.open("w", encoding="utf-8") as f:
+            json.dump(stats, f, ensure_ascii=False, indent=2)
+        print(f"[ga] output dir: {output_dir}")
+        print(f"[ga] summary saved to {summary_path}")
+    else:
+        room_cfg = RoomConfig(**config_payload.get("room", {}))
+        reward_cfg.target_lamp_count = env_cfg.target_lamp_count
+        env = SingleRoomLightingEnv.from_json(
+            repo_root / room_cfg.json_path,
+            room_name=room_cfg.room_name,
+            config=env_cfg,
+        )
+        optimizer = GALayoutOptimizer(env=env, ga_config=ga_config, output_dir=output_dir)
+        summary = optimizer.run()
+        summary["config_path"] = str(config_ga_path)
+        summary["output_dir"] = str(output_dir)
+        summary_path = output_dir / "ga_summary.json"
+        with summary_path.open("w", encoding="utf-8") as f:
+            json.dump(summary, f, ensure_ascii=False, indent=2)
+        print(f"[ga] run output dir: {output_dir}")
+        print(f"[ga] summary saved to {summary_path}")
+        print(f"[ga] best_fitness={summary['best_fitness']:.3f}")
+        print(f"[ga] best_positions={summary['best_positions']}")
 
 
 if __name__ == "__main__":

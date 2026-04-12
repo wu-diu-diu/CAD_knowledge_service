@@ -13,7 +13,6 @@ import random
 import re
 import shutil
 from collections import Counter, defaultdict
-from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -27,32 +26,6 @@ from env import EnvironmentConfig, SingleRoomLightingEnv
 from model import LightingActorCritic
 from train import PPOConfig, load_yaml_config, plot_reward_curve, plot_score_trends, set_seed
 from visualize import save_room_grid_image
-
-
-@dataclass
-class CurriculumStage:
-    """One stage in the curriculum: train on rooms with lamp_count in [min_lamps, max_lamps]."""
-
-    min_lamps: int
-    max_lamps: int
-    episodes: int
-
-
-@dataclass
-class CurriculumConfig:
-    """Curriculum learning schedule for multi-room training loaded from config.yaml."""
-
-    stages: list[CurriculumStage] = field(default_factory=list)
-
-
-def load_curriculum_config(config_payload: dict[str, Any]) -> CurriculumConfig:
-    """Load curriculum stages from config.yaml payload."""
-    raw_stages = config_payload.get("curriculum", {}).get("stages", [])
-    if not isinstance(raw_stages, list) or not raw_stages:
-        raise ValueError("config.yaml 中缺少 curriculum.stages 配置，或 stages 为空。")
-
-    stages = [CurriculumStage(**stage_config) for stage_config in raw_stages]
-    return CurriculumConfig(stages=stages)
 
 
 def _compute_gae(
@@ -182,18 +155,6 @@ def load_split(split_dir: Path, room_dir: Path) -> tuple[list[dict], list[dict],
     return result[0], result[1], result[2]
 
 
-def _build_curriculum_pool(
-    room_dataset: list[dict],
-    stage: CurriculumStage,
-) -> list[dict]:
-    """Filter dataset to rooms whose lamp_count is within the stage range."""
-    pool = [r for r in room_dataset if stage.min_lamps <= r["lamp_count"] <= stage.max_lamps]
-    if not pool:
-        print(f"[curriculum] WARNING: no rooms in lamp range [{stage.min_lamps}, {stage.max_lamps}], using full dataset")
-        return room_dataset
-    return pool
-
-
 def ppo_update_multi_room(
     model: LightingActorCritic,
     optimizer: torch.optim.Optimizer,
@@ -291,20 +252,12 @@ def train_multi_room(
     ppo_cfg: Any,
     env_cfg: EnvironmentConfig,
     output_dir: Path,
-    curriculum: CurriculumConfig | None = None,
     val_rooms: list[dict] | None = None,
 ) -> dict:
     """
     Train PPO model on multiple rooms with random sampling.
 
-    When `curriculum` is provided, training is split into stages defined by
-    CurriculumConfig. Each stage restricts sampling to rooms whose lamp_count
-    falls within [min_lamps, max_lamps], progressing from easy to hard.
-    The total episode count is the sum of all stage episodes; ppo_cfg.episodes
-    is ignored when curriculum is active.
-
-    When `val_rooms` is provided, validation is run at the end of each
-    curriculum stage (or every log_every_episodes when no curriculum).
+    When `val_rooms` is provided, validation is run periodically during training.
     """
     device = torch.device(ppo_cfg.device if torch.cuda.is_available() else "cpu")
     model.to(device)
@@ -314,35 +267,29 @@ def train_multi_room(
     best_reward = float("-inf")
     best_episode = 0
     rollout_buffer = []
+    total_episodes = ppo_cfg.episodes
 
-    if curriculum is not None:
-        total_episodes = sum(s.episodes for s in curriculum.stages)
-        # Compute episode boundaries where each stage ends
-        stage_end_episodes: set[int] = set()
+    # 课程学习：三阶段奖励调度
+    # 阶段1（0~40%）：alignment_coef=0，只优化均匀覆盖
+    # 阶段2（40%~70%）：alignment_coef/wiring_coef 从0线性增长到目标值
+    # 阶段3（70%~100%）：系数固定，奖励稳定，可观察真实收敛
+    _base_alignment_coef = env_cfg.reward_config.alignment_coef
+    _base_wiring_coef = env_cfg.reward_config.wiring_coef
+    _phase1_end = int(total_episodes * 0.4)
+    _phase2_end = int(total_episodes * 0.7)
 
-        def episode_iter():
-            ep = 0
-            for stage_idx, stage in enumerate(curriculum.stages):
-                pool = _build_curriculum_pool(room_dataset, stage)
-                print(
-                    f"[curriculum] Stage {stage_idx + 1}/{len(curriculum.stages)}: "
-                    f"lamps=[{stage.min_lamps},{stage.max_lamps}] "
-                    f"pool={len(pool)} rooms, episodes={stage.episodes}"
-                )
-                for _ in range(stage.episodes):
-                    ep += 1
-                    yield ep, pool, stage_idx
-    else:
-        total_episodes = ppo_cfg.episodes
-        stage_end_episodes = set()
+    def _curriculum_coefs(ep: int) -> tuple[float, float]:
+        if ep <= _phase1_end:
+            return 0.0, 0.0
+        if ep >= _phase2_end:
+            return _base_alignment_coef, _base_wiring_coef
+        progress = (ep - _phase1_end) / (_phase2_end - _phase1_end)  # 0→1
+        return _base_alignment_coef * progress, _base_wiring_coef * progress
 
-        def episode_iter():
-            for ep in range(1, total_episodes + 1):
-                yield ep, room_dataset, 0
+    for episode in range(1, total_episodes + 1):
+        room_data = random.choice(room_dataset)
 
-    for episode, active_pool, stage_idx in episode_iter():
-        room_data = random.choice(active_pool)
-
+        align_coef, wire_coef = _curriculum_coefs(episode)
         current_env_cfg = EnvironmentConfig(
             padded_size=env_cfg.padded_size,
             max_steps=env_cfg.max_steps,
@@ -351,6 +298,8 @@ def train_multi_room(
             reward_config=copy.copy(env_cfg.reward_config),
         )
         current_env_cfg.reward_config.target_lamp_count = room_data["lamp_count"]
+        current_env_cfg.reward_config.alignment_coef = align_coef
+        current_env_cfg.reward_config.wiring_coef = wire_coef
 
         env = SingleRoomLightingEnv(room_data, config=current_env_cfg)
 
@@ -404,7 +353,6 @@ def train_multi_room(
             "room_name": room_data.get("room_name", ""),
             "shape_type": room_data.get("_shape_type", "unknown"),
             "lamp_count": room_data["lamp_count"],
-            "curriculum_stage": stage_idx,
             "alignment_normalized": float(final_breakdown.alignment_normalized) if final_breakdown else 0.0,
             "wiring_normalized": float(final_breakdown.wiring_normalized) if final_breakdown else 0.0,
             "mst_cost": float(final_breakdown.mst_cost) if final_breakdown else 0.0,
@@ -423,29 +371,24 @@ def train_multi_room(
             train_recent = [h for h in history[-ppo_cfg.log_every_episodes:] if h.get("type") == "train"]
             avg_reward = sum(h["episode_reward"] for h in train_recent) / max(len(train_recent), 1)
             avg_align = sum(h["alignment_normalized"] for h in train_recent) / max(len(train_recent), 1)
-            stage_info = f" stage={stage_idx + 1}" if curriculum is not None else ""
+            cur_align, cur_wire = _curriculum_coefs(episode)
+            phase = 1 if episode <= _phase1_end else (2 if episode <= _phase2_end else 3)
             print(
-                f"[train] episode={episode:04d}{stage_info} avg_reward={avg_reward:7.2f} "
-                f"avg_align={avg_align:.3f} best={best_reward:7.2f}"
+                f"[train] episode={episode:04d} phase={phase} "
+                f"align_coef={cur_align:.2f} wire_coef={cur_wire:.2f} "
+                f"avg_reward={avg_reward:7.2f} avg_align={avg_align:.3f} best={best_reward:7.2f}"
             )
 
-        # Run validation at end of each curriculum stage (or periodically without curriculum)
-        run_val = (
-            val_rooms is not None and (
-                episode in stage_end_episodes
-                or (not stage_end_episodes and episode % (ppo_cfg.log_every_episodes * 4) == 0)
-            )
-        )
+        run_val = val_rooms is not None and episode % (ppo_cfg.log_every_episodes * 4) == 0
         if run_val:
             val_metrics = evaluate_on_val_set(val_rooms, model, env_cfg, device)
             history.append({
                 "type": "validation",
                 "episode": episode,
-                "curriculum_stage": stage_idx,
                 **val_metrics,
             })
             print(
-                f"[val]   episode={episode:04d} stage={stage_idx + 1 if curriculum else 0} "
+                f"[val]   episode={episode:04d} "
                 f"avg_reward={val_metrics['avg_reward']:7.2f} "
                 f"avg_align={val_metrics['avg_alignment']:.3f} "
                 f"avg_wiring={val_metrics['avg_wiring']:.3f}"
@@ -465,8 +408,10 @@ def evaluate_all_rooms(
     env_cfg: EnvironmentConfig,
     results_dir: Path,
 ) -> list[dict]:
-    """Greedy rollout on every room, save layout image to results_dir."""
+    """Greedy rollout on every room, save layout image and JSON to results_dir."""
     results_dir.mkdir(parents=True, exist_ok=True)
+    json_dir = results_dir / "json"
+    json_dir.mkdir(exist_ok=True)
     for old_file in results_dir.glob("*.png"):
         old_file.unlink()
     device = next(model.parameters()).device
@@ -501,7 +446,15 @@ def evaluate_all_rooms(
             f"w={final_bd.wiring_normalized:.2f}"
         ) if final_bd else f"{room_name} | r={total_reward:.2f}"
         img_path = results_dir / f"room_{i:04d}_{lamp_count}lamp.png"
-        save_room_grid_image(env.current_encoded_matrix(), img_path, cell_size=16, room_name=title)
+        final_matrix = env.current_encoded_matrix()
+        save_room_grid_image(final_matrix, img_path, cell_size=16, room_name=title)
+
+        # 将推理后的 matrix 写回原始 JSON 结构，灯具位置已为4
+        output_json = {k: v for k, v in room_data.items() if not k.startswith("_")}
+        output_json["matrix"] = final_matrix.tolist()
+        json_path = json_dir / f"room_{i:04d}_{lamp_count}lamp.json"
+        with json_path.open("w", encoding="utf-8") as f:
+            json.dump(output_json, f, ensure_ascii=False, indent=2)
 
         results.append({
             "index": i,
@@ -515,12 +468,12 @@ def evaluate_all_rooms(
         })
 
     avg_reward = sum(r["total_reward"] for r in results) / max(len(results), 1)
-    avg_potential = sum(r["potential_normalized"] for r in results) / max(len(results), 1)
+    avg_uniformity = sum(r["potential_normalized"] for r in results) / max(len(results), 1)
     avg_align = sum(r["alignment_normalized"] for r in results) / max(len(results), 1)
     avg_wire = sum(r["wiring_normalized"] for r in results) / max(len(results), 1)
     print(
         f"[eval] {len(results)} rooms | avg_reward={avg_reward:.3f} "
-        f"avg_potential={avg_potential:.3f} avg_align={avg_align:.3f} avg_wire={avg_wire:.3f}"
+        f"avg_uniformity={avg_uniformity:.3f} avg_align={avg_align:.3f} avg_wire={avg_wire:.3f}"
     )
     print(f"[eval] results saved to {results_dir}")
     return results
@@ -568,15 +521,25 @@ def plot_reward_curve_with_val(
     return output_path
 
 
+def _compute_uniformity(env: SingleRoomLightingEnv, state: RoomState) -> float:
+    """Normalize layout uniformity to [0, 1] using 1 - current/initial potential."""
+    current_potential = float(env.reward_calculator.potential(state))
+    initial_potential = float(env.reward_calculator.initial_potential(state))
+    if initial_potential <= 0.0:
+        return 1.0
+    return float(np.clip(1.0 - current_potential / initial_potential, 0.0, 1.0))
+
+
 def evaluate_test_metrics(
     test_rooms: list[dict],
     model: LightingActorCritic,
     env_cfg: EnvironmentConfig,
+    output_dir: Path,
 ) -> dict[str, float]:
-    """Greedy rollout on test set, return avg potential (raw) and avg alignment."""
+    """Greedy rollout on test set, save avg normalized uniformity and alignment metrics."""
     model.eval()
     device = next(model.parameters()).device
-    potentials: list[float] = []
+    uniformities: list[float] = []
     alignments: list[float] = []
     with torch.no_grad():
         for room_data in test_rooms:
@@ -592,18 +555,25 @@ def evaluate_test_metrics(
                 obs_t = torch.from_numpy(obs).unsqueeze(0).to(device=device, dtype=torch.float32)
                 action = int(model.act(obs_t, deterministic=True)["action"].item())
                 obs, _, done, _ = env.step(action)
-            potentials.append(float(env.reward_calculator.potential(env.current_room_state())))
-            bd = env.last_breakdown
-            if bd:
-                alignments.append(float(bd.alignment_normalized))
+            final_state = env.current_room_state()
+            uniformities.append(_compute_uniformity(env, final_state))
+            alignments.append(float(env.reward_calculator.soft_alignment_score(final_state.lamp_positions)))
     model.train()
-    avg_potential = float(np.mean(potentials)) if potentials else 0.0
-    avg_alignment = float(np.mean(alignments)) if alignments else 0.0
+    metrics = {
+        "num_rooms": len(test_rooms),
+        "avg_uniformity": float(np.mean(uniformities)) if uniformities else 0.0,
+        "avg_alignment": float(np.mean(alignments)) if alignments else 0.0,
+    }
+    metrics_path = output_dir / "test_layout_metrics.json"
+    with metrics_path.open("w", encoding="utf-8") as f:
+        json.dump(metrics, f, ensure_ascii=False, indent=2)
     print(
         f"[test]  {len(test_rooms)} rooms | "
-        f"avg_potential={avg_potential:.1f}  avg_alignment={avg_alignment:.3f}"
+        f"avg_uniformity={metrics['avg_uniformity']:.3f}  "
+        f"avg_alignment={metrics['avg_alignment']:.3f}"
     )
-    return {"avg_potential_raw": avg_potential, "avg_alignment": avg_alignment}
+    print(f"[test]  layout metrics saved to {metrics_path}")
+    return metrics
 
 
 def run_multi_room_training(
@@ -642,17 +612,7 @@ def run_multi_room_training(
     # Create model
     model = LightingActorCritic(target_lamp_count=None)
 
-    # Load curriculum if present
     print(f"[train] Starting multi-room training on {len(train_rooms)} training rooms")
-    curriculum = None
-    curriculum_payload = config_payload.get("curriculum", {})
-    stage_payload = curriculum_payload.get("stages", []) if isinstance(curriculum_payload, dict) else []
-    if stage_payload:
-        curriculum = load_curriculum_config(config_payload)
-        total = sum(s.episodes for s in curriculum.stages)
-        print(f"[train] Curriculum learning enabled: {len(curriculum.stages)} stages, {total} total episodes")
-    else:
-        print("[train] Curriculum learning disabled: no curriculum.stages found in config.yaml")
 
     # Train on training set with validation monitoring
     summary = train_multi_room(
@@ -661,13 +621,12 @@ def run_multi_room_training(
         ppo_cfg,
         env_cfg,
         output_dir,
-        curriculum=curriculum,
         val_rooms=val_rooms,
     )
 
-    # Test set metrics (potential raw + alignment)
+    # Test set metrics (normalized uniformity + alignment)
     print(f"[train] Testing on {len(test_rooms)} test rooms...")
-    test_metrics_new = evaluate_test_metrics(test_rooms, model, env_cfg)
+    test_layout_metrics = evaluate_test_metrics(test_rooms, model, env_cfg, output_dir)
 
     # Evaluate on test set
     test_results_dir = output_dir / "test_results"
@@ -677,7 +636,7 @@ def run_multi_room_training(
     # Compute test metrics
     test_metrics = {
         "avg_reward": float(np.mean([r["total_reward"] for r in test_results])),
-        "avg_potential": float(np.mean([r["potential_normalized"] for r in test_results])),
+        "avg_uniformity": float(np.mean([r["potential_normalized"] for r in test_results])),
         "avg_alignment": float(np.mean([r["alignment_normalized"] for r in test_results])),
         "avg_wiring": float(np.mean([r["wiring_normalized"] for r in test_results])),
     }
@@ -699,6 +658,7 @@ def run_multi_room_training(
             },
         },
         "test_evaluations": test_results,
+        "test_layout_metrics": test_layout_metrics,
         "test_metrics": test_metrics,
         "best_model": {
             "episode": summary["best_episode"],
@@ -716,7 +676,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Train PPO model on multiple room tasks")
     parser.add_argument("--room_dir", type=str, required=True, help="Directory containing room JSON files")
     parser.add_argument("--output_base", type=str, default=None, help="Base output directory (default: RL/output_multiroom)")
-    parser.add_argument("--episodes", type=int, default=None, help="Override number of training episodes when curriculum is disabled")
+    parser.add_argument("--episodes", type=int, default=None, help="Override number of training episodes")
     parser.add_argument("--split_dir", type=str, default=None, help="Pre-split index directory (train.json/val.json/test.json)")
     args = parser.parse_args()
 

@@ -2,7 +2,7 @@
 RL vs GA 对比评估脚本
 
 指标：
-  - 均匀度（势能）：所有可放置格子到最近灯具的平方距离之和，越低越好
+  - 均匀度：1 - 当前势能 / 初始势能，归一化到 [0,1]，越高越好
   - 对齐度：灯具行列软对齐分数 [0,1]，越高越好
   - 时间（ms）：单房间推理/优化耗时
 
@@ -52,6 +52,16 @@ def _mean(lst: list[float]) -> float:
     return float(np.mean(valid)) if valid else float("nan")
 
 
+def _compute_uniformity(env: SingleRoomLightingEnv, state) -> tuple[float, float]:
+    """Return (uniformity_normalized, potential_raw)."""
+    potential_raw = float(env.reward_calculator.potential(state))
+    initial_potential = float(env.reward_calculator.initial_potential(state))
+    if initial_potential <= 0.0:
+        return 1.0, potential_raw
+    uniformity = float(np.clip(1.0 - potential_raw / initial_potential, 0.0, 1.0))
+    return uniformity, potential_raw
+
+
 # ── RL inference ──────────────────────────────────────────────────────────────
 
 def run_rl(
@@ -80,14 +90,14 @@ def run_rl(
             obs, _, done, _ = env.step(action)
     elapsed_ms = (time.perf_counter() - t0) * 1000.0
 
-    # 势能绝对值（越低越好）
     final_state = env.current_room_state()
-    potential_raw = float(env.reward_calculator.potential(final_state))
+    uniformity, potential_raw = _compute_uniformity(env, final_state)
 
     bd = env.last_breakdown
     alignment = float(bd.alignment_normalized) if bd else 0.0
 
     result = {
+        "uniformity": uniformity,
         "potential_raw": potential_raw,
         "alignment": alignment,
         "time_ms": elapsed_ms,
@@ -95,7 +105,7 @@ def run_rl(
 
     if images_dir is not None:
         room_name = room_data.get("room_name", f"room_{room_idx:04d}")
-        title = f"RL {room_name} | pot={potential_raw:.0f} a={alignment:.2f}"
+        title = f"RL {room_name} | u={uniformity:.2f} a={alignment:.2f}"
         save_room_grid_image(
             env.current_encoded_matrix(),
             images_dir / f"rl_{room_idx:04d}_{lamp_count}lamp.png",
@@ -129,15 +139,15 @@ def run_ga(
     summary = optimizer.run()
     elapsed_ms = (time.perf_counter() - t0) * 1000.0
 
-    # 势能绝对值：从最优基因组重建状态后计算
     best_genome = tuple(summary["best_genome"])
     best_state = optimizer._build_state(best_genome)
-    potential_raw = float(env.reward_calculator.potential(best_state))
+    uniformity, potential_raw = _compute_uniformity(env, best_state)
 
     diag = summary["best_diagnostics"]
     alignment = float(diag["alignment_score"])
 
     result = {
+        "uniformity": uniformity,
         "potential_raw": potential_raw,
         "alignment": alignment,
         "time_ms": elapsed_ms,
@@ -149,7 +159,7 @@ def run_ga(
         encoded = env.original_matrix.copy()
         for r, c in best_positions:
             encoded[r, c] = 4
-        title = f"GA {room_name} | pot={potential_raw:.0f} a={alignment:.2f}"
+        title = f"GA {room_name} | u={uniformity:.2f} a={alignment:.2f}"
         save_room_grid_image(
             encoded,
             images_dir / f"ga_{room_idx:04d}_{lamp_count}lamp.png",
@@ -163,9 +173,9 @@ def run_ga(
 # ── reporting ─────────────────────────────────────────────────────────────────
 
 METRICS = [
-    ("potential_raw", "均匀度（势能↓）", False),   # (key, label, higher_is_better)
-    ("alignment",     "对齐度（↑）",     True),
-    ("time_ms",       "时间 ms（↓）",    False),
+    ("uniformity", "均匀度（↑）",  True),   # (key, label, higher_is_better)
+    ("alignment",  "对齐度（↑）",  True),
+    ("time_ms",    "时间 ms（↓）", False),
 ]
 
 
@@ -220,7 +230,7 @@ def _build_table(
     _add_group("ALL", rl_records, ga_records)
 
     lines.append(sep)
-    lines.append("（势能越低越好；对齐度越高越好；时间越低越好；差值 = RL - GA）")
+    lines.append("（均匀度、对齐度越高越好；时间越低越好；差值 = RL - GA）")
 
     return "\n".join(lines), "\n".join(md_lines)
 
@@ -245,7 +255,7 @@ def write_markdown(
         f"- 模型：`{model_path}`",
         "",
         "## 指标说明",
-        "- **均匀度（势能）**：所有可放置格子到最近灯具的平方距离之和，越低越好",
+        "- **均匀度**：按 `1 - 当前势能 / 初始势能` 归一化到 `[0,1]`，越高越好",
         "- **对齐度**：灯具行列软对齐分数，越高越好（[0,1]）",
         "- **时间（ms）**：单房间推理/优化平均耗时",
         "",
@@ -336,8 +346,8 @@ def main() -> None:
         ga_res = run_ga(room_data, ga_cfg, base_env_cfg, images_dir, i, tmp_ga_dir)
 
         print(
-            f"RL pot={rl_res['potential_raw']:.0f} a={rl_res['alignment']:.2f} ({rl_res['time_ms']:.0f}ms)  |  "
-            f"GA pot={ga_res['potential_raw']:.0f} a={ga_res['alignment']:.2f} ({ga_res['time_ms']:.0f}ms)"
+            f"RL u={rl_res['uniformity']:.3f} a={rl_res['alignment']:.2f} ({rl_res['time_ms']:.0f}ms)  |  "
+            f"GA u={ga_res['uniformity']:.3f} a={ga_res['alignment']:.2f} ({ga_res['time_ms']:.0f}ms)"
         )
 
         rl_records.append({"lamp_count": lamp_count, "room_name": room_name, **rl_res})

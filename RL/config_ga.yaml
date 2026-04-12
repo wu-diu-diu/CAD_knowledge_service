@@ -1,0 +1,35 @@
+ga:
+  population_size: 128  ##一个种群表示一个布局方案，增加种群规模以提升多样性
+  generations: 500  ## 增加迭代次数即增加种群交叉和变异的机会
+  tournament_size: 3  ## 锦标赛选择的竞争者数量，适度增加以增强选择压力
+  elite_count: 4
+  # 变异退火参数（取代旧的 mutation_rate / mutation_count）
+  mutation_rate_start: 0.8   # 初始变异概率（早期大探索）
+  mutation_rate_end: 0.05    # 终止变异概率（后期微调）
+  mutation_count_start: 3    # 初始每次变异替换的基因数（增大早期扰动）
+  mutation_count_end: 1      # 终止每次变异替换的基因数
+  # 多样性保护
+  diversity_min_hamming: 2   # 提高汉明距离阈值，强制子代与精英有更大差异
+  patience: 80               # 延长早停耐心，给算法更多时间跳出局部最优
+  min_delta: 0.0001
+  seed: 42
+  log_every_generations: 10
+
+room:
+  json_path: "RL/test_room/origin_room/unregular.json"
+  room_name: "热量室准备间"
+
+environment:
+  padded_size: 48  # 增大以容纳35x33的不规则房间
+  max_steps: 16
+  target_lamp_count: 5
+  turn_penalty: 0.2
+  wall_margin: 1  # 灯具距墙/门/开关的最小安全距离（格子数）
+
+reward:
+  potential_coef: 5.0         # 均匀覆盖是最重要的目标，权重最高
+  alignment_coef: 0.1         # 对齐是次要目标，降低权重避免"全放一行"局部最优
+  wiring_coef: 0.5            # 布线奖励
+  grid_regularity_coef: 0.0
+  alignment_tolerance: 2.0
+  invalid_action_penalty: 10.0

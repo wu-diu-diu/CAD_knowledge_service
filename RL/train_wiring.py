@@ -23,8 +23,6 @@
 ../.venv/bin/python train_wiring.py \
   --room_dir test_room/layout_room/json \
   --split_dir test_room/layout_room/split \
-  --episodes 5000 \
-  --curriculum \
   --output_dir output_wiring
 """
 from __future__ import annotations
@@ -488,7 +486,7 @@ def train_wiring(
 
             # ── 日志 ──
             if episode_idx % cfg.log_every_episodes == 0 or episode_idx >= total_episodes:
-                recent = history[-cfg.log_every_episodes:]
+                recent = [h for h in history[-cfg.log_every_episodes * 2:] if h.get("type") != "validation"][-cfg.log_every_episodes:]
                 moving_reward = sum(h["episode_reward"] for h in recent) / len(recent)
                 last_ep = rollout_buffer[-1]
                 print(
@@ -837,7 +835,6 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="布线RL训练")
     parser.add_argument("--room", type=str, default=None, help="单个房间 JSON 路径")
     parser.add_argument("--room_dir", type=str, default="RL/test_room/layout_room/json", help="房间数据集目录")
-    parser.add_argument("--episodes", type=int, default=3000)
     parser.add_argument("--curriculum", action="store_true", help="启用课程学习")
     parser.add_argument("--device", type=str, default=None)
     parser.add_argument("--output_dir", type=str, default="RL/output_wiring")
@@ -852,12 +849,12 @@ def main() -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # 配置
-    config_path = Path(__file__).resolve().parent / "config.yaml"
+    config_path = Path(__file__).resolve().parent / "config_wiring.yaml"
     cfg_payload = _load_yaml_config(config_path)
 
     ppo_raw = cfg_payload.get("wiring_training", {})
     ppo_cfg = WiringPPOConfig(
-        episodes=args.episodes if args.episodes else ppo_raw.get("episodes", 5000),
+        episodes=ppo_raw.get("episodes", 5000),
         gamma=ppo_raw.get("gamma", 0.99),
         gae_lambda=ppo_raw.get("gae_lambda", 0.95),
         learning_rate=ppo_raw.get("learning_rate", 3e-4),
@@ -878,7 +875,7 @@ def main() -> None:
     env_cfg = WiringEnvConfig(
         padded_size=env_raw.get("padded_size", 48),
         turn_penalty=env_raw.get("turn_penalty", 0.2),
-        potential_coef=env_raw.get("potential_coef", 2.0),
+        step_cost_coef=env_raw.get("step_cost_coef", 0.1),
         invalid_action_penalty=env_raw.get("invalid_action_penalty", 1.0),
         terminal_length_coef=env_raw.get("terminal_length_coef", 1.0),
         terminal_sharing_coef=env_raw.get("terminal_sharing_coef", 0.5),
@@ -950,6 +947,11 @@ def main() -> None:
     with summary_path.open("w", encoding="utf-8") as f:
         json.dump({k: v for k, v in summary.items() if k != "history"}, f, ensure_ascii=False, indent=2)
     print(f"[main] summary saved to {summary_path}")
+
+    # 复制配置文件到输出目录，方便复现
+    import shutil
+    shutil.copy(config_path, output_dir / "config_wiring.yaml")
+    print(f"[main] config saved to {output_dir / 'config_wiring.yaml'}")
 
     # 加载最佳模型
     device = torch.device(ppo_cfg.device)

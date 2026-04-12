@@ -133,9 +133,13 @@ class WiringPolicyNet(nn.Module):
         lamp_r = lamp_coords[:, :, 0].float()  # [B, N]  所有lamp的行坐标
         lamp_c = lamp_coords[:, :, 1].float()  # [B, N]  所有lamp的列坐标
 
-        # 归一化到 [-1, 1]（feat_map 尺寸是 H/2, W/2）
-        norm_x = (lamp_c / (W / 2)) * 2.0 - 1.0  # col → x
-        norm_y = (lamp_r / (H / 2)) * 2.0 - 1.0  # row → y
+        # 先缩放到 feat_map 坐标系（feat_map 分辨率是 obs 的 1/2）
+        lamp_r_feat = lamp_r * (fh / H)  # [B, N]
+        lamp_c_feat = lamp_c * (fw / W)  # [B, N]
+
+        # align_corners=True: [-1, 1] 对应 feat_map 的 [0, size-1]
+        norm_x = (lamp_c_feat / (fw - 1)) * 2.0 - 1.0  # col → x
+        norm_y = (lamp_r_feat / (fh - 1)) * 2.0 - 1.0  # row → y
         grid = torch.stack([norm_x, norm_y], dim=-1)  # [B, N, 2]
         grid = grid.unsqueeze(2)  # [B, N, 1, 2]
 
