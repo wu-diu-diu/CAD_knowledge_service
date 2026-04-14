@@ -1,8 +1,5 @@
 """
-cd RL && ../.venv/bin/python train_multi.py   
---room_dir ../RL/room_gen/all/json   
---split_dir ../RL/room_gen/all/split   
---output_base ../RL/output_multiroom
+cd RL && ../.venv/bin/python train_multi.py   --room_dir ../RL/room_gen/all/json   --split_dir ../RL/room_gen/all/split   --output_base ../RL/output_multiroom
 """
 
 from __future__ import annotations
@@ -439,15 +436,9 @@ def evaluate_all_rooms(
 
         final_bd = env.last_breakdown
         room_name = room_data.get("room_name", f"room_{i:04d}")
-        title = (
-            f"{room_name} | r={total_reward:.2f} "
-            f"p={final_bd.potential_reduction_normalized:.2f} "
-            f"a={final_bd.alignment_normalized:.2f} "
-            f"w={final_bd.wiring_normalized:.2f}"
-        ) if final_bd else f"{room_name} | r={total_reward:.2f}"
         img_path = results_dir / f"room_{i:04d}_{lamp_count}lamp.png"
         final_matrix = env.current_encoded_matrix()
-        save_room_grid_image(final_matrix, img_path, cell_size=16, room_name=title)
+        save_room_grid_image(final_matrix, img_path, cell_size=16, room_name=None)
 
         # 将推理后的 matrix 写回原始 JSON 结构，灯具位置已为4
         output_json = {k: v for k, v in room_data.items() if not k.startswith("_")}
@@ -488,6 +479,13 @@ def plot_reward_curve_with_val(
 ) -> Path:
     """Plot training reward with moving average and validation reward overlay."""
     import matplotlib.pyplot as plt
+    from matplotlib.font_manager import FontProperties
+    from matplotlib import rcParams
+
+    _CN_FONT_PATH = '/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc'
+    cn_font = FontProperties(fname=_CN_FONT_PATH, size=16)  ## 修改字号
+    cn_font_legend = FontProperties(fname=_CN_FONT_PATH, size=16)
+    rcParams['axes.unicode_minus'] = False
 
     if not train_history:
         raise ValueError("Train history is empty.")
@@ -501,20 +499,20 @@ def plot_reward_curve_with_val(
     moving_episodes = train_episodes[window - 1:]
 
     fig, ax = plt.subplots(figsize=(11, 5))
-    ax.plot(train_episodes, train_rewards, color="#7aa6ff", linewidth=0.8, alpha=0.5, label="Train Reward")
-    ax.plot(moving_episodes, moving, color="#2563eb", linewidth=2.0, label=f"Train Moving Avg ({window})")
+    ax.plot(train_episodes, train_rewards, color="#7aa6ff", linewidth=0.8, alpha=0.5, label="训练奖励")
+    ax.plot(moving_episodes, moving, color="#2563eb", linewidth=2.0, label=f"训练滑动平均（窗口={window}）")
 
     if val_history:
         val_episodes = [int(h["episode"]) for h in val_history]
         val_rewards = np.asarray([float(h["avg_reward"]) for h in val_history], dtype=np.float32)
         ax.plot(val_episodes, val_rewards, color="#e74c3c", linewidth=2.0,
-                marker="o", markersize=4, label="Val Avg Reward")
+                marker="o", markersize=4, label="验证集平均奖励")
 
-    ax.set_xlabel("Episode")
-    ax.set_ylabel("Reward")
-    ax.set_title("Multi-Room PPO Training Reward Curve")
+    ax.set_xlabel("训练轮次", fontproperties=cn_font)
+    ax.set_ylabel("奖励", fontproperties=cn_font)
     ax.grid(True, linestyle="--", linewidth=0.5, alpha=0.5)
-    ax.legend()
+    ax.legend(prop=cn_font_legend)
+    ax.tick_params(axis='both', labelsize=11)
     fig.tight_layout()
     fig.savefig(output_path, dpi=180)
     plt.close(fig)

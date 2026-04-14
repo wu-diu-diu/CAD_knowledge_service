@@ -15,7 +15,7 @@ cd "$RESULTS_DIR"
 
 for NAME in wiring_encoder wiring_policy wiring_value; do
     echo "[compile] $NAME ..."
-    pdflatex -interaction=nonstopmode ${NAME}.tex
+    xelatex -interaction=nonstopmode ${NAME}.tex
     pdftoppm -r 300 -png ${NAME}.pdf ${NAME}_page
     mv ${NAME}_page-1.png ${NAME}.png
     rm -f ${NAME}.aux ${NAME}.log

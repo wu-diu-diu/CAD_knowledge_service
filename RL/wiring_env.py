@@ -22,10 +22,8 @@
   动作掩码：已连接的灯具被屏蔽
 奖励设计：
     每步奖励：新增线路长度的负值（归一化）
-    终局奖励：相对MST的线长改善 + 线槽共享得分 - 最大深度惩罚
+    终局奖励：相对MST的线长改善
         - MST改善：与预计算的 MST baseline 成本比较，正值=比MST好，负值=比MST差
-        - 线槽共享得分：共用路径段数 / 总路径段数  （鼓励共用线路）
-        - 最大深度惩罚：最长路径格子数 / 灯具数  （鼓励树的平衡，避免过深）
 """
 from __future__ import annotations
 
@@ -53,12 +51,10 @@ class WiringEnvConfig:
     padded_size: int = 48       # 观察空间的填充尺寸
     turn_penalty: float = 0.2   # A* 转弯惩罚
     # 每步奖励：路径增量成本
-    step_cost_coef: float = 0.1          # 步进成本归一化系数
+    step_cost_coef: float = 0.3          # 步进成本归一化系数
     invalid_action_penalty: float = 1.0  # 非法动作惩罚
     # 终局奖励系数
     terminal_length_coef: float = 1.0   # 相对MST的线长改善得分
-    terminal_sharing_coef: float = 0.5  # 线槽共享得分
-    terminal_depth_coef: float = 0.3    # 最大深度惩罚
 
 
 class WiringEnv:
@@ -114,6 +110,15 @@ class WiringEnv:
         # 路由缓存
         self._route_cache: dict[tuple[GridPoint, GridPoint], tuple[list[GridPoint] | None, float]] = {}
 
+        # 预计算 MST cost，结果缓存在 room_data 字典上避免同一房间重复计算
+        _cache_key = f"_mst_cost_{self.config.turn_penalty}"
+        if _cache_key not in self._room_data:
+            self._room_data[_cache_key] = max(
+                compute_mst_baseline(self._room_data, turn_penalty=self.config.turn_penalty)["total_cost"],
+                1.0,
+            )
+        self._mst_cost: float = self._room_data[_cache_key]
+
         self.episode_index = 0
         self.reset()
 
@@ -159,13 +164,6 @@ class WiringEnv:
         # 记录每步路径，用于终局统计
         self.step_paths: list[list[GridPoint]] = []
         self.step_costs: list[float] = []
-
-        # 预计算 MST cost 作为终局奖励基准（只在第一次 reset 时计算）
-        if not hasattr(self, "_mst_cost"):
-            self._mst_cost = max(
-                compute_mst_baseline(self._room_data, turn_penalty=self.config.turn_penalty)["total_cost"],
-                1.0,
-            )
 
         self.done = False
         return self.observation()
@@ -286,32 +284,20 @@ class WiringEnv:
         return -self.config.step_cost_coef * last_cost / max(self.room_diagonal, 1.0)
 
     def _terminal_reward(self) -> tuple[float, dict[str, Any]]:
-        """终局奖励：相对MST的线长改善 + 线槽共享得分 - 最大深度惩罚。"""
+        """终局奖励：相对MST的线长改善。正值=比MST好，负值=比MST差。"""
         total_cost = sum(self.step_costs)
-
-        # 对标 MST：正值=比MST好，负值=比MST差
         mst_relative = (self._mst_cost - total_cost) / self._mst_cost
         length_reward = self.config.terminal_length_coef * mst_relative
-
-        # 线槽共享得分（共用路径段的比例）
-        sharing_score = _compute_sharing_score(self.step_paths)
-        sharing_reward = self.config.terminal_sharing_coef * sharing_score
-
-        # 最大深度惩罚（树的最大深度 / 灯具数）
-        max_depth = _compute_max_depth(self.step_paths, self.switch_pos, self.lamp_positions)
-        depth_penalty = -self.config.terminal_depth_coef * (max_depth / max(self.n_lamps, 1))
-
-        total = length_reward + sharing_reward + depth_penalty
         info = {
-            "terminal_reward": total,
+            "terminal_reward": length_reward,
             "mst_relative": mst_relative,
             "mst_cost": self._mst_cost,
             "length_score": mst_relative,   # 保持 key 兼容性
-            "sharing_score": sharing_score,
-            "max_depth": max_depth,
+            "sharing_score": 0.0,           # 保持 key 兼容性
+            "max_depth": 0,                 # 保持 key 兼容性
             "total_cost": total_cost,
         }
-        return total, info
+        return length_reward, info
 
     # ------------------------------------------------------------------
     # 辅助方法
@@ -376,76 +362,6 @@ class WiringEnv:
 # 独立辅助函数
 # ------------------------------------------------------------------
 
-def _wall_adjacency_ratio(path: list[GridPoint], room_mask: np.ndarray) -> float:
-    """
-    计算路径中紧邻墙壁（房间边界）的格子比例。
-    判断标准：该格子的4邻域中至少有一个格子在房间外（room_mask=False）。
-    """
-    if not path:
-        return 0.0
-    rows, cols = room_mask.shape
-    wall_count = 0
-    for r, c in path:
-        for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-            nr, nc = r + dr, c + dc
-            if not (0 <= nr < rows and 0 <= nc < cols) or not room_mask[nr, nc]:
-                wall_count += 1
-                break
-    return wall_count / len(path)
-
-
-def _count_crossings(existing_paths: list[list[GridPoint]], new_path: list[GridPoint]) -> int:
-    """
-    计算新路径与已有路径的交叉点数。
-    交叉定义：新路径中的某个格子已经被已有路径占用（重叠格子）。
-    """
-    if not existing_paths or not new_path:
-        return 0
-    existing_cells: set[GridPoint] = set()
-    for path in existing_paths:
-        existing_cells.update(path)
-    new_set = set(new_path)
-    # 排除端点（接入点本身是树的一部分，不算交叉）
-    if new_path:
-        new_set.discard(new_path[-1])  # 接入点
-    return len(new_set & existing_cells)
-
-
-def _compute_sharing_score(paths: list[list[GridPoint]]) -> float:
-    """
-    计算线槽共享得分：共用路径段数 / 总路径段数。
-    共用段 = 在多条路径中都出现的相邻格子对。
-    """
-    if not paths:
-        return 0.0
-    seg_count: dict[tuple, int] = {}
-    total_segs = 0
-    for path in paths:
-        for i in range(len(path) - 1):
-            a, b = path[i], path[i + 1]
-            key = (a, b) if a <= b else (b, a)
-            seg_count[key] = seg_count.get(key, 0) + 1
-            total_segs += 1
-    if total_segs == 0:
-        return 0.0
-    shared_segs = sum(1 for cnt in seg_count.values() if cnt > 1)
-    return shared_segs / total_segs
-
-
-def _compute_max_depth(
-    paths: list[list[GridPoint]],
-    switch_pos: GridPoint,
-    lamp_positions: list[GridPoint],
-) -> int:
-    """
-    计算布线树的最大深度（从开关到最远灯具经过的灯具节点数）。
-    简化实现：用路径长度（格子数）作为深度的代理指标。
-    """
-    if not paths:
-        return 0
-    return max(len(p) for p in paths) if paths else 0
-
-
 def compute_mst_baseline(
     room_data: dict[str, Any],
     turn_penalty: float = 0.2,
@@ -477,17 +393,8 @@ def compute_mst_baseline(
     total_cost = sum(cost for _, _, _, cost in oriented)
     routes = [path for _, _, path, _ in oriented]
 
-    # 计算沿墙率和交叉数
-    room_mask = matrix != 0
-    wall_ratios = [_wall_adjacency_ratio(p, room_mask) for p in routes]
-    crossings = sum(
-        _count_crossings(routes[:i], routes[i]) for i in range(1, len(routes))
-    )
-
     return {
         "total_cost": total_cost,
         "routes": routes,
         "n_nodes": len(nodes),
-        "mean_wall_ratio": float(np.mean(wall_ratios)) if wall_ratios else 0.0,
-        "total_crossings": crossings,
     }

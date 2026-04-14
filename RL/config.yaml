@@ -10,7 +10,7 @@ training:
   entropy_coef: 0.05      # 多房间训练需要更强探索，防止过早收敛
   grad_clip_norm: 0.5
   seed: 42
-  device: "cuda:1"
+  device: "cuda:2"
   visualize_every_episodes: 100
   log_every_episodes: 32  # 与rollout_episodes对齐，每批次输出一次日志
   reward_curve_moving_window: 50

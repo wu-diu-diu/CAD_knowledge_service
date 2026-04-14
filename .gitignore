@@ -40,3 +40,5 @@ eval/qa_multihop_test.json
 RL/output_multiroom_gate_test
 article/results
 RL/room_gen/all
+RL/room_gen/RL_layouted_better
+RL/article_visu

@@ -20,10 +20,10 @@ echo "[1/3] generating .tex files ..."
 
 cd "$RESULTS_DIR"
 
-echo "[2/3] compiling PDFs ..."
+echo "[2/3] compiling PDFs with xelatex ..."
 for base in "${BASENAMES[@]}"; do
   echo "  - ${base}.tex"
-  pdflatex -interaction=nonstopmode "${base}.tex" >/dev/null
+  xelatex -interaction=nonstopmode "${base}.tex" >/dev/null
 done
 
 echo "[3/3] exporting PNGs ..."

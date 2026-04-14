@@ -18,9 +18,9 @@ OUTPUT_NAME="${1:-model_value}"
 echo "[1/3] 生成 .tex ..."
 $PYTHON plot_value.py
 
-echo "[2/3] pdflatex 编译 ..."
+echo "[2/3] xelatex 编译 ..."
 cd "$RESULTS_DIR"
-pdflatex -interaction=nonstopmode model_value.tex
+xelatex -interaction=nonstopmode model_value.tex
 
 echo "[3/3] PDF → PNG (300dpi) ..."
 pdftoppm -r 300 -png model_value.pdf model_value_page

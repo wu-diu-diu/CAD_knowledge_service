@@ -157,6 +157,14 @@ def plot_reward_curve(
     moving_window: int = 20,
 ) -> Path:
     """Plot episode reward and its moving average, then save to disk."""
+    from matplotlib.font_manager import FontProperties
+    from matplotlib import rcParams
+
+    _CN_FONT_PATH = '/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc'
+    cn_font = FontProperties(fname=_CN_FONT_PATH, size=14)
+    cn_font_legend = FontProperties(fname=_CN_FONT_PATH, size=12)
+    rcParams['axes.unicode_minus'] = False
+
     if not history:
         raise ValueError("History is empty. Cannot plot reward curve.")
 
@@ -168,22 +176,30 @@ def plot_reward_curve(
     moving = np.convolve(rewards, kernel, mode="valid")
     moving_episodes = episodes[window - 1 :]
 
-    plt.figure(figsize=(10, 5))
-    plt.plot(episodes, rewards, color="#7aa6ff", linewidth=1.2, alpha=0.75, label="Episode Reward")
-    plt.plot(moving_episodes, moving, color="#d94f30", linewidth=2.0, label=f"Moving Avg ({window})")
-    plt.xlabel("Episode")
-    plt.ylabel("Reward")
-    plt.title("PPO Single-Room Training Reward Curve")
-    plt.grid(True, linestyle="--", linewidth=0.5, alpha=0.5)
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=180)
-    plt.close()
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ax.plot(episodes, rewards, color="#7aa6ff", linewidth=1.2, alpha=0.75, label="每轮奖励")
+    ax.plot(moving_episodes, moving, color="#d94f30", linewidth=2.0, label=f"滑动平均（窗口={window}）")
+    ax.set_xlabel("训练轮次", fontproperties=cn_font)
+    ax.set_ylabel("奖励", fontproperties=cn_font)
+    ax.grid(True, linestyle="--", linewidth=0.5, alpha=0.5)
+    ax.legend(prop=cn_font_legend)
+    ax.tick_params(axis='both', labelsize=11)
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=180)
+    plt.close(fig)
     return output_path
 
 
 def plot_score_trends(history: list[dict[str, Any]], output_path: Path) -> Path:
     """Plot episode-level mean raw-score trends over the whole training run."""
+    from matplotlib.font_manager import FontProperties
+    from matplotlib import rcParams
+
+    _CN_FONT_PATH = '/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc'
+    cn_font = FontProperties(fname=_CN_FONT_PATH, size=14)
+    cn_font_legend = FontProperties(fname=_CN_FONT_PATH, size=12)
+    rcParams['axes.unicode_minus'] = False
+
     if not history:
         raise ValueError("History is empty. Cannot plot score trends.")
 
@@ -191,21 +207,19 @@ def plot_score_trends(history: list[dict[str, Any]], output_path: Path) -> Path:
     potential = np.asarray([float(item.get("mean_potential_normalized", 0.0)) for item in history], dtype=np.float32)
     alignment = np.asarray([float(item.get("alignment_normalized", 0.0)) for item in history], dtype=np.float32)
     wiring = np.asarray([float(item.get("wiring_normalized", 0.0)) for item in history], dtype=np.float32)
-    # mst_cost = np.asarray([float(item.get("mst_cost", 0.0)) for item in history], dtype=np.float32)
 
-    plt.figure(figsize=(11, 5.5))
-    plt.plot(episodes, potential, label="mean_potential_normalized", linewidth=2.0)
-    plt.plot(episodes, alignment, label="alignment_normalized", linewidth=2.0)
-    plt.plot(episodes, wiring, label="wiring_normalized", linewidth=2.0)
-    # plt.plot(episodes, mst_cost, label="mst_cost", linewidth=2.0)
-    plt.xlabel("Episode")
-    plt.ylabel("Score / Cost")
-    plt.title("Episode-Level Mean Score Trends")
-    plt.grid(True, linestyle="--", linewidth=0.5, alpha=0.5)
-    plt.legend(loc="best")
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=180)
-    plt.close()
+    fig, ax = plt.subplots(figsize=(11, 5.5))
+    ax.plot(episodes, potential, label="均匀度（归一化）", linewidth=2.0)
+    ax.plot(episodes, alignment, label="对齐度（归一化）", linewidth=2.0)
+    ax.plot(episodes, wiring, label="布线质量（归一化）", linewidth=2.0)
+    ax.set_xlabel("训练轮次", fontproperties=cn_font)
+    ax.set_ylabel("得分", fontproperties=cn_font)
+    ax.grid(True, linestyle="--", linewidth=0.5, alpha=0.5)
+    ax.legend(loc="best", prop=cn_font_legend)
+    ax.tick_params(axis='both', labelsize=11)
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=180)
+    plt.close(fig)
     return output_path
 
 

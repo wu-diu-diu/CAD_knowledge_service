@@ -40,7 +40,7 @@ def to_tensor_block(name, offset, to, width, height, depth, fill=r'\ConvColor'):
 def to_label_below(node_name, text, x_offset="0cm", y_offset="1.5cm"):
     """在方块正下方标注张量维度，支持自定义左右偏移和向下偏移。"""
     return r"""
-\node[below=""" + y_offset + r""" of """ + node_name + r"""-south, font=\bfseries\Large\boldmath, align=center, xshift=""" + x_offset + r"""]
+\node[below=""" + y_offset + r""" of """ + node_name + r"""-south, font=\LabelFont\boldmath, align=center, xshift=""" + x_offset + r"""]
     {""" + text + r"""};
 """
 
@@ -48,17 +48,20 @@ def to_label_below(node_name, text, x_offset="0cm", y_offset="1.5cm"):
 def to_arrow_with_label(from_east, to_west, label):
     """带操作名标注的箭头，标注在箭头上方。"""
     return r"""
-\draw [-stealth, line width=1.5pt, draw=\edgecolor] (""" + from_east + r"""-east) -- node[above, font=\normalsize\bfseries, text=black] {""" + label + r"""} (""" + to_west + r"""-west);
+\draw [-stealth, line width=1.5pt, draw=\edgecolor] (""" + from_east + r"""-east) -- node[above, font=\LabelFont, text=black] {""" + label + r"""} (""" + to_west + r"""-west);
 """
 
 
 arch = [
     to_head('/home/chen/punchy/PlotNeuralNet'),
     to_cor(),
+    r"\usepackage{fontspec}",
     to_begin(),
     # 自定义颜色
     r"\def\BlockColor{\ConvColor}",
     r"\def\BottleneckColor{\ConvReluColor}",
+    r"\newfontfamily\SongtiFont{Noto Serif CJK SC}",
+    r"\newcommand{\LabelFont}{\SongtiFont\fontsize{22pt}{24pt}\selectfont}",  ## 修改中文字的大小
 
     # ── 6×48×48 ──────────────────────────────────────────────────────────────
     to_tensor_block('t0', offset="(0,0,0)", to="(0,0,0)",
@@ -69,44 +72,44 @@ arch = [
     to_tensor_block('t1', offset="(5,0,0)", to="(t0-east)",
                     width=3, height=40, depth=40),
     to_label_below('t1', r'$32 \times 48 \times 48$', x_offset="-1.2cm", y_offset="1.8cm"),
-    to_arrow_with_label('t0', 't1', 'ConvBlock'),
+    to_arrow_with_label('t0', 't1', '卷积'),
 
     # MaxPool → 32×24×24
     to_tensor_block('t2', offset="(5,0,0)", to="(t1-east)",
                     width=3, height=32, depth=32),
     to_label_below('t2', r'$32 \times 24 \times 24$', x_offset="-1.2cm", y_offset="1.5cm"),
-    to_arrow_with_label('t1', 't2', 'MaxPool2d'),
+    to_arrow_with_label('t1', 't2', '池化'),
 
     # Stage2 ConvBlock → 64×24×24
     to_tensor_block('t3', offset="(4.5,0,0)", to="(t2-east)",
                     width=4, height=32, depth=32),
     to_label_below('t3', r'$64 \times 24 \times 24$', x_offset="-1cm", y_offset="1.5cm"),
-    to_arrow_with_label('t2', 't3', 'ConvBlock'),
+    to_arrow_with_label('t2', 't3', '卷积'),
 
     # MaxPool → 64×12×12
     to_tensor_block('t4', offset="(4.8,0,0)", to="(t3-east)",
                     width=4, height=24, depth=24),
     to_label_below('t4', r'$64 \times 12 \times 12$', x_offset="-0.8cm", y_offset="1.2cm"),
-    to_arrow_with_label('t3', 't4', 'MaxPool2d'),
+    to_arrow_with_label('t3', 't4', '池化'),
 
     # Stage3 ConvBlock → 128×12×12
     to_tensor_block('t5', offset="(4.2,0,0)", to="(t4-east)",
                     width=5, height=24, depth=24),
     to_label_below('t5', r'$128 \times 12 \times 12$', x_offset="-0.6cm", y_offset="1.2cm"),
-    to_arrow_with_label('t4', 't5', 'ConvBlock'),
+    to_arrow_with_label('t4', 't5', '卷积'),
 
     # MaxPool → 128×6×6
     to_tensor_block('t6', offset="(4,0,0)", to="(t5-east)",
                     width=5, height=16, depth=16),
     to_label_below('t6', r'$128 \times 6 \times 6$', x_offset="-0.5cm", y_offset="1cm"),
-    to_arrow_with_label('t5', 't6', 'MaxPool2d'),
+    to_arrow_with_label('t5', 't6', '池化'),
 
     # Stage4 ConvBlock → 256×6×6
     to_tensor_block('t7', offset="(4,0,0)", to="(t6-east)",
                     width=6, height=16, depth=16,
-                    fill=r'\BottleneckColor'),
+                    fill=r'\BlockColor'),
     to_label_below('t7', r'$256 \times 6 \times 6$', x_offset="-0.5cm", y_offset="1cm"),
-    to_arrow_with_label('t6', 't7', 'ConvBlock'),
+    to_arrow_with_label('t6', 't7', '卷积'),
 
     to_end(),
 ]

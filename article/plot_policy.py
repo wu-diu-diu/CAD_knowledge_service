@@ -42,7 +42,7 @@ def to_tensor_block(name, offset, to, width, height, depth, fill=r'\ConvColor'):
 def to_label_below(node_name, text, xshift="-0.5cm", yshift="1.5cm"):
     """在方块正下方标注张量维度，支持自定义左偏移和下偏移。"""
     return r"""
-\node[below=""" + yshift + r""" of """ + node_name + r"""-south, font=\bfseries\large, align=center, xshift=""" + xshift + r"""]
+\node[below=""" + yshift + r""" of """ + node_name + r"""-south, font=\LabelFont\boldmath, align=center, xshift=""" + xshift + r"""]
     {""" + text + r"""};
 """
 
@@ -50,7 +50,7 @@ def to_label_below(node_name, text, xshift="-0.5cm", yshift="1.5cm"):
 def to_arrow_with_label(from_east, to_west, label):
     """带操作名标注的箭头，标注在箭头上方。"""
     return r"""
-\draw [-stealth, line width=1.5pt, draw=\edgecolor] (""" + from_east + r"""-east) -- node[above, font=\normalsize\bfseries, text=black] {""" + label + r"""} (""" + to_west + r"""-west);
+\draw [-stealth, line width=1.5pt, draw=\edgecolor] (""" + from_east + r"""-east) -- node[above, font=\LabelFont, text=black] {""" + label + r"""} (""" + to_west + r"""-west);
 """
 
 
@@ -58,6 +58,14 @@ def to_arrow(from_east, to_west):
     """仅绘制连接箭头，不放文字。"""
     return r"""
 \draw [-stealth, line width=1.5pt, draw=\edgecolor] (""" + from_east + r"""-east) -- (""" + to_west + r"""-west);
+"""
+
+
+def to_legend_entry(name, at_expr, fill, text, swatch_w="1.1cm", swatch_h="0.7cm"):
+    """绘制图例色块及其文字说明。"""
+    return r"""
+\node[draw, rounded corners=2pt, fill=""" + fill + r""", minimum width=""" + swatch_w + r""", minimum height=""" + swatch_h + r"""] (""" + name + r""") at """ + at_expr + r""" {};
+\node[anchor=west, font=\LabelFont] at ($(""" + name + r""".east)+(0.35cm,0)$) {""" + text + r"""};
 """
 
 
@@ -77,7 +85,7 @@ def to_right_angle_arrow(from_coord, to_coord, label=None):
     label_tex = ""
     if label:
         label_tex = (
-            r" node[midway, above, font=\Large\bfseries, text=black] {"
+            r" node[midway, above, font=\LabelFont, text=black] {"
             + label
             + r"} "
         )
@@ -107,7 +115,7 @@ def to_up_right_down_arrow(from_coord, to_coord, up_dist="2cm", label=None):
     label_tex = ""
     if label:
         label_tex = (
-            r" node[midway, above, font=\Large\bfseries, text=black] {"
+            r" node[midway, above, font=\LabelFont, text=black] {"
             + label
             + r"} "
         )
@@ -153,12 +161,15 @@ def to_concat_arrow(from_main, from_skip, to_node, height="1.5cm", width="2cm"):
 arch = [
     to_head('/home/chen/punchy/PlotNeuralNet'),
     to_cor(),
+    r"\usepackage{fontspec}",
     r"\usetikzlibrary{calc}",
     to_begin(),
     # 自定义颜色
     r"\def\EncoderColor{\ConvColor}",
     r"\def\BottleneckColor{\ConvReluColor}",
     r"\def\DecoderColor{green!30}",
+    r"\newfontfamily\SongtiFont{Noto Serif CJK SC}",
+    r"\newcommand{\LabelFont}{\SongtiFont\fontsize{28pt}{30pt}\selectfont}",
 
     # ════════════════════════════════════════════════════════════════════════
     # ENCODER
@@ -215,7 +226,7 @@ arch = [
     # Stage4 ConvBlock → 256×6×6
     to_tensor_block('t7', offset="(1,0,0)", to="(t6-east)",
                     width=6, height=16, depth=16,
-                    fill=r'\BottleneckColor'),
+                    fill=r'\EncoderColor'),
     to_label_below('t7', r'$256 \times 6 \times 6$', xshift="-0.5cm", yshift="1cm"),
     to_arrow('t6', 't7'),
 
@@ -228,66 +239,66 @@ arch = [
                     width=5, height=24, depth=24,
                     fill=r'\DecoderColor'),
     to_label_below('up3_out', r'$128 \times 12 \times 12$', xshift="-0.6cm", yshift="1.2cm"),
-    to_arrow_with_label('t7', 'up3_out', 'Up'),
-    to_up_right_down_arrow(from_coord="t5-north", to_coord="up3_out-north", up_dist="2cm", label="Concat"),
+    to_arrow_with_label('t7', 'up3_out', '上采样'),
+    to_up_right_down_arrow(from_coord="t5-north", to_coord="up3_out-north", up_dist="2cm", label="拼接"),
 
     # ── Concat3: 128×12×12 + 128×12×12 → 256×12×12 ──
     to_tensor_block('concat3', offset="(2,0,0)", to="(up3_out-east)",
                     width=6, height=24, depth=24,
                     fill=r'\DecoderColor'),
-    to_label_below('concat3', r'$256 \times 12 \times 12$', xshift="-0.5cm", yshift="1.2cm"),
+    to_label_below('concat3', r'', xshift="-0.5cm", yshift="1.2cm"),
     to_arrow('up3_out', 'concat3'),
 
     # ── Fuse3: 256×12×12 → 128×12×12 ──
     to_tensor_block('fuse3', offset="(3,0,0)", to="(concat3-east)",
                     width=5, height=24, depth=24,
                     fill=r'\DecoderColor'),
-    to_label_below('fuse3', r'$128 \times 12 \times 12$', xshift="-0.6cm", yshift="1.2cm"),
-    to_arrow_with_label('concat3', 'fuse3', 'Fuse'),
+    to_label_below('fuse3', r'', xshift="-0.6cm", yshift="1.2cm"),
+    to_arrow_with_label('concat3', 'fuse3', '融合'),
 
     # ── Up2: 128×12×12 → 64×24×24 ──
     to_tensor_block('up2_out', offset="(3.2,0,0)", to="(fuse3-east)",
                     width=4, height=32, depth=32,
                     fill=r'\DecoderColor'),
     to_label_below('up2_out', r'$64 \times 24 \times 24$', xshift="-1cm", yshift="1.5cm"),
-    to_arrow_with_label('fuse3', 'up2_out', 'Up'),
+    to_arrow_with_label('fuse3', 'up2_out', '上采样'),
 
     # ── Concat2: 64×24×24 + 64×24×24 → 128×24×24 ──
     to_tensor_block('concat2', offset="(2,0,0)", to="(up2_out-east)",
                     width=5, height=32, depth=32,
                     fill=r'\DecoderColor'),
-    to_label_below('concat2', r'$128 \times 24 \times 24$', xshift="-0.8cm", yshift="1.5cm"),
+    to_label_below('concat2', r'', xshift="-0.8cm", yshift="1.5cm"),
     to_arrow('up2_out', 'concat2'),
-    to_up_right_down_arrow(from_coord="t3-north", to_coord="up2_out-north", up_dist="2cm",  label="Concat"),
+    to_up_right_down_arrow(from_coord="t3-north", to_coord="up2_out-north", up_dist="3cm",  label="拼接"),
 
     # ── Fuse2: 128×24×24 → 64×24×24 ──
     to_tensor_block('fuse2', offset="(4,0,0)", to="(concat2-east)",
                     width=4, height=32, depth=32,
                     fill=r'\DecoderColor'),
-    to_label_below('fuse2', r'$64 \times 24 \times 24$', xshift="-1cm", yshift="1.5cm"),
-    to_arrow_with_label('concat2', 'fuse2', 'Fuse'),
+    to_label_below('fuse2', r'', xshift="-1cm", yshift="1.5cm"),
+    to_arrow_with_label('concat2', 'fuse2', '融合'),
 
     # ── Up1: 64×24×24 → 32×48×48 ──
     to_tensor_block('up1_out', offset="(4,0,0)", to="(fuse2-east)",
                     width=3, height=40, depth=40,
                     fill=r'\DecoderColor'),
     to_label_below('up1_out', r'$32 \times 48 \times 48$', xshift="-1.2cm", yshift="1.8cm"),
-    to_arrow_with_label('fuse2', 'up1_out', 'Up'),
+    to_arrow_with_label('fuse2', 'up1_out', '上采样'),
 
     # ── Concat1: 32×48×48 + 32×48×48 → 64×48×48 ──
     to_tensor_block('concat1', offset="(3,0,0)", to="(up1_out-east)",
                     width=4, height=40, depth=40,
                     fill=r'\DecoderColor'),
-    to_label_below('concat1', r'$64 \times 48 \times 48$', xshift="-1cm", yshift="1.8cm"),
+    to_label_below('concat1', r'', xshift="-1cm", yshift="1.8cm"),
     to_arrow('up1_out', 'concat1'),
-    to_up_right_down_arrow(from_coord="t1-north", to_coord="up1_out-north", up_dist="2cm", label="Concat"),
+    to_up_right_down_arrow(from_coord="t1-north", to_coord="up1_out-north", up_dist="4cm", label="拼接"),
 
     # ── Fuse1: 64×48×48 → 32×48×48 ──
     to_tensor_block('fuse1', offset="(4,0,0)", to="(concat1-east)",
                     width=3, height=40, depth=40,
                     fill=r'\DecoderColor'),
-    to_label_below('fuse1', r'$32 \times 48 \times 48$', xshift="-1.2cm", yshift="1.8cm"),
-    to_arrow_with_label('concat1', 'fuse1', 'Fuse'),
+    to_label_below('fuse1', r'', xshift="-1.2cm", yshift="1.8cm"),
+    to_arrow_with_label('concat1', 'fuse1', '融合'),
 
     # ── spatial_head: 32×48×48 → 1×48×48 ──
     to_tensor_block('spatial_head', offset="(3,0,0)", to="(fuse1-east)",
@@ -300,8 +311,13 @@ arch = [
     to_tensor_block('stop_head', offset="(38,-8,0)", to="(t7-east)",
                     width=1, height=6, depth=6,
                     fill=r'\DecoderColor'),
-    to_label_below('stop_head', r'$1$', xshift="-0.5cm", yshift="1cm"),
-    to_right_angle_arrow('t7-south', 'stop_head-west', label='Stop-head'),
+    to_label_below('stop_head', r'', xshift="-0.5cm", yshift="1cm"),
+    to_right_angle_arrow('t7-south', 'stop_head-west', label='停止头'),
+
+    # 图例：先固定一个基准点，避免 current bounding box 在绘制首个图例后继续变化
+    r"\coordinate (legend_base) at ($(current bounding box.south)+(0,-2.4cm)$);",
+    to_legend_entry('leg_enc', r"($(legend_base)+(-6cm,0)$)", r'\EncoderColor', '编码器'),
+    to_legend_entry('leg_dec', r"($(legend_base)+(6cm,0)$)", r'\DecoderColor', '策略解码器'),
     to_end(),
 ]
 

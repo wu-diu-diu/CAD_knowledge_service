@@ -71,6 +71,7 @@ class WiringPPOConfig:
     learning_rate: float = 3e-4
     ppo_epochs: int = 4
     rollout_episodes: int = 16
+    minibatch_size: int = 256
     clip_eps: float = 0.2
     value_coef: float = 0.5
     entropy_coef: float = 0.01
@@ -80,6 +81,7 @@ class WiringPPOConfig:
     log_every_episodes: int = 32
     visualize_every_episodes: int = 100
     reward_curve_moving_window: int = 50
+    reward_curve_bias: float = 0.0
 
 
 @dataclass
@@ -249,6 +251,7 @@ def _collect_one_episode(
     masks_list: list[np.ndarray] = []
 
     done = False
+    ##TODO: 这里存在一个bug，如果从开关的位置出发，无论如何都无法连接到灯具，即房间的设计不合理，在此情况下进行强化学习布线会陷入死循环而且很难察觉
     while not done:
         obs_t = torch.from_numpy(obs).unsqueeze(0).to(device=device, dtype=torch.float32)
         mask = env.action_mask()  # [N] bool
@@ -356,32 +359,39 @@ def ppo_update(
     if adv_t.numel() > 1:
         adv_t = (adv_t - adv_t.mean()) / (adv_t.std(unbiased=False) + 1e-8)
 
+    total_steps = obs_t.shape[0]
+    mb_size = max(1, cfg.minibatch_size)
+
     last_policy_loss = 0.0
     last_value_loss = 0.0
     last_entropy = 0.0
 
     for _ in range(cfg.ppo_epochs):
-        evaluated = model.evaluate_actions(obs_t, lamp_coords_t, masks_t, actions_t)
-        log_probs_t = evaluated["log_prob"]
-        entropy_t = evaluated["entropy"]
-        values_t = evaluated["value"].squeeze(-1)
+        perm = torch.randperm(total_steps, device=device)
+        for start in range(0, total_steps, mb_size):
+            idx = perm[start:start + mb_size]
+            evaluated = model.evaluate_actions(obs_t[idx], lamp_coords_t[idx], masks_t[idx], actions_t[idx])
+            log_probs_mb = evaluated["log_prob"]
+            entropy_mb = evaluated["entropy"]
+            values_mb = evaluated["value"].squeeze(-1)
 
-        ratio = torch.exp(log_probs_t - old_log_probs_t)
-        s1 = ratio * adv_t
-        s2 = torch.clamp(ratio, 1.0 - cfg.clip_eps, 1.0 + cfg.clip_eps) * adv_t
-        policy_loss = -torch.min(s1, s2).mean()
-        value_loss = nn.functional.mse_loss(values_t, returns_t)
-        entropy_bonus = entropy_t.mean()
-        loss = policy_loss + cfg.value_coef * value_loss - cfg.entropy_coef * entropy_bonus
+            ratio = torch.exp(log_probs_mb - old_log_probs_t[idx])
+            adv_mb = adv_t[idx]
+            s1 = ratio * adv_mb
+            s2 = torch.clamp(ratio, 1.0 - cfg.clip_eps, 1.0 + cfg.clip_eps) * adv_mb
+            policy_loss = -torch.min(s1, s2).mean()
+            value_loss = nn.functional.mse_loss(values_mb, returns_t[idx])
+            entropy_bonus = entropy_mb.mean()
+            loss = policy_loss + cfg.value_coef * value_loss - cfg.entropy_coef * entropy_bonus
 
-        optimizer.zero_grad()
-        loss.backward()
-        nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip_norm)
-        optimizer.step()
+            optimizer.zero_grad()
+            loss.backward()
+            nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip_norm)
+            optimizer.step()
 
-        last_policy_loss = float(policy_loss.item())
-        last_value_loss = float(value_loss.item())
-        last_entropy = float(entropy_bonus.item())
+            last_policy_loss = float(policy_loss.item())
+            last_value_loss = float(value_loss.item())
+            last_entropy = float(entropy_bonus.item())
 
     return last_policy_loss, last_value_loss, last_entropy
 
@@ -462,10 +472,9 @@ def train_wiring(
 
             # ── 记录统计 ──
             for ep in rollout_buffer:
-                ep_reward = ep["episode_reward"]
                 history.append({
                     "episode": len(history) + 1,
-                    "episode_reward": ep_reward,
+                    "episode_reward": ep["episode_reward"],
                     "n_lamps": ep["n_lamps"],
                     "total_cost": ep["total_cost"],
                     "length_score": ep["length_score"],
@@ -476,13 +485,16 @@ def train_wiring(
                     "entropy": last_entropy,
                     "stage": stage_name,
                 })
-                if ep_reward > best_reward:
-                    best_reward = ep_reward
-                    torch.save({
-                        "model_state_dict": model.state_dict(),
-                        "episode": episode_idx,
-                        "episode_reward": ep_reward,
-                    }, best_model_path)
+
+            # 按 batch 平均奖励保存最佳模型
+            batch_avg_reward = sum(ep["episode_reward"] for ep in rollout_buffer) / len(rollout_buffer)
+            if batch_avg_reward > best_reward:
+                best_reward = batch_avg_reward
+                torch.save({
+                    "model_state_dict": model.state_dict(),
+                    "episode": episode_idx,
+                    "episode_reward": batch_avg_reward,
+                }, best_model_path)
 
             # ── 日志 ──
             if episode_idx % cfg.log_every_episodes == 0 or episode_idx >= total_episodes:
@@ -640,8 +652,8 @@ def visualize_wiring_result(
     rows, cols = matrix.shape
     text_y = y0 + rows * cell_size + 6
     stats = (
-        f"ep={episode_idx}  cost={total_cost:.1f}  "
-        f"lamps={env.n_lamps}  paths={len(paths)}"
+        f"轮次={episode_idx}  代价={total_cost:.1f}  "
+        f"灯具数={env.n_lamps}  路径数={len(paths)}"
     )
     # 用 Pillow 写中英文
     from PIL import Image, ImageDraw
@@ -721,14 +733,22 @@ def compare_with_mst(
 # 可视化
 # ------------------------------------------------------------------
 
-def plot_wiring_reward_curve(history: list[dict], output_path: Path, window: int = 50) -> None:
+def plot_wiring_reward_curve(history: list[dict], output_path: Path, window: int = 50, bias: float = 0.0) -> None:
+    from matplotlib.font_manager import FontProperties
+    from matplotlib import rcParams
+
+    _CN_FONT_PATH = '/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc'
+    cn_font = FontProperties(fname=_CN_FONT_PATH, size=16)
+    cn_font_legend = FontProperties(fname=_CN_FONT_PATH, size=16)  ## 修改字号
+    rcParams['axes.unicode_minus'] = False
+
     if not history:
         return
     train_h = [h for h in history if h.get("type") != "validation"]
     val_h   = [h for h in history if h.get("type") == "validation"]
 
     episodes = [h["episode"] for h in train_h]
-    rewards  = np.array([h["episode_reward"] for h in train_h], dtype=np.float32)
+    rewards  = np.array([h["episode_reward"] for h in train_h], dtype=np.float32) + bias
     costs    = np.array([h["total_cost"]     for h in train_h], dtype=np.float32)
 
     w = max(1, min(window, len(rewards)))
@@ -738,31 +758,31 @@ def plot_wiring_reward_curve(history: list[dict], output_path: Path, window: int
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(11, 8))
 
     # ── 上图：奖励曲线 ──
-    ax1.plot(episodes, rewards, color="#7aa6ff", alpha=0.5, linewidth=0.8, label="Train Reward")
-    ax1.plot(episodes[w - 1:], moving, color="#2563eb", linewidth=2.0, label=f"Train Moving Avg ({w})")
+    ax1.plot(episodes, rewards, color="#7aa6ff", alpha=0.5, linewidth=0.8, label="训练奖励")
+    ax1.plot(episodes[w - 1:], moving, color="#2563eb", linewidth=2.0, label=f"训练滑动平均（窗口={w}）")
     if val_h:
         val_eps = [h["episode"] for h in val_h]
-        val_rws = np.array([h["avg_reward"] for h in val_h], dtype=np.float32)
+        val_rws = np.array([h["avg_reward"] for h in val_h], dtype=np.float32) + bias
         ax1.plot(val_eps, val_rws, color="#e74c3c", linewidth=2.0,
-                 marker="o", markersize=4, label="Val Avg Reward")
-    ax1.set_xlabel("Episode")
-    ax1.set_ylabel("Reward")
-    ax1.set_title("Wiring RL Training Reward")
-    ax1.legend()
+                 marker="o", markersize=4, label="验证集平均奖励")
+    ax1.set_xlabel("训练轮次", fontproperties=cn_font)
+    ax1.set_ylabel("奖励", fontproperties=cn_font)
+    ax1.legend(prop=cn_font_legend)
     ax1.grid(True, linestyle="--", alpha=0.5)
+    ax1.tick_params(axis='both', labelsize=11)
 
     # ── 下图：布线代价曲线 ──
-    ax2.plot(episodes, costs, color="#4caf50", alpha=0.6, linewidth=1.0, label="Train Wire Cost")
+    ax2.plot(episodes, costs, color="#4caf50", alpha=0.6, linewidth=1.0, label="训练布线代价")
     if val_h:
         val_eps = [h["episode"] for h in val_h]
         val_costs = np.array([h["avg_cost"] for h in val_h], dtype=np.float32)
         ax2.plot(val_eps, val_costs, color="#e67e22", linewidth=2.0,
-                 marker="s", markersize=4, label="Val Avg Cost")
-    ax2.set_xlabel("Episode")
-    ax2.set_ylabel("Wire Cost (grid steps)")
-    ax2.set_title("Total Wiring Cost per Episode")
-    ax2.legend()
+                 marker="s", markersize=4, label="验证集平均代价")
+    ax2.set_xlabel("训练轮次", fontproperties=cn_font)
+    ax2.set_ylabel("布线代价（格子步数）", fontproperties=cn_font)
+    ax2.legend(prop=cn_font_legend)
     ax2.grid(True, linestyle="--", alpha=0.5)
+    ax2.tick_params(axis='both', labelsize=11)
 
     plt.tight_layout()
     plt.savefig(output_path, dpi=150)
@@ -774,6 +794,14 @@ def plot_rl_vs_mst_comparison(results: list[dict[str, Any]], output_path: Path) 
     if not results:
         return
     from collections import defaultdict
+    from matplotlib.font_manager import FontProperties
+    from matplotlib import rcParams
+
+    _CN_FONT_PATH = '/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc'
+    cn_font = FontProperties(fname=_CN_FONT_PATH, size=14)
+    cn_font_legend = FontProperties(fname=_CN_FONT_PATH, size=12)
+    cn_font_small = FontProperties(fname=_CN_FONT_PATH, size=9)
+    rcParams['axes.unicode_minus'] = False
 
     # 按灯具数排序
     results = sorted(results, key=lambda r: (r["n_lamps"], r["room_name"]))
@@ -787,15 +815,17 @@ def plot_rl_vs_mst_comparison(results: list[dict[str, Any]], output_path: Path) 
     mst_costs = [r["mst_cost"] for r in results]
     labels = [f"{r['room_name']}\n({r['n_lamps']}灯)" for r in results]
 
-    ax1.bar(x - width / 2, rl_costs, width, label="RL", color="#4a90d9", alpha=0.85)
-    ax1.bar(x + width / 2, mst_costs, width, label="MST", color="#e8833a", alpha=0.85)
+    ax1.bar(x - width / 2, rl_costs, width, label="强化学习", color="#4a90d9", alpha=0.85)
+    ax1.bar(x + width / 2, mst_costs, width, label="最小生成树", color="#e8833a", alpha=0.85)
     ax1.set_xticks(x)
     ax1.set_xticklabels(labels, rotation=90, fontsize=6)
-    ax1.set_ylabel("Wiring Cost")
+    ax1.set_ylabel("布线代价", fontproperties=cn_font)
     avg_ratio = np.mean([r["cost_ratio"] for r in results])
-    ax1.set_title(f"Per-Room RL vs MST Cost  (avg ratio={avg_ratio:.3f})")
-    ax1.legend()
+    ax1.text(0.99, 0.97, f"平均比值={avg_ratio:.3f}", transform=ax1.transAxes,
+             ha='right', va='top', fontproperties=cn_font_small)
+    ax1.legend(prop=cn_font_legend)
     ax1.grid(True, axis="y", linestyle="--", alpha=0.4)
+    ax1.tick_params(axis='both', labelsize=11)
 
     # ── 下图：按灯具数分组平均 ──
     by_lamps: dict[int, list[dict]] = defaultdict(list)
@@ -808,18 +838,18 @@ def plot_rl_vs_mst_comparison(results: list[dict[str, Any]], output_path: Path) 
     group_labels = [f"{n}灯\n(n={len(by_lamps[n])})" for n in lamp_groups]
 
     x2 = np.arange(len(lamp_groups))
-    ax2.bar(x2 - width / 2, avg_rl, width, label="RL (avg)", color="#4a90d9", alpha=0.85)
-    ax2.bar(x2 + width / 2, avg_mst, width, label="MST (avg)", color="#e8833a", alpha=0.85)
+    ax2.bar(x2 - width / 2, avg_rl, width, label="强化学习（均值）", color="#4a90d9", alpha=0.85)
+    ax2.bar(x2 + width / 2, avg_mst, width, label="最小生成树（均值）", color="#e8833a", alpha=0.85)
     # 在柱子上标注 ratio
     for i, n in enumerate(lamp_groups):
         ratio = avg_rl[i] / max(avg_mst[i], 1.0)
         ax2.text(i, max(avg_rl[i], avg_mst[i]) + 1, f"{ratio:.2f}", ha="center", fontsize=9)
     ax2.set_xticks(x2)
     ax2.set_xticklabels(group_labels)
-    ax2.set_ylabel("Avg Wiring Cost")
-    ax2.set_title("RL vs MST by Lamp Count (number = RL/MST ratio)")
-    ax2.legend()
+    ax2.set_ylabel("平均布线代价", fontproperties=cn_font)
+    ax2.legend(prop=cn_font_legend)
     ax2.grid(True, axis="y", linestyle="--", alpha=0.4)
+    ax2.tick_params(axis='both', labelsize=11)
 
     plt.tight_layout()
     plt.savefig(output_path, dpi=150)
@@ -834,13 +864,13 @@ def plot_rl_vs_mst_comparison(results: list[dict[str, Any]], output_path: Path) 
 def main() -> None:
     parser = argparse.ArgumentParser(description="布线RL训练")
     parser.add_argument("--room", type=str, default=None, help="单个房间 JSON 路径")
-    parser.add_argument("--room_dir", type=str, default="RL/test_room/layout_room/json", help="房间数据集目录")
+    parser.add_argument("--room_dir", type=str, default="RL/room_gen/RL_layouted_better/json", help="房间数据集目录")
     parser.add_argument("--curriculum", action="store_true", help="启用课程学习")
     parser.add_argument("--device", type=str, default=None)
     parser.add_argument("--output_dir", type=str, default="RL/output_wiring")
     parser.add_argument("--compare_mst", action="store_true", help="训练后与MST对比")
     parser.add_argument("--test_ratio", type=float, default=0.2, help="测试集比例")
-    parser.add_argument("--split_dir", type=str, default=None, help="预分割索引目录（train.json/test.json）")
+    parser.add_argument("--split_dir", type=str, default="RL/room_gen/RL_layouted_better/split", help="预分割索引目录（train.json/test.json）")
     args = parser.parse_args()
 
     # 输出目录
@@ -860,6 +890,7 @@ def main() -> None:
         learning_rate=ppo_raw.get("learning_rate", 3e-4),
         ppo_epochs=ppo_raw.get("ppo_epochs", 4),
         rollout_episodes=ppo_raw.get("rollout_episodes", 16),
+        minibatch_size=ppo_raw.get("minibatch_size", 256),
         clip_eps=ppo_raw.get("clip_eps", 0.2),
         value_coef=ppo_raw.get("value_coef", 0.5),
         entropy_coef=ppo_raw.get("entropy_coef", 0.01),
@@ -869,17 +900,16 @@ def main() -> None:
         log_every_episodes=ppo_raw.get("log_every_episodes", 32),
         visualize_every_episodes=ppo_raw.get("visualize_every_episodes", 100),
         reward_curve_moving_window=ppo_raw.get("reward_curve_moving_window", 50),
+        reward_curve_bias=ppo_raw.get("reward_curve_bias", 0.0),
     )
 
     env_raw = cfg_payload.get("wiring_environment", {})
     env_cfg = WiringEnvConfig(
         padded_size=env_raw.get("padded_size", 48),
         turn_penalty=env_raw.get("turn_penalty", 0.2),
-        step_cost_coef=env_raw.get("step_cost_coef", 0.1),
+        step_cost_coef=env_raw.get("step_cost_coef", 0.3),
         invalid_action_penalty=env_raw.get("invalid_action_penalty", 1.0),
         terminal_length_coef=env_raw.get("terminal_length_coef", 1.0),
-        terminal_sharing_coef=env_raw.get("terminal_sharing_coef", 0.5),
-        terminal_depth_coef=env_raw.get("terminal_depth_coef", 0.3),
     )
 
     if args.curriculum:
@@ -929,6 +959,15 @@ def main() -> None:
 
     print(f"[main] train={len(rooms)}, val={len(val_rooms)}, test={len(test_rooms)}, episodes={ppo_cfg.episodes}, device={ppo_cfg.device}")
 
+    # 预热所有房间的 MST 缓存，避免训练开始后长时间无响应
+    all_rooms_to_warm = rooms + (val_rooms or []) + (test_rooms or [])
+    print(f"[main] 预计算 MST cache ({len(all_rooms_to_warm)} 个房间)...")
+    for i, room in enumerate(all_rooms_to_warm):
+        WiringEnv(room, config=env_cfg)  # __init__ 里会计算并缓存 MST
+        if (i + 1) % 50 == 0 or (i + 1) == len(all_rooms_to_warm):
+            print(f"[main] MST cache: {i + 1}/{len(all_rooms_to_warm)}")
+    print("[main] MST cache 预计算完成")
+
     # 创建模型
     model = WiringPolicyNet(in_channels=6)
 
@@ -940,6 +979,7 @@ def main() -> None:
         summary["history"],
         output_dir / "wiring_reward_curve.png",
         window=ppo_cfg.reward_curve_moving_window,
+        bias=ppo_cfg.reward_curve_bias,
     )
 
     # 保存训练摘要

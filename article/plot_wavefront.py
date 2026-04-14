@@ -7,18 +7,21 @@
 """
 import os
 import numpy as np
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib import rcParams
-from matplotlib.font_manager import FontProperties, fontManager
+from matplotlib.font_manager import FontProperties
+from matplotlib.lines import Line2D
 from collections import deque
 
-_FONT_PATH = '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc'
-fontManager.addfont(_FONT_PATH)
-_fp = FontProperties(fname=_FONT_PATH)
-rcParams['font.family'] = _fp.get_name()
+_CN_FONT_PATH = '/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc'
+_cn_fp = FontProperties(fname=_CN_FONT_PATH)
 rcParams['axes.unicode_minus'] = False
+
+CN_TITLE_FONT = FontProperties(fname=_CN_FONT_PATH, size=20)
 
 RESULTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results')
 
@@ -137,7 +140,7 @@ def draw_frame(ax, grid, dist_map, path, title):
     ax.set_ylim(0, rows)
     ax.set_aspect('equal')
     ax.axis('off')
-    ax.set_title(title, fontsize=10, fontweight='bold', pad=4)
+    ax.set_title(title, fontproperties=CN_TITLE_FONT, pad=4)
 
 
 def main():
@@ -160,8 +163,8 @@ def main():
         else:
             titles.append(f"步数={snapshots[idx].max()}")
 
-    fig, axes = plt.subplots(1, N_COLS, figsize=(16, 3.5),
-                             gridspec_kw={'bottom': 0.18})
+    fig, axes = plt.subplots(1, N_COLS, figsize=(16, 4.3),
+                             gridspec_kw={'bottom': 0.28})
 
     for ax, idx, title in zip(axes, indices, titles):
         is_final = (idx == n-1)
@@ -172,6 +175,31 @@ def main():
                 spine.set_visible(True)
                 spine.set_edgecolor('#1e8449')
                 spine.set_linewidth(3)
+
+    legend_handles = [
+        Line2D([0], [0], marker='s', linestyle='None', markersize=14,
+               markerfacecolor=C_FREE, markeredgecolor='#d0d7de', label='未访问区域'),
+        Line2D([0], [0], marker='s', linestyle='None', markersize=14,
+               markerfacecolor=C_WALL, markeredgecolor=C_WALL, label='障碍物'),
+        Line2D([0], [0], marker='s', linestyle='None', markersize=14,
+               markerfacecolor=WAVE_CMAP(0.8), markeredgecolor=WAVE_CMAP(0.8), label='波前扩展区域'),
+        Line2D([0], [0], marker='s', linestyle='None', markersize=14,
+               markerfacecolor=C_START, markeredgecolor=C_START, label='起点'),
+        Line2D([0], [0], marker='s', linestyle='None', markersize=14,
+               markerfacecolor=C_GOAL, markeredgecolor=C_GOAL, label='终点'),
+        Line2D([0], [0], color='#e74c3c', lw=1.5, label='最短路径'),
+    ]
+    fig.legend(
+        handles=legend_handles,
+        loc='lower center',
+        ncol=6,
+        bbox_to_anchor=(0.5, 0.01),
+        frameon=False,
+        prop=CN_TITLE_FONT,
+        handlelength=1.8,
+        columnspacing=1.0,
+        handletextpad=0.6,
+    )
 
     out = os.path.join(RESULTS_DIR, 'wavefront.png')
     plt.savefig(out, dpi=150, bbox_inches='tight')

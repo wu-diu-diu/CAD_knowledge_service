@@ -35,7 +35,7 @@ def box(name, offset, to, w, h, d, fill=r'\ConvColor'):
 def label(node, text, anchor="south", yshift="-0.5cm", xshift="0cm"):
     return (
         r"\node[below=" + yshift + r" of " + node + "-" + anchor
-        + r", font=\bfseries\normalsize, align=center, xshift=" + xshift + r"] {"
+        + r", font=\LabelFont, align=center, xshift=" + xshift + r"] {"
         + text + r"};" + "\n"
     )
 
@@ -50,7 +50,7 @@ def arrow(a, b):
 def arrow_label(a, b, txt, pos="above"):
     return (
         r"\draw[-stealth, line width=1.5pt, draw=\edgecolor] ("
-        + a + r") -- node[" + pos + r", font=\bfseries\small, text=black] {"
+        + a + r") -- node[" + pos + r", font=\LabelFont, text=black] {"
         + txt + r"} (" + b + r");" + "\n"
     )
 
@@ -66,6 +66,7 @@ C_SAMPLE  = r'rgb:magenta,4;white,3'# 紫色   – 采样结果
 arch = [
     to_head('/home/chen/punchy/PlotNeuralNet'),
     to_cor(),
+    r"\usepackage{fontspec}",
     r"\usetikzlibrary{calc,shapes,fit,backgrounds}",
     to_begin(),
 
@@ -76,13 +77,15 @@ arch = [
     r"\def\StopColor{"  + C_STOP    + r"}",
     r"\def\MaskColor{"  + C_MASK    + r"}",
     r"\def\SampColor{"  + C_SAMPLE  + r"}",
+    r"\newfontfamily\SongtiFont{Noto Serif CJK SC}",
+    r"\newcommand{\LabelFont}{\SongtiFont\fontsize{20pt}{24pt}\selectfont}",
 
     # ════════════════════════════════════════════════════════════════════════
     # 1. 输入：房间状态 H×W×C
     # ════════════════════════════════════════════════════════════════════════
     box('inp', "(0,0,0)", "(0,0,0)", 2, 28, 28, r'\InputColor'),
-    r"\node[below=1.5cm of inp-south, font=\bfseries\normalsize, align=center]"
-    r" {Room State\\$H \times W \times C$};" + "\n",
+    r"\node[below=1.5cm of inp-south, font=\LabelFont, align=center]",
+    r" {房间状态向量};" + "\n",
 
     # ════════════════════════════════════════════════════════════════════════
     # 2. 神经网络（三层示意）
@@ -95,8 +98,8 @@ arch = [
     arrow('fc1-east',  'fc2-west'),
     arrow('fc2-east',  'fc3-west'),
 
-    r"\node[below=1.15cm of fc2-south, font=\bfseries\normalsize, align=center]"
-    r" {Neural Network};" + "\n",
+    r"\node[below=1.15cm of fc2-south, font=\LabelFont, align=center]"
+    r" {神经网络};" + "\n",
 
     # ════════════════════════════════════════════════════════════════════════
     # 3. 输出头：空间动作图 + Stop
@@ -104,13 +107,13 @@ arch = [
 
     # 空间动作图 H×W（上方）
     box('spat', "(5, 4,0)", "(fc3-east)", 2, 28, 28, r'\SpatColor'),
-    r"\node[below=1.5cm of spat-south, font=\bfseries\normalsize, align=center]"
-    r" {Spatial Logits\\$H \times W$};" + "\n",
+    r"\node[below=1.5cm of spat-south, font=\LabelFont, align=center]"
+    r" {空间动作分数};" + "\n",
 
     # Stop 动作（下方）
     box('stop', "(5,-4,0)", "(fc3-east)", 2,  6,  6, r'\StopColor'),
-    r"\node[below=0.75cm of stop-south, font=\bfseries\normalsize, align=center]"
-    r" {Stop Logit\\$1$};" + "\n",
+    r"\node[below=0.75cm of stop-south, font=\LabelFont, align=center]"
+    r" {停止分数};" + "\n",
 
     # fc3 → spat / stop（折线箭头）
     r"""
@@ -124,13 +127,13 @@ arch = [
     # 4. 掩码：与 spat 同一水平线，放在 spat 上方（y 偏移对齐）
     # ════════════════════════════════════════════════════════════════════════
     box('mask', "(5,0,0)", "(spat-west)", 2, 28, 28, r'\MaskColor'),
-    r"\node[below=1.5cm of mask-south, font=\bfseries\normalsize, align=center]"
-    r" {Placeable Mask\\$H \times W$};" + "\n",
+    r"\node[below=1.5cm of mask-south, font=\LabelFont, align=center]"
+    r" {可放置掩码};" + "\n",
 
     # spat → mask（水平箭头）
     r"""
 \draw[-stealth, line width=1.5pt, draw=\edgecolor]
-    (spat-east) -- node[above, font=\bfseries\small, text=black] {Mask} (mask-west);
+    (spat-east) -- node[above, font=\LabelFont, text=black] {掩码} (mask-west);
 """,
 
     # ════════════════════════════════════════════════════════════════════════
@@ -138,21 +141,21 @@ arch = [
     # ════════════════════════════════════════════════════════════════════════
 
     box('soft', "(10,0,0)", "(spat-east)", 2, 28, 28, r'\SampColor'),
-    r"\node[below=1.5cm of soft-south, font=\bfseries\normalsize, align=center]"
-    r" {Softmax\\Prob. Map};" + "\n",
+    r"\node[below=1.5cm of soft-south, font=\LabelFont, align=center]"
+    r" {概率图};" + "\n",
 
     r"""
 \draw[-stealth, line width=1.5pt, draw=\edgecolor]
-    (mask-east) -- node[above, font=\bfseries\small, text=black] {Softmax} (soft-west);
+    (mask-east) -- node[above, font=\LabelFont, text=black] {归一化} (soft-west);
 """,
 
     # Stop sigmoid
     box('sigs', "(5,0,0)", "(stop-east)", 2,  6,  6, r'\SampColor'),
-    r"\node[below=0.75cm of sigs-south, font=\bfseries\normalsize, align=center]"
-    r" {Sigmoid\\Stop Prob.};" + "\n",
+    r"\node[below=0.75cm of sigs-south, font=\LabelFont, align=center]"
+    r" {停止概率};" + "\n",
     r"""
 \draw[-stealth, line width=1.5pt, draw=\edgecolor]
-    (stop-east) -- node[above, font=\bfseries\small, text=black] {Sigmoid} (sigs-west);
+    (stop-east) -- node[above, font=\LabelFont, text=black] {归一化} (sigs-west);
 """,
 
     # ════════════════════════════════════════════════════════════════════════
@@ -161,18 +164,18 @@ arch = [
     r"""
 \node[draw, fill=\SampColor, rounded corners=4pt,
       minimum width=2.2cm, minimum height=1.0cm,
-      font=\bfseries\normalsize, align=center,
-      right=3.5cm of soft-east] (act_pos) {Position\\$(r, c)$};
+      font=\LabelFont, align=center,
+      right=3.5cm of soft-east] (act_pos) {灯具位置\\$(r, c)$};
 
 \node[draw, fill=\SampColor, rounded corners=4pt,
       minimum width=2.2cm, minimum height=1.0cm,
-      font=\bfseries\normalsize, align=center,
-      right=3.5cm of sigs-east] (act_stop) {Stop\\$\{0,1\}$};
+      font=\LabelFont, align=center,
+      right=3.5cm of sigs-east] (act_stop) {是否停止\\$\{0,1\}$};
 
 \draw[-stealth, line width=1.5pt, draw=\edgecolor]
-    (soft-east) -- node[above, font=\bfseries\small, text=black] {Sample} (act_pos.west);
+    (soft-east) -- node[above, font=\LabelFont, text=black] {采样} (act_pos.west);
 \draw[-stealth, line width=1.5pt, draw=\edgecolor]
-    (sigs-east) -- node[above, font=\bfseries\small, text=black] {Sample} (act_stop.west);
+    (sigs-east) -- node[above, font=\LabelFont, text=black] {采样} (act_stop.west);
 """,
 
     to_end(),

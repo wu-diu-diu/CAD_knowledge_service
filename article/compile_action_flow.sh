@@ -11,9 +11,9 @@ PYTHON="../.venv/bin/python"
 echo "[1/3] 生成 .tex ..."
 $PYTHON plot_action_flow.py
 
-echo "[2/3] pdflatex 编译 ..."
+echo "[2/3] xelatex 编译 ..."
 cd "$RESULTS_DIR"
-pdflatex -interaction=nonstopmode action_flow.tex
+xelatex -interaction=nonstopmode action_flow.tex
 
 echo "[3/3] PDF → PNG (300dpi) ..."
 pdftoppm -r 300 -png action_flow.pdf action_flow_page

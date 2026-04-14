@@ -43,7 +43,7 @@ def to_tensor_block(name, offset, to, width, height, depth, fill=r'\ConvColor'):
 def to_label_below(node_name, text, xshift="-0.5cm", yshift="1.5cm"):
     """在方块正下方标注张量维度。"""
     return r"""
-\node[below=""" + yshift + r""" of """ + node_name + r"""-south, font=\bfseries\large, align=center, xshift=""" + xshift + r"""]
+\node[below=""" + yshift + r""" of """ + node_name + r"""-south, font=\DimFont, align=center, xshift=""" + xshift + r"""]
     {""" + text + r"""};
 """
 
@@ -51,7 +51,7 @@ def to_label_below(node_name, text, xshift="-0.5cm", yshift="1.5cm"):
 def to_arrow_with_label(from_east, to_west, label):
     """带操作名标注的箭头。"""
     return r"""
-\draw [-stealth, line width=1.5pt, draw=\edgecolor] (""" + from_east + r"""-east) -- node[above, font=\normalsize\bfseries, text=black] {""" + label + r"""} (""" + to_west + r"""-west);
+\draw [-stealth, line width=1.5pt, draw=\edgecolor] (""" + from_east + r"""-east) -- node[above, font=\LabelFont, text=black] {""" + label + r"""} (""" + to_west + r"""-west);
 """
 
 
@@ -62,6 +62,14 @@ def to_arrow(from_east, to_west):
 """
 
 
+def to_legend_entry(name, at_expr, fill, text, swatch_w="1.1cm", swatch_h="0.7cm"):
+    """绘制图例色块及其文字说明。"""
+    return r"""
+\node[draw, rounded corners=2pt, fill=""" + fill + r""", minimum width=""" + swatch_w + r""", minimum height=""" + swatch_h + r"""] (""" + name + r""") at """ + at_expr + r""" {};
+\node[anchor=west, font=\LabelFont] at ($(""" + name + r""".east)+(0.35cm,0)$) {""" + text + r"""};
+"""
+
+
 # ── 三个 pooling 向量的 y 方向间距和 x 位置 ──
 # p2(1×64) 在上，p3(1×128) 在中，p4(1×256) 在下
 # 用 \coordinate 定位，然后用 \pic 画方块
@@ -69,12 +77,16 @@ def to_arrow(from_east, to_west):
 arch = [
     to_head('/home/chen/punchy/PlotNeuralNet'),
     to_cor(),
+    r"\usepackage{fontspec}",
     r"\usetikzlibrary{calc}",
     to_begin(),
     # 自定义颜色
     r"\def\EncoderColor{\ConvColor}",
     r"\def\BottleneckColor{\ConvReluColor}",
     r"\def\ValueColor{rgb:blue,3;green,1;white,4}",
+    r"\newfontfamily\SongtiFont{Noto Serif CJK SC}",
+    r"\newcommand{\LabelFont}{\SongtiFont\fontsize{22pt}{24pt}\selectfont}",
+    r"\newcommand{\DimFont}{\SongtiFont\fontsize{22pt}{24pt}\selectfont\boldmath}",
 
     # ════════════════════════════════════════════════════════════════════════
     # ENCODER
@@ -123,7 +135,7 @@ arch = [
 
     to_tensor_block('t7', offset="(1,0,0)", to="(t6-east)",
                     width=6, height=16, depth=16,
-                    fill=r'\BottleneckColor'),
+                    fill=r'\EncoderColor'),
     to_label_below('t7', r'$256 \times 6 \times 6$', xshift="-0.5cm", yshift="1cm"),
     to_arrow('t6', 't7'),
 
@@ -166,7 +178,7 @@ arch = [
 \draw [-stealth, line width=1.5pt, draw=\edgecolor]
     (t3-north)
     -- (t3-north |- p2-west)
-    -- node[midway, above, font=\normalsize\bfseries, text=black] {AvgPool} (p2-west);
+    -- node[midway, above, font=\LabelFont, text=black] {平均池化} (p2-west);
 """,
 
     r"""
@@ -174,13 +186,13 @@ arch = [
 \draw [-stealth, line width=1.5pt, draw=\edgecolor]
     (t5-south)
     -- (t5-south |- p3-west)
-    -- node[midway, below, font=\normalsize\bfseries, text=black] {AvgPool} (p3-west);
+    -- node[midway, below, font=\LabelFont, text=black] {平均池化} (p3-west);
 """,
 
     r"""
 % t7 → p4: 水平向右到 p4
 \draw [-stealth, line width=1.5pt, draw=\edgecolor]
-    (t7-east) -- node[above, font=\normalsize\bfseries, text=black] {AvgPool} (p4-west);
+    (t7-east) -- node[above, font=\LabelFont, text=black] {平均池化} (p4-west);
 """,
 
     # ── Concat: 64+128+256 = 448 ──
@@ -196,32 +208,37 @@ arch = [
     (p2-east) -- (p2-east -| vcat-north) -- (vcat-north);
 % p4 → vcat (Concat 标注在这条上，中间那条)
 \draw [-stealth, line width=1.5pt, draw=\edgecolor]
-    (p4-east) -- node[above, font=\normalsize\bfseries, text=black] {Concat} (vcat-west);
+    (p4-east) -- node[above, font=\LabelFont, text=black] {拼接} (vcat-west);
 % p3 → vcat
 \draw [-stealth, line width=1.5pt, draw=\edgecolor]
     (p3-east) -- (p3-east -| vcat-south) -- (vcat-south);
 """,
 
     # ── FC: 448 → 256 ──
-    to_tensor_block('v1', offset="(3,0,0)", to="(vcat-east)",
+    to_tensor_block('v1', offset="(4,0,0)", to="(vcat-east)",
                     width=2, height=12, depth=1,
                     fill=r'\ValueColor'),
     to_label_below('v1', r'$256$', xshift="0cm", yshift="0.8cm"),
-    to_arrow_with_label('vcat', 'v1', 'FC+ReLU'),
+    to_arrow_with_label('vcat', 'v1', '线性映射'),
 
     # ── FC: 256 → 128 ──
-    to_tensor_block('v2', offset="(3,0,0)", to="(v1-east)",
+    to_tensor_block('v2', offset="(4,0,0)", to="(v1-east)",
                     width=2, height=8, depth=1,
                     fill=r'\ValueColor'),
     to_label_below('v2', r'$128$', xshift="0cm", yshift="0.8cm"),
-    to_arrow_with_label('v1', 'v2', 'FC+ReLU'),
+    to_arrow_with_label('v1', 'v2', '线性映射'),
 
     # ── FC: 128 → 1 ──
-    to_tensor_block('v3', offset="(3,0,0)", to="(v2-east)",
+    to_tensor_block('v3', offset="(4,0,0)", to="(v2-east)",
                     width=1, height=4, depth=1,
                     fill=r'\ValueColor'),
     to_label_below('v3', r'$1$', xshift="0cm", yshift="0.6cm"),
-    to_arrow_with_label('v2', 'v3', 'FC'),
+    to_arrow_with_label('v2', 'v3', '线性映射'),
+
+    # 图例：先固定一个基准点，避免 current bounding box 在绘制首个图例后继续变化
+    r"\coordinate (legend_base) at ($(current bounding box.south)+(0,-2.2cm)$);",
+    to_legend_entry('leg_enc', r"($(legend_base)+(-5.5cm,0)$)", r'\EncoderColor', '编码器'),
+    to_legend_entry('leg_val', r"($(legend_base)+(6.2cm,0)$)", r'\ValueColor', '价值解码器'),
 
     to_end(),
 ]

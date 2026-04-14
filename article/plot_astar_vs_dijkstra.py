@@ -9,16 +9,18 @@
 import os
 import heapq
 import numpy as np
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.lines import Line2D
 from matplotlib import rcParams
-from matplotlib.font_manager import FontProperties, fontManager
+from matplotlib.font_manager import FontProperties
 
-_FONT_PATH = '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc'
-fontManager.addfont(_FONT_PATH)
-_fp = FontProperties(fname=_FONT_PATH)
-rcParams['font.family'] = _fp.get_name()
+_CN_FONT_PATH = '/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc'
+CN_FONT = FontProperties(fname=_CN_FONT_PATH, size=16)
+EN_FONT = FontProperties(family=['Times New Roman', 'Liberation Serif'], size=14)
 rcParams['axes.unicode_minus'] = False
 
 RESULTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results')
@@ -240,7 +242,8 @@ def draw_frame(ax, grid, frame, title, use_heuristic=False):
             if text:
                 ax.text(c + 0.5, y + 0.5, text,
                         ha='center', va='center',
-                        fontsize=9, fontweight='bold', color=tc, zorder=4)
+                        fontproperties=EN_FONT, fontweight='bold',
+                        color=tc, zorder=4)
 
     # 路径箭头
     if found and len(path) > 1:
@@ -264,7 +267,7 @@ def draw_frame(ax, grid, frame, title, use_heuristic=False):
             spine.set_edgecolor('#1e8449')
             spine.set_linewidth(3)
 
-    ax.set_title(title, fontsize=10, fontweight='bold', pad=4)
+    ax.set_title(title, fontproperties=CN_FONT, pad=8)
 
 
 def main():
@@ -286,7 +289,7 @@ def main():
     astar_frames = sample_frames(astar_order, astar_path, GOAL,
                                  N_COLS, is_astar=True,  shared_indices=shared)
 
-    fig, axes = plt.subplots(2, N_COLS, figsize=(10, 6))
+    fig, axes = plt.subplots(2, N_COLS, figsize=(10, 6.8))
     plt.subplots_adjust(wspace=0.05)
 
     for col in range(N_COLS):
@@ -300,32 +303,40 @@ def main():
         draw_frame(axes[0, col], GRID, df, d_title, use_heuristic=False)
         draw_frame(axes[1, col], GRID, af, a_title, use_heuristic=True)
 
-    # 行标注
-    for row, txt in enumerate(['Dijkstra', 'A*']):
-        axes[row, 0].set_ylabel(txt, fontsize=13, fontweight='bold',
-                                rotation=90, labelpad=6)
-        axes[row, 0].yaxis.set_label_position('left')
-        axes[row, 0].yaxis.label.set_visible(True)
+    legend_handles = [
+        mpatches.Patch(color=C_WALL, label='障碍物'),
+        mpatches.Patch(color=C_FREE, label='未访问区域'),
+        mpatches.Patch(color=CLOSED_CMAP(0.55), label='已扩展区域'),
+        mpatches.Patch(color=OPEN_CMAP(0.45), label='待扩展区域'),
+        mpatches.Patch(color=C_START, label='起点'),
+        mpatches.Patch(color=C_GOAL, label='终点'),
+        Line2D([0], [0], color='#e74c3c', lw=1.8, label='最短路径'),
+    ]
+    fig.legend(
+        handles=legend_handles,
+        loc='lower center',
+        ncol=4,
+        bbox_to_anchor=(0.5, 0.035),
+        frameon=False,
+        prop=CN_FONT,
+        handlelength=1.2,
+        handleheight=1.0,
+        columnspacing=1.2,
+        handletextpad=0.5,
+    )
 
-    # 图例
-    # legend_patches = [
-    #     mpatches.Patch(color=C_WALL,           label='障碍'),
-    #     mpatches.Patch(color=C_FREE,           label='未探索'),
-    #     mpatches.Patch(color=CLOSED_CMAP(0.5), label='已扩展'),
-    #     mpatches.Patch(color=OPEN_CMAP(0.4),   label='待扩展'),
-    #     mpatches.Patch(color=C_PATH,           label='最短路径'),
-    #     mpatches.Patch(color=C_START,          label='起点 S'),
-    #     mpatches.Patch(color=C_GOAL,           label='终点 G'),
-    # ]
-    # fig.legend(handles=legend_patches, loc='lower center', ncol=7,
-    #            fontsize=9, bbox_to_anchor=(0.5, -0.02), frameon=True)
+    fig.text(
+        -0.01, 0.75, 'Dijkstra',
+        fontproperties=EN_FONT, fontweight='bold',
+        va='center', ha='left', color='#1e8449'
+    )
+    fig.text(
+        0.04, 0.35, 'A*',
+        fontproperties=EN_FONT, fontweight='bold',
+        va='center', ha='left', color='#1e8449'
+    )
 
-    fig.text(-0.01, 0.75, 'Dijkstra', fontsize=9,
-             fontweight='bold', va='center', ha='left', color='#1e8449')
-    fig.text(0.01, 0.27, 'A*', fontsize=9,
-             fontweight='bold', va='center', ha='left', color='#1e8449')
-
-    plt.tight_layout(rect=[0.04, 0.06, 1, 1])
+    plt.tight_layout(rect=[0.06, 0.12, 1, 1])
     out = os.path.join(RESULTS_DIR, 'astar_vs_dijkstra.png')
     plt.savefig(out, dpi=150, bbox_inches='tight')
     print(f"saved → {out}")

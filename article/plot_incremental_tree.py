@@ -10,18 +10,16 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-from matplotlib.patches import FancyArrowPatch
+from matplotlib.lines import Line2D
 from matplotlib import rcParams
-from matplotlib.font_manager import FontProperties, fontManager
+from matplotlib.font_manager import FontProperties
 from collections import deque
 import heapq
 from pathlib import Path
 
 # 中文字体设置
-_FONT_PATH = '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc'
-fontManager.addfont(_FONT_PATH)
-_fp = FontProperties(fname=_FONT_PATH)
-rcParams['font.family'] = _fp.get_name()
+_CN_FONT_PATH = '/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc'
+CN_FONT = FontProperties(fname=_CN_FONT_PATH, size=22)
 rcParams['axes.unicode_minus'] = False
 
 # ── 网格定义（10×10）────────────────────────────────────────────────
@@ -167,8 +165,9 @@ def draw_grid(ax, highlight_bfs=None, highlight_entry=None, wire_cells=None,
                                       linewidth=1.0, zorder=5)
                 ax.add_patch(rect)
             elif val == 4:
+                facecolor = COLOR_LAMP_NEW if new_lamp == (r, c) else COLOR_LAMP_CONN
                 rect = plt.Rectangle((c, ROWS-1-r), 1, 1,
-                                      facecolor=COLOR_LAMP_CONN, edgecolor='white',
+                                      facecolor=facecolor, edgecolor='white',
                                       linewidth=1.0, zorder=5)
                 ax.add_patch(rect)
 
@@ -176,7 +175,7 @@ def draw_grid(ax, highlight_bfs=None, highlight_entry=None, wire_cells=None,
     ax.set_ylim(0, ROWS)
     ax.set_aspect('equal')
     ax.axis('off')
-    ax.set_title(title, fontsize=11, fontweight='bold', pad=8)
+    ax.set_title(title, fontproperties=CN_FONT, pad=8)
 
 
 # ── 预计算布线状态 ───────────────────────────────────────────────────
@@ -243,23 +242,29 @@ draw_grid(axes[3],
           wire_cells=new_wire,
           title="（d）状态转移完成")
 
-# 图例
-# legend_elements = [
-#     mpatches.Patch(facecolor=COLOR_FREE, edgecolor=COLOR_GRID_LINE, label='Free cell'),
-#     mpatches.Patch(facecolor=COLOR_OBSTACLE, label='Obstacle'),
-#     mpatches.Patch(facecolor=COLOR_BFS, alpha=0.6, label='BFS frontier'),
-#     mpatches.Patch(facecolor=COLOR_BFS_ENTRY, label='Entry point $p^*$'),
-#     plt.Line2D([0],[0], color=COLOR_WIRE, linewidth=3, label='Wiring tree $\\mathcal{T}$'),
-#     plt.Line2D([0],[0], marker='o', color='w', markerfacecolor=COLOR_LAMP_CONN,
-#                markersize=10, label='Connected lamp'),
-#     plt.Line2D([0],[0], marker='o', color='w', markerfacecolor=COLOR_LAMP_NEW,
-#                markersize=10, label='Target lamp $v_i$'),
-#     plt.Line2D([0],[0], marker='s', color='w', markerfacecolor=COLOR_SWITCH,
-#                markersize=10, label='Switch'),
-# ]
-# fig.legend(handles=legend_elements, loc='lower center', ncol=8,
-#            fontsize=9, frameon=True, bbox_to_anchor=(0.5, -0.05))
-plt.tight_layout()
+legend_elements = [
+    mpatches.Patch(facecolor=COLOR_FREE, edgecolor=COLOR_GRID_LINE, label='可通行区域'),
+    mpatches.Patch(facecolor=COLOR_OBSTACLE, edgecolor=COLOR_GRID_LINE, label='障碍物'),
+    mpatches.Patch(facecolor=COLOR_BFS, edgecolor=COLOR_GRID_LINE, alpha=0.6, label='BFS 扩展区域'),
+    mpatches.Patch(facecolor=COLOR_BFS_ENTRY, edgecolor='white', label='接入点'),
+    mpatches.Patch(facecolor=COLOR_SWITCH, edgecolor='white', label='开关'),
+    mpatches.Patch(facecolor=COLOR_LAMP_CONN, edgecolor='white', label='已连接灯具'),
+    mpatches.Patch(facecolor=COLOR_LAMP_NEW, edgecolor='white', label='待连接灯具'),
+    Line2D([0], [0], color=COLOR_WIRE, linewidth=3, label='线路路径'),
+]
+fig.legend(
+    handles=legend_elements,
+    loc='lower center',
+    ncol=4,
+    bbox_to_anchor=(0.5, -0.015),
+    frameon=False,
+    prop=CN_FONT,
+    handlelength=1.8,
+    handleheight=1.0,
+    columnspacing=1.4,
+    handletextpad=1.6,
+)
+plt.tight_layout(rect=[0, 0.2, 1, 1])
 
 out_path = Path(__file__).parent / 'results' / 'incremental_tree.png'
 plt.savefig(out_path, dpi=150, bbox_inches='tight', facecolor='white')
