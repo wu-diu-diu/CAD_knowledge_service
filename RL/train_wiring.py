@@ -864,13 +864,13 @@ def plot_rl_vs_mst_comparison(results: list[dict[str, Any]], output_path: Path) 
 def main() -> None:
     parser = argparse.ArgumentParser(description="布线RL训练")
     parser.add_argument("--room", type=str, default=None, help="单个房间 JSON 路径")
-    parser.add_argument("--room_dir", type=str, default="RL/room_gen/RL_layouted_better/json", help="房间数据集目录")
+    parser.add_argument("--room_dir", type=str, default="RL/test_room/layout_room/json", help="房间数据集目录")
     parser.add_argument("--curriculum", action="store_true", help="启用课程学习")
     parser.add_argument("--device", type=str, default=None)
     parser.add_argument("--output_dir", type=str, default="RL/output_wiring")
     parser.add_argument("--compare_mst", action="store_true", help="训练后与MST对比")
     parser.add_argument("--test_ratio", type=float, default=0.2, help="测试集比例")
-    parser.add_argument("--split_dir", type=str, default="RL/room_gen/RL_layouted_better/split", help="预分割索引目录（train.json/test.json）")
+    parser.add_argument("--split_dir", type=str, default="RL/test_room/layout_room/split", help="预分割索引目录（train.json/test.json）")
     args = parser.parse_args()
 
     # 输出目录
@@ -910,6 +910,8 @@ def main() -> None:
         step_cost_coef=env_raw.get("step_cost_coef", 0.3),
         invalid_action_penalty=env_raw.get("invalid_action_penalty", 1.0),
         terminal_length_coef=env_raw.get("terminal_length_coef", 1.0),
+        step_reward_fixed=env_raw.get("step_reward_fixed", 0.0),
+        step_reward_weight=env_raw.get("step_reward_weight", 1.0),
     )
 
     if args.curriculum:

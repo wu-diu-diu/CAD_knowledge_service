@@ -16,7 +16,7 @@ from .tools import (
 )
 
 
-class MiniMaxLightingAgent:
+class _LegacyAnthropicLightingAgent:
     """
     使用 Anthropic 风格工具调用接口的 MiniMax 智能体。
     """

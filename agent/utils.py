@@ -145,19 +145,10 @@ def extract_json(text: str) -> Optional[Dict[str, Any]]:
 
 
 def resolve_provider(provider: str, model_name: Optional[str]) -> Tuple[str, str, str]:
-    provider = (provider or "qwen").strip().lower()
-    model_name = (model_name or "").strip()
-    if provider in ("qwen", "dashscope"):
-        api_key = os.getenv("DASHSCOPE_API_KEY", "").strip()
-        base_url = os.getenv("DASHSCOPE_BASE_URL", "").strip() or "https://dashscope.aliyuncs.com/compatible-mode/v1"
-        model = model_name or os.getenv("CAD_AGENT_QWEN_MODEL", "qwen-plus").strip()
-        return api_key, base_url, model
-    if provider == "deepseek":
-        api_key = os.getenv("DEEPSEEK_API_KEY", "").strip()
-        base_url = os.getenv("DEEPSEEK_BASE_URL", "").strip() or "https://api.deepseek.com/v1"
-        model = model_name or os.getenv("CAD_AGENT_DEEPSEEK_MODEL", "deepseek-chat").strip()
-        return api_key, base_url, model
-    raise ValueError(f"unsupported provider: {provider}. Use 'qwen' or 'deepseek'.")
+    from .config import get_provider_config
+
+    cfg = get_provider_config(provider=provider, model_name=model_name)
+    return cfg.api_key, cfg.base_url, cfg.model
 
 
 def describe_tool_result(tool_name: str, tool_output: Dict[str, Any]) -> str:

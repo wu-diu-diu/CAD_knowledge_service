@@ -9,8 +9,8 @@ __all__ = [
     "RoomAgentState",
     "AgentStateManager",
     "LightingTools",
-    "ReActLightingAgent",
-    "MiniMaxLightingAgent",
+    "LightingAgent",
+    "build_lighting_agent",
     "process_image_to_agent_input",
     "run_agent_pipeline",
 ]
@@ -19,8 +19,8 @@ _EXPORT_MAP = {
     "RoomAgentState": (".state", "RoomAgentState"),
     "AgentStateManager": (".state", "AgentStateManager"),
     "LightingTools": (".tools", "LightingTools"),
-    "ReActLightingAgent": (".react_agent", "ReActLightingAgent"),
-    "MiniMaxLightingAgent": (".mini_model", "MiniMaxLightingAgent"),
+    "LightingAgent": (".base", "LightingAgent"),
+    "build_lighting_agent": (".factory", "build_lighting_agent"),
     "process_image_to_agent_input": (".image_process", "process_image_to_agent_input"),
     "run_agent_pipeline": (".run", "run_agent_pipeline"),
 }

@@ -5,10 +5,10 @@ wiring_training:
   learning_rate: 0.0003
   ppo_epochs: 4
   rollout_episodes: 64
-  minibatch_size: 16
+  minibatch_size: 0.1
   clip_eps: 0.2
   value_coef: 0.5
-  entropy_coef: 0.05
+  entropy_coef: 0.01
   grad_clip_norm: 0.5
   seed: 42
   device: "cuda:1"
@@ -20,6 +20,9 @@ wiring_training:
 wiring_environment:
   padded_size: 48
   turn_penalty: 0.2
-  step_cost_coef: 0.0
+  step_cost_coef: 0.3
   invalid_action_penalty: 1.0
   terminal_length_coef: 1.0
+  step_reward_fixed: 0.0    # >0 时启用固定步进奖励，替代步进代价惩罚；0=禁用
+  step_cost_coef: 0.0       # 步进代价惩罚系数；0=禁用（纯终局奖励模式）
+  step_reward_weight: 1.0   # 固定步进奖励权重，实际奖励 = weight / n_lamps

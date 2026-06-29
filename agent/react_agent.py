@@ -13,7 +13,7 @@ from .tools import LightingTools, REACT_SYSTEM_PROMPT_TEMPLATE, REACT_TOOLS
 from .utils import describe_tool_result, extract_json, resolve_provider
 
 
-class ReActLightingAgent:
+class _LegacyJsonLightingAgent:
     """
     ReAct 智能体:
     - `init_mode=rule` 时先用规则生成初稿

@@ -21,15 +21,13 @@ from preprocess.wiring_layout import process_room_wiring_layout
 
 try:
     from .config import REPO_ROOT
+    from .factory import build_lighting_agent
     from .image_process import process_image_to_agent_input
-    from .mini_model import MiniMaxLightingAgent
-    from .react_agent import ReActLightingAgent
     from .state import RoomAgentState
 except ImportError:
     from agent.config import REPO_ROOT
+    from agent.factory import build_lighting_agent
     from agent.image_process import process_image_to_agent_input
-    from agent.mini_model import MiniMaxLightingAgent
-    from agent.react_agent import ReActLightingAgent
     from agent.state import RoomAgentState
 
 
@@ -74,19 +72,14 @@ def run_agent_design(
     image_h = int(initial_input.get("image_height", 0))
 
     resolved_agent_type = (agent_type or "react").strip().lower()
-    if resolved_agent_type == "minimax":
-        agent = MiniMaxLightingAgent(
-            model_name=model_name,
-            log_dir=str(REPO_ROOT / "logs"),
-        )
-    elif resolved_agent_type == "react":
-        agent = ReActLightingAgent(
-            provider=provider,
-            model_name=model_name,
-            log_dir=str(REPO_ROOT / "logs"),
-        )
-    else:
-        raise ValueError(f"unsupported agent_type: {agent_type}. Use 'react' or 'minimax'.")
+    resolved_provider = (provider or "qwen").strip().lower()
+    if resolved_agent_type not in {"react", "lighting", "base"}:
+        resolved_provider = resolved_agent_type
+    agent = build_lighting_agent(
+        provider=resolved_provider,
+        model_name=model_name,
+        log_dir=str(REPO_ROOT / "logs"),
+    )
 
     room_plans: Dict[str, Dict[str, Any]] = {}
     rooms_internal: Dict[str, Dict[str, Any]] = {}

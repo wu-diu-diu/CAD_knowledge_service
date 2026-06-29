@@ -51,10 +51,13 @@ class WiringEnvConfig:
     padded_size: int = 48       # 观察空间的填充尺寸
     turn_penalty: float = 0.2   # A* 转弯惩罚
     # 每步奖励：路径增量成本
-    step_cost_coef: float = 0.3          # 步进成本归一化系数
+    step_cost_coef: float = 0.3          # 步进成本归一化系数（step_reward_fixed>0时不生效）
     invalid_action_penalty: float = 1.0  # 非法动作惩罚
     # 终局奖励系数
     terminal_length_coef: float = 1.0   # 相对MST的线长改善得分
+    # 固定步进奖励（>0时替代步进代价惩罚）
+    step_reward_fixed: float = 0.0       # >0 时启用固定步进奖励
+    step_reward_weight: float = 1.0      # 固定步进奖励权重，实际奖励 = weight / n_lamps
 
 
 class WiringEnv:
@@ -274,10 +277,13 @@ class WiringEnv:
     # ------------------------------------------------------------------
 
     def _step_reward(self) -> float:
-        """每步奖励：本步新增线路长度的负值（归一化）。
+        """每步奖励：固定奖励或步进代价惩罚（取决于配置）。
 
-        reward = -step_cost_coef * last_route_cost / room_diagonal
+        固定模式：reward = step_reward_weight / n_lamps
+        代价模式：reward = -step_cost_coef * last_route_cost / room_diagonal
         """
+        if self.config.step_reward_fixed > 0.0:
+            return self.config.step_reward_weight / max(self.n_lamps, 1)
         if not self.step_costs:
             return 0.0
         last_cost = self.step_costs[-1]

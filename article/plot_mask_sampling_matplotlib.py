@@ -112,11 +112,11 @@ def main() -> None:
     c_sample0 = "#efefef"
 
     cols = [
-        ("Logits", logits, [c_logit] * 6),
-        ("Action Mask", mask, [c_mask1, c_mask0, c_mask1, c_mask0, c_mask1, c_mask1]),
-        ("Masked Logits", masked, [c_logit, c_masked, c_logit, c_masked, c_logit, c_logit]),
-        ("Softmax Probs", probs, [c_prob] * 6),
-        ("Sampled Action", sample, [c_sample0, c_sample0, c_sample0, c_sample0, c_sample1, c_sample0]),
+        ("分数", logits, [c_logit] * 6),
+        ("动作掩码", mask, [c_mask1, c_mask0, c_mask1, c_mask0, c_mask1, c_mask1]),
+        ("掩码后分数", masked, [c_logit, c_masked, c_logit, c_masked, c_logit, c_logit]),
+        ("归一化概率", probs, [c_prob] * 6),
+        ("动作采样", sample, [c_sample0, c_sample0, c_sample0, c_sample0, c_sample1, c_sample0]),
     ]
 
     fig, ax = plt.subplots(figsize=(13.5, 6.8))
@@ -130,7 +130,7 @@ def main() -> None:
         geom = draw_vector_column(ax, x=x, y_top=y_top, values=values, facecolors=fills, title=title)
         cols_geom.append(geom)
 
-    for i, label in enumerate(["Mask", "Apply", "Softmax", "Sample"]):
+    for i, label in enumerate(["掩码", "", "Softmax", "Sample"]):
         _, cy1, _, right1 = cols_geom[i]
         _, cy2, left2, _ = cols_geom[i + 1]
         draw_arrow(ax, (right1, cy1), (left2, cy2), label)

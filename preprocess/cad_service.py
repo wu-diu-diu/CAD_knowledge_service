@@ -16,7 +16,6 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from agent.react_agent import ReActLightingAgent
 from agent.state import RoomAgentState
 from .find_all import process_images_batch, process_single_image, process_layout_from_intermediate
 from .coordinate_converter import DEFAULT_CAD_PARAMS, pixel_to_cad
@@ -1669,7 +1668,9 @@ class CADAnalysisService:
             "switch_count": int(resolved_switch_count),
             "is_regular": bool(base_internal.get("is_regular", True)),
         }
-        agent = ReActLightingAgent(
+        from agent.factory import build_lighting_agent
+
+        agent = build_lighting_agent(
             provider=os.getenv("CAD_AGENT_PROVIDER", "qwen").strip().lower(),
             model_name=os.getenv("CAD_AGENT_MODEL", "").strip() or None,
             init_mode=resolved_placement_mode,

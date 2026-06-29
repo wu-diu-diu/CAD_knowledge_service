@@ -20,6 +20,7 @@ summary_docs
 kg_store/
 cad_sessions/
 chat_output/
+agent/config.yaml
 RL/output/
 RL/test_room/
 RL/generated_rooms/*.jsons

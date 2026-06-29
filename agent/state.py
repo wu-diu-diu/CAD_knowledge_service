@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import numpy as np
@@ -23,6 +25,8 @@ class RoomAgentState:
     tool_history: List[Dict[str, Any]] = field(default_factory=list)
     tool_result_history: List[Dict[str, Any]] = field(default_factory=list)
     thought_history: List[Dict[str, Any]] = field(default_factory=list)
+    snapshots: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    snapshot_order: List[str] = field(default_factory=list)
     logger: Optional[AgentRunLogger] = None
 
     def __post_init__(self) -> None:
@@ -100,7 +104,62 @@ class RoomAgentState:
             "tool_calls": len(self.tool_history),
             "tool_result_calls": len(self.tool_result_history),
             "thought_calls": len(self.thought_history),
+            "snapshot_count": len(self.snapshot_order),
         }
+
+    @staticmethod
+    def _copy_tool_cache(tool_cache: Dict[str, Any]) -> Dict[str, Any]:
+        copied: Dict[str, Any] = {}
+        for key, value in (tool_cache or {}).items():
+            if str(key).startswith("_"):
+                continue
+            try:
+                copied[key] = deepcopy(value)
+            except Exception:
+                copied[key] = value
+        return copied
+
+    def snapshot(self, label: str = "", reason: str = "") -> str:
+        snapshot_id = f"snap_{len(self.snapshot_order) + 1:04d}"
+        self.snapshots[snapshot_id] = {
+            "snapshot_id": snapshot_id,
+            "label": str(label or ""),
+            "reason": str(reason or ""),
+            "created_at": datetime.now().isoformat(),
+            "placements": deepcopy(self.placements),
+            "selected_lamp_type": self.selected_lamp_type,
+            "lamp_plan": deepcopy(self.lamp_plan),
+            "tool_cache": self._copy_tool_cache(self.tool_cache),
+        }
+        self.snapshot_order.append(snapshot_id)
+        return snapshot_id
+
+    def restore(self, snapshot_id: str) -> bool:
+        snapshot = self.snapshots.get(snapshot_id)
+        if not isinstance(snapshot, dict):
+            return False
+        self.placements = deepcopy(snapshot.get("placements", {"lamps": [], "switches": []}))
+        self.selected_lamp_type = snapshot.get("selected_lamp_type")
+        self.lamp_plan = deepcopy(snapshot.get("lamp_plan"))
+        self.tool_cache = deepcopy(snapshot.get("tool_cache", {}))
+        self.record(
+            "restore_snapshot",
+            {"snapshot_id": snapshot_id},
+            {"status": "ok", "label": snapshot.get("label", "")},
+        )
+        return True
+
+    def list_snapshots(self) -> List[Dict[str, Any]]:
+        return [
+            {
+                "snapshot_id": item,
+                "label": self.snapshots[item].get("label", ""),
+                "reason": self.snapshots[item].get("reason", ""),
+                "created_at": self.snapshots[item].get("created_at", ""),
+            }
+            for item in self.snapshot_order
+            if item in self.snapshots
+        ]
 
 
 class AgentStateManager:

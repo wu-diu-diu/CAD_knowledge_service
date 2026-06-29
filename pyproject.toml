@@ -25,4 +25,5 @@ dependencies = [
     "bm25s>=0.3.2.post1",
     "jieba>=0.42.1",
     "torchview>=0.2.7",
+    "pytest>=9.0.3",
 ]

@@ -21,16 +21,16 @@ from preprocess.lighting_layout import _grid_cell_to_pixel, _sanitize_filename, 
 from preprocess.wiring_layout import process_room_wiring_layout
 
 try:
+    from .approval import cli_approval_handler
     from .config import REPO_ROOT
+    from .factory import build_lighting_agent
     from .image_process import process_image_to_agent_input
-    from .mini_model import MiniMaxLightingAgent
-    from .react_agent import ReActLightingAgent
     from .state import RoomAgentState
 except ImportError:
+    from agent.approval import cli_approval_handler
     from agent.config import REPO_ROOT
+    from agent.factory import build_lighting_agent
     from agent.image_process import process_image_to_agent_input
-    from agent.mini_model import MiniMaxLightingAgent
-    from agent.react_agent import ReActLightingAgent
     from agent.state import RoomAgentState
 
 
@@ -57,18 +57,14 @@ def _build_agent(
     log_dir: Path,
 ):
     resolved_agent_type = (agent_type or "react").strip().lower()
-    if resolved_agent_type == "minimax":
-        return MiniMaxLightingAgent(
-            model_name=model_name,
-            log_dir=str(log_dir),
-        )
-    if resolved_agent_type == "react":
-        return ReActLightingAgent(
-            provider=provider,
-            model_name=model_name,
-            log_dir=str(log_dir),
-        )
-    raise ValueError(f"unsupported agent_type: {agent_type}. Use 'react' or 'minimax'.")
+    resolved_provider = (provider or "qwen").strip().lower()
+    if resolved_agent_type not in {"react", "lighting", "base"}:
+        resolved_provider = resolved_agent_type
+    return build_lighting_agent(
+        provider=resolved_provider,
+        model_name=model_name,
+        log_dir=str(log_dir),
+    )
 
 
 def _build_room_states(initial_input: Dict[str, Any]) -> Dict[str, RoomAgentState]:
@@ -454,6 +450,7 @@ def main() -> None:
             max_steps=max_steps,
             user_goal=user_text,
             reset_layout=reset_layout,
+            approval_handler=cli_approval_handler,
         )
         turn_outputs = _save_turn_outputs(
             turn_dir=turn_dir,

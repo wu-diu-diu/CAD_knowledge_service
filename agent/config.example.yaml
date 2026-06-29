@@ -1,0 +1,26 @@
+default_provider: qwen
+
+providers:
+  qwen:
+    api_key: ""
+    base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    model: "qwen-plus"
+    api_type: "openai_compatible"
+
+  deepseek:
+    api_key: ""
+    base_url: "https://api.deepseek.com/v1"
+    model: "deepseek-chat"
+    api_type: "openai_compatible"
+
+  glm:
+    api_key: ""
+    base_url: "https://open.bigmodel.cn/api/paas/v4"
+    model: "glm-4-plus"
+    api_type: "openai_compatible"
+
+  minimax:
+    api_key: ""
+    base_url: ""
+    model: "MiniMax-M2.5"
+    api_type: "anthropic_compatible"
